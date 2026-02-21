@@ -29,22 +29,16 @@
 
         errorSlide2_faculty.textContent = "";
 
-        const faculty = selectFaculty.value;
-        const level = selectLevel.value;
-
-        if(faculty && level) {
-            try{
-                populateSpecializations(faculty, level);
-            }catch(e){
-                resetFaculty();
-                resetLevel();
-                resetSpecializations();
-                alert(t('err_specializations_unavailable'));
-                return;
-            }
+        try{
+            populateSpecializations(faculty, level);
+        }catch(e){
+            resetFaculty();
+            resetLevel();
+            resetSpecializations();
+            alert(t('err_specializations_unavailable'));
+            return;
         }
-        
-        
+         
     });
 
     const selectLevel = document.getElementById('level');
