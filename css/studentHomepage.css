@@ -53,6 +53,16 @@
 	--student-transition-button: background 0.15s ease, transform 120ms ease;
 }
 
+/* Hide initial skeleton until JS finishes page initialization */
+body.page-loading {
+	opacity: 0;
+	visibility: hidden;
+}
+
+body {
+	transition: opacity 0.12s ease;
+}
+
 /* Center title in the header for this page */
 .card-header .title {
 	text-align: center;

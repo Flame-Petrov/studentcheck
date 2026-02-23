@@ -28,6 +28,11 @@ function deriveDisplayName(loginData) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+	const revealPage = () => {
+		try {
+			document.body.classList.remove('page-loading');
+		} catch (_) {}
+	};
 
 	var rawData = null;
 	var parsedData = null;
@@ -51,11 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	}catch(e){
 		console.error("Error during extracting data.", e);
+		revealPage();
 		return;
 	}
 
 	if (!studentData) {
 		console.error("No student data found in sessionStorage.");
+		revealPage();
 		return;
 	}
 	
@@ -66,11 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	}catch(e){
 		console.error("Error during initializing page elements.", e);
+		revealPage();
 		return;
 	}
 
 	if(nameElement == null || facultyNumberElement == null){
 		console.error("Essential page elements are missing.");
+		revealPage();
 		return;
 	}
 
@@ -178,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		displayErrorInQRContainer(qrContainer, 'QR library not loaded');
 	}
 
+	revealPage();
 
 });
 
