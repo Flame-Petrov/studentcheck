@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Rajdhani:wght@500;700&display=swap');
 
 :root {
+  /* Change this one variable to update font across the whole app. */
   --app-font-family: "Orbitron", "Rajdhani", sans-serif;
   --app-logo-top: 12px;
   --app-logo-left: 12px;
@@ -350,7 +351,7 @@ body[aria-busy="true"] .navbar-logo {
   display: inline-flex;
   align-items: center;
   color: #111827;
-  font-family: "Orbitron", "Rajdhani", sans-serif;
+  font-family: var(--app-font-family);
   font-size: clamp(1rem, 1.6vw, 1.35rem);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -359,7 +360,7 @@ body[aria-busy="true"] .navbar-logo {
 
 .nav-control-label-language {
   color: #4b5563;
-  font-family: "Rajdhani", sans-serif;
+  font-family: var(--app-font-family);
   font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.08em;
