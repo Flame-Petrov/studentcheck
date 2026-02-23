@@ -36,23 +36,44 @@ export async function fetchClasses(teacherEmail) {
         throw new Error('Teacher email is required');
     }
 
-    // Server route contract for class listing is path-based:
-    // GET /classes/:teacherEmail
-    const url = `${SERVER_BASE_URL + ENDPOINTS.createClass}/${encodeURIComponent(teacherEmail)}`;
-    const result = await fetch(url, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-    });
+    const encoded = encodeURIComponent(teacherEmail);
+    const candidateUrls = [
+        // Most common variants across backend revisions:
+        `${SERVER_BASE_URL + ENDPOINTS.createClass}?teacherEmail=${encoded}`,
+        `${SERVER_BASE_URL + ENDPOINTS.createClass}?teacher_email=${encoded}`,
+        `${SERVER_BASE_URL + ENDPOINTS.createClass}/${encoded}`,
+        `${SERVER_BASE_URL}/get_teacher_classes?teacherEmail=${encoded}`,
+        `${SERVER_BASE_URL}/get_teacher_classes?teacher_email=${encoded}`,
+        `${SERVER_BASE_URL}/get_classes_by_teacher?teacherEmail=${encoded}`,
+        `${SERVER_BASE_URL}/get_classes_by_teacher?teacher_email=${encoded}`
+    ];
 
-    if (!result.ok) {
-        throw new Error(`Failed to fetch classes: ${result.status} ${result.statusText} (${url})`);
+    const attempts = [];
+
+    for (const url of candidateUrls) {
+        try {
+            const result = await fetch(url, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!result.ok) {
+                attempts.push(`${result.status} ${result.statusText} (${url})`);
+                continue;
+            }
+
+            const data = await result.json();
+            // Normalize to { classes: [...] } for all callers
+            if (Array.isArray(data)) return { classes: data };
+            if (Array.isArray(data?.classes)) return { classes: data.classes };
+            if (Array.isArray(data?.data)) return { classes: data.data };
+            return { classes: [] };
+        } catch (e) {
+            attempts.push(`NETWORK_ERROR (${url}): ${e.message}`);
+        }
     }
 
-    const data = await result.json();
-    // Normalize to { classes: [...] } for all callers
-    if (Array.isArray(data)) return { classes: data };
-    if (Array.isArray(data?.classes)) return { classes: data.classes };
-    return { classes: [] };
+    throw new Error(`Failed to fetch classes. Tried routes: ${attempts.join(' | ')}`);
 }
 
 /**
