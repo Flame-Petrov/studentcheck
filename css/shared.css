@@ -57,8 +57,8 @@ body[aria-busy="true"] .navbar-logo {
 /* Language switcher */
 .lang-toggle-btn {
   position: fixed;
-  top: 12px;
-  right: 12px;
+  top: 88px;
+  left: 12px;
   width: 64px;
   height: 64px;
   border-radius: 10px;
@@ -174,8 +174,8 @@ body[aria-busy="true"] .navbar-logo {
 
 @media (max-width: 480px) {
   .lang-toggle-btn {
-    top: 10px;
-    right: 10px;
+    top: 62px;
+    left: 10px;
     width: 44px;
     height: 44px;
   }
