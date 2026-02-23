@@ -295,24 +295,24 @@ body[aria-busy="true"] .navbar-logo {
 .nav-menu-logout-btn {
   width: 100%;
   min-height: 52px;
-  border: 2px solid #7f1d1d;
+  border: 2px solid #000000;
   border-radius: 12px;
-  background: #dc2626;
-  color: #ffffff;
+  background: #ffffff;
+  color: #111827;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(127, 29, 29, 0.32);
-  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.38);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease, color 0.14s ease;
 }
 
 .nav-menu-logout-btn:hover {
-  background: #b91c1c;
+  background: #f3f4f6;
 }
 
 .nav-menu-logout-btn:active {
   transform: translateY(2px) scale(0.98);
-  box-shadow: 0 4px 12px rgba(127, 29, 29, 0.28);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
 }
 
 .nav-control-brand-btn {

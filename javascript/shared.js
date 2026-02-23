@@ -648,6 +648,24 @@
     const logoutBtn = document.getElementById('navMenuLogoutBtn');
     if (!panel || !backdrop) return;
 
+    function hasActiveProfileSession() {
+      try {
+        const hasStudent = !!sessionStorage.getItem('studentData');
+        const hasTeacher = !!sessionStorage.getItem('teacherData');
+        return hasStudent || hasTeacher;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function syncLogoutVisibility() {
+      if (!logoutBtn) return;
+      const visible = hasActiveProfileSession();
+      logoutBtn.style.display = visible ? 'block' : 'none';
+      logoutBtn.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      logoutBtn.tabIndex = visible ? 0 : -1;
+    }
+
     logoBtn.setAttribute('aria-controls', 'navControlCluster');
     logoBtn.setAttribute('aria-expanded', 'false');
 
@@ -658,6 +676,7 @@
     }
 
     function openMenu() {
+      syncLogoutVisibility();
       shell.classList.add('open');
       panel.setAttribute('aria-hidden', 'false');
       logoBtn.setAttribute('aria-expanded', 'true');
@@ -704,6 +723,8 @@
       });
       shell.dataset.bound = 'true';
     }
+
+    syncLogoutVisibility();
 
     window.NavMenu = {
       open: openMenu,
