@@ -6,6 +6,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100dvh;
+  padding: 0 16px;
   background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   color: #111827;
@@ -115,6 +116,15 @@ body {
 .password-req li.unmet .indicator { opacity: 0.6; }
 
 @media (max-width: 520px) {
+  body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .card {
+    width: 100%;
+  }
+
   .slide { padding: 18px 16px 8px 16px; }
   .field input,
   .field select { max-width: 100%; }
