@@ -270,7 +270,7 @@ body[aria-busy="true"] .navbar-logo {
 .nav-control-brand-btn {
   width: var(--menu-control-size);
   height: var(--menu-control-size);
-  border: none;
+  border: 2px solid #cbd5e1;
   border-radius: 10px;
   padding: 0;
   margin: 0;
@@ -310,6 +310,7 @@ body[aria-busy="true"] .navbar-logo {
   margin: 0;
   width: var(--menu-control-size);
   height: var(--menu-control-size);
+  border: 2px solid #cbd5e1;
 }
 
 .nav-control-label {
