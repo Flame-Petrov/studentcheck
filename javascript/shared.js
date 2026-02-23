@@ -122,6 +122,8 @@
       language_change_title: 'Change Language',
       language_en: 'English',
       language_bg: 'Bulgarian',
+      language_label: 'Language',
+      brand_label: 'E-Trek',
       home_title: 'Join as',
       role_student: 'Student',
       role_teacher: 'Teacher',
@@ -249,6 +251,8 @@
       scanner_close_message: 'Closing the scanner will discard attendance data.'
     },
     bg: {
+      language_label: 'Език',
+      brand_label: 'E-Trek',
       language_change_title: 'Промяна на езика',
       language_en: 'Английски',
       language_bg: 'Български',
@@ -593,6 +597,50 @@
     if (page === 'teacherhomepage.html') {
       updateModeLabels();
     }
+    updateNavClusterLabels();
+  }
+
+  function updateNavClusterLabels() {
+    const brandLabel = document.getElementById('navControlBrandLabel');
+    const languageLabel = document.getElementById('navControlLanguageLabel');
+    if (brandLabel) brandLabel.textContent = t('brand_label') || 'E-Trek';
+    if (languageLabel) languageLabel.textContent = t('language_label') || 'Language';
+  }
+
+  function ensureNavControlCluster(btn) {
+    let cluster = document.getElementById('navControlCluster');
+    if (!cluster) {
+      cluster = document.createElement('div');
+      cluster.id = 'navControlCluster';
+      cluster.className = 'nav-control-cluster';
+    }
+
+    const logoBtn = cluster.querySelector('.navbar-logo') || document.querySelector('.navbar-logo');
+    if (logoBtn) cluster.appendChild(logoBtn);
+
+    cluster.appendChild(btn);
+
+    let brandLabel = document.getElementById('navControlBrandLabel');
+    if (!brandLabel) {
+      brandLabel = document.createElement('span');
+      brandLabel.id = 'navControlBrandLabel';
+      brandLabel.className = 'nav-control-label nav-control-label-brand';
+      brandLabel.textContent = 'E-Trek';
+      cluster.appendChild(brandLabel);
+    }
+
+    let languageLabel = document.getElementById('navControlLanguageLabel');
+    if (!languageLabel) {
+      languageLabel = document.createElement('span');
+      languageLabel.id = 'navControlLanguageLabel';
+      languageLabel.className = 'nav-control-label nav-control-label-language';
+      languageLabel.textContent = 'Language';
+      cluster.appendChild(languageLabel);
+    }
+
+    if (!cluster.isConnected) {
+      document.body.appendChild(cluster);
+    }
   }
 
   function ensureLanguageUI() {
@@ -617,7 +665,7 @@
       </div>
     `;
 
-    document.body.appendChild(btn);
+    ensureNavControlCluster(btn);
     document.body.appendChild(overlay);
 
     const updateLangButtons = () => {
@@ -663,4 +711,3 @@
 
   window.i18n = { t, setLanguage, getLanguage, applyTranslations };
 })();
-
