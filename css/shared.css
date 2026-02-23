@@ -302,7 +302,7 @@ body[aria-busy="true"] .navbar-logo {
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(190, 24, 93, 0.16);
+  box-shadow: none;
   transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease, color 0.14s ease;
   display: inline-flex;
   align-items: center;
@@ -318,7 +318,7 @@ body[aria-busy="true"] .navbar-logo {
 
 .nav-menu-logout-btn:active {
   transform: translateY(2px) scale(0.98);
-  box-shadow: 0 4px 12px rgba(190, 24, 93, 0.2);
+  box-shadow: none;
 }
 
 .nav-menu-logout-icon {
@@ -341,7 +341,7 @@ body[aria-busy="true"] .navbar-logo {
   padding: 0;
   margin: 0;
   background: transparent;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.38);
+  box-shadow: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -378,14 +378,14 @@ body[aria-busy="true"] .navbar-logo {
   width: var(--menu-control-size);
   height: var(--menu-control-size);
   border: 2px solid #000000;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.38);
+  box-shadow: none;
   transition: transform 0.14s ease, box-shadow 0.14s ease;
 }
 
 .nav-control-brand-btn:active,
 .nav-menu-panel .lang-toggle-btn:active {
   transform: translateY(2px) scale(0.97);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
+  box-shadow: none;
 }
 
 .nav-control-label {
