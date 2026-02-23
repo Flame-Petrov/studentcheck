@@ -622,10 +622,12 @@
             </div>
             <div class="nav-menu-item nav-menu-item-language" id="navMenuLanguageRow"></div>
             <div class="nav-menu-spacer" aria-hidden="true"></div>
-            <button id="navMenuLogoutBtn" class="nav-menu-logout-btn" type="button" aria-label="Log out">
-              <img src="icons/logout.svg" alt="" class="nav-menu-logout-icon">
-              <span class="nav-menu-logout-label">Log out</span>
-            </button>
+            <div class="nav-menu-item nav-menu-item-logout" id="navMenuLogoutRow">
+              <button id="navMenuLogoutBtn" class="nav-menu-logout-btn" type="button" aria-label="Log out">
+                <img src="icons/logout.svg" alt="" class="nav-menu-logout-icon">
+              </button>
+              <span id="navMenuLogoutLabel" class="nav-control-label nav-control-label-language">Log out</span>
+            </div>
           </div>
         </aside>
       `;
@@ -649,6 +651,7 @@
     const backdrop = document.getElementById('navMenuBackdrop');
     const brandBtn = document.getElementById('navControlBrandBtn');
     const logoutBtn = document.getElementById('navMenuLogoutBtn');
+    const logoutRow = document.getElementById('navMenuLogoutRow');
     if (!panel || !backdrop) return;
 
     function hasActiveProfileSession() {
@@ -662,9 +665,9 @@
     }
 
     function syncLogoutVisibility() {
-      if (!logoutBtn) return;
+      if (!logoutBtn || !logoutRow) return;
       const visible = hasActiveProfileSession();
-      logoutBtn.style.display = visible ? 'block' : 'none';
+      logoutRow.style.display = visible ? 'grid' : 'none';
       logoutBtn.setAttribute('aria-hidden', visible ? 'false' : 'true');
       logoutBtn.tabIndex = visible ? 0 : -1;
     }

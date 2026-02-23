@@ -293,27 +293,24 @@ body[aria-busy="true"] .navbar-logo {
 }
 
 .nav-menu-logout-btn {
-  width: 100%;
-  min-height: 52px;
-  border: 2px solid #fecaca;
-  border-radius: 12px;
-  background: #fff1f2;
-  color: #991b1b;
-  font-size: 1rem;
-  font-weight: 700;
+  width: var(--menu-control-size);
+  height: var(--menu-control-size);
+  border: 2px solid #000000;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111827;
   cursor: pointer;
   box-shadow: none;
-  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease, color 0.14s ease;
+  transition: transform 0.14s ease, background 0.14s ease, color 0.14s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 10px 14px;
+  padding: 0;
 }
 
 .nav-menu-logout-btn:hover {
-  background: #ffe4e6;
-  color: #7f1d1d;
+  background: #f3f4f6;
+  color: #111827;
 }
 
 .nav-menu-logout-btn:active {
@@ -322,15 +319,16 @@ body[aria-busy="true"] .navbar-logo {
 }
 
 .nav-menu-logout-icon {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   display: block;
   flex: 0 0 auto;
 }
 
-.nav-menu-logout-label {
-  line-height: 1;
-  letter-spacing: 0.02em;
+.nav-menu-item-logout {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
 }
 
 .nav-control-brand-btn {
