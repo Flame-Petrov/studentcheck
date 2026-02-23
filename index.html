@@ -14,15 +14,17 @@
     <button class="navbar-logo" type="button" aria-label="Home" onclick="handleLogoClick()">
         <img src="images/new_main_logo.png" alt="Home">
     </button>
-    <main class="card" role="region" aria-labelledby="homeTitle">
-        <div class="card-header">
-            <h1 id="homeTitle" class="title">Join as</h1>
-        </div>
-        <div class="actions">
-            <button id="studentBtn" class="btn btn-primary" type="button">Student</button>
-            <button id="teacherBtn" class="btn btn-primary" type="button">Teacher</button>
-        </div>
-    </main>
+    <div class="page-container">
+        <main class="card" role="region" aria-labelledby="homeTitle">
+            <div class="card-header">
+                <h1 id="homeTitle" class="title">Join as</h1>
+            </div>
+            <div class="actions">
+                <button id="studentBtn" class="btn btn-primary" type="button">Student</button>
+                <button id="teacherBtn" class="btn btn-primary" type="button">Teacher</button>
+            </div>
+        </main>
+    </div>
     
     <script src="javascript/shared.js"></script>
     <script src="javascript/index.js"></script>
