@@ -26,6 +26,9 @@ import { getActiveClassName, logError } from '../utils/helpers.js';
 import { openConfirmOverlay, getOverlay, hideOverlay } from '../ui/overlays.js';
 import { closeScanner } from './scanner.js';
 
+const recentScanTimestamps = new Map();
+const SCAN_DEBOUNCE_MS = 1500;
+
 function i18nText(key, fallback) {
     try {
         if (window.i18n && typeof window.i18n.t === 'function') {
@@ -134,7 +137,7 @@ export function updateAttendanceState(className, studentFacultyNumber, mode, upd
             const timestamp = getStudentTimestamp(studentFacultyNumber);
             const joinedAt = timestamp ? timestamp.joined_at : null;
             setStudentTimestamp(studentFacultyNumber, joinedAt, Date.now());
-        } else {
+        } else if (current !== 'completed') {
             console.warn('[Attendance] Leaving scan ignored: student not joined yet', {
                 className,
                 studentFacultyNumber,
@@ -185,15 +188,14 @@ export function handleScannedCode(data, mode, className, updateStudentInfoCountF
             // Ignoring scan for unassigned student
             return;
         } else {
-            if (mode === 'leaving') {
-                const map = getAttendanceState(activeClass);
-                const current = map?.get(studentFacultyNumber) || 'none';
-                console.warn('[Attendance] Leaving scan', {
-                    activeClass,
-                    studentFacultyNumber,
-                    current
-                });
+            const scanKey = `${activeClass}|${studentFacultyNumber}|${mode}`;
+            const now = Date.now();
+            const lastSeenAt = recentScanTimestamps.get(scanKey) || 0;
+            if (now - lastSeenAt < SCAN_DEBOUNCE_MS) {
+                return;
             }
+            recentScanTimestamps.set(scanKey, now);
+
             const result = updateAttendanceState(activeClass, studentFacultyNumber, mode, updateStudentInfoCountFn);
             if (result?.changed) {
                 const storedStudents = loadClassStudentsFromStorage(activeClass) || [];
