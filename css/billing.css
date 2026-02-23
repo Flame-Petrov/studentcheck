@@ -22,7 +22,7 @@ body {
 }
 
 .teacher-navbar .navbar-logo {
-    position: static;
+    position: relative;
     margin: 0;
 }
 
