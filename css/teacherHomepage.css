@@ -105,7 +105,7 @@
     border-radius: 14px;
     cursor: pointer;
     padding: 16px 22px;
-    box-shadow: 0 8px 20px rgba(55,65,81,0.35);
+    box-shadow: none;
     transition: background 0.25s ease, transform 120ms ease, box-shadow 0.25s ease;
     position: relative;
     overflow: hidden;
@@ -113,10 +113,10 @@
 .add-class-btn:hover {
     /* Highlight on hover: slightly brighter and stronger glow */
     background: #4b5563; /* gray-600 */
-    box-shadow: 0 12px 26px rgba(55,65,81,0.42);
+    box-shadow: none;
     transform: translateY(-1px);
 }
-.add-class-btn:active { transform: translateY(2px); box-shadow: 0 4px 14px rgba(31,41,55,0.4); }
+.add-class-btn:active { transform: translateY(2px); box-shadow: none; }
 
 /* Individual class buttons (blue) */
 .newClassBtn {
@@ -133,7 +133,7 @@
     border-radius: 14px;
     cursor: pointer;
     padding: 16px 22px;
-    box-shadow: 0 8px 22px rgba(37,99,235,0.38);
+    box-shadow: none;
     transition: background 0.25s ease, transform 120ms ease, box-shadow 0.25s ease;
     position: relative;
     overflow: hidden;
@@ -141,22 +141,22 @@
 .newClassBtn:hover {
     /* Highlight on hover: slightly brighter and stronger glow */
     background: #1d4ed8; /* blue-700 */
-    box-shadow: 0 12px 28px rgba(29,78,216,0.46);
+    box-shadow: none;
     transform: translateY(-1px);
 }
-.newClassBtn:active { transform: translateY(2px); box-shadow: 0 5px 16px rgba(29,78,216,0.4); }
+.newClassBtn:active { transform: translateY(2px); box-shadow: none; }
 
 /* Ready state visuals */
 .newClassBtn.class-ready {
     background: #059669; /* emerald-600 */
-    box-shadow: 0 8px 22px rgba(5,150,105,0.38);
+    box-shadow: none;
 }
 .newClassBtn.class-ready:hover {
     background: #10b981; /* emerald-500, brighter */
-    box-shadow: 0 12px 28px rgba(16,185,129,0.46);
+    box-shadow: none;
     transform: translateY(-1px);
 }
-.newClassBtn.class-ready:active { box-shadow: 0 5px 16px rgba(4,120,87,0.45); }
+.newClassBtn.class-ready:active { box-shadow: none; }
 
 /* Temporary ready badge shown on top of class button */
 .newClassBtn .ready-badge {
