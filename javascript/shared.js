@@ -670,7 +670,7 @@
       if (brandBtn) {
         brandBtn.addEventListener('click', () => {
           closeMenu();
-          window.location.href = 'index.html';
+          window.location.reload();
         });
       }
       panel.addEventListener('click', (e) => {
