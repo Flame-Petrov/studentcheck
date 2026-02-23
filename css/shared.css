@@ -356,12 +356,12 @@ body[aria-busy="true"] .navbar-logo {
 
 @media (max-width: 480px) {
   .nav-menu-panel {
-    --menu-control-size: 40px;
+    --menu-control-size: 56px;
   }
 
   .nav-control-brand-btn {
-    width: 40px;
-    height: 40px;
+    width: var(--menu-control-size);
+    height: var(--menu-control-size);
   }
 
   .nav-control-label-brand {
