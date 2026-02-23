@@ -67,6 +67,13 @@
     width: 100%;
 }
 
+#classList > li,
+.classes-list > li {
+    width: min(100%, var(--class-list-button-width));
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .classes-controls {
     width: 100%;
     display: flex;
@@ -113,7 +120,7 @@
 
 /* Individual class buttons (blue) */
 .newClassBtn {
-    width: min(100%, var(--class-list-button-width));
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
     min-height: 54px;
@@ -1320,6 +1327,11 @@ body.delete-popup-active #addClassBtn {
         border-radius: 14px !important;
         -webkit-appearance: none;
         appearance: none;
+    }
+
+    #classList > li,
+    .classes-list > li {
+        width: 100%;
     }
 }
 
