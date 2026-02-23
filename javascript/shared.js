@@ -426,10 +426,23 @@
   function updateSelectOptions() {
     const lang = getLanguage();
     const optionMap = {
-      '': t('any') || 'Any',
       bachelor: t('bachelor') || 'Bachelor',
       master: t('master') || 'Master',
       phd: t('phd') || 'PhD'
+    };
+    const emptyOptionBySelectId = {
+      filterLevel: t('level') || 'Level',
+      createClassFilterLevel: t('level') || 'Level',
+      addStudentsFilterLevel: t('level') || 'Level',
+      filterFaculty: t('faculty') || 'Faculty',
+      createClassFilterFaculty: t('faculty') || 'Faculty',
+      addStudentsFilterFaculty: t('faculty') || 'Faculty',
+      filterSpecialization: t('specialization') || 'Specialization',
+      createClassFilterSpecialization: t('specialization') || 'Specialization',
+      addStudentsFilterSpecialization: t('specialization') || 'Specialization',
+      filterGroup: t('group') || 'Group',
+      createClassFilterGroup: t('group') || 'Group',
+      addStudentsFilterGroup: t('group') || 'Group'
     };
     const localizedOptionMap = {
       economics: { en: 'Economics', bg: 'Икономика' },
@@ -447,6 +460,11 @@
     };
     document.querySelectorAll('select').forEach(select => {
       Array.from(select.options).forEach(opt => {
+        if (opt.value === '') {
+          const label = emptyOptionBySelectId[select.id] || t('any') || 'Any';
+          opt.textContent = label;
+          return;
+        }
         if (optionMap.hasOwnProperty(opt.value)) {
           opt.textContent = optionMap[opt.value];
           return;
