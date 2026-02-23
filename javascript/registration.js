@@ -9,7 +9,7 @@
     const track = document.getElementById('slidesTrack');
     const progressBar = document.getElementById('progressBar');
 
-    const backBtn = document.getElementById('backBtn');
+    let backBtn = null;
     const nextBtn = document.getElementById('nextBtn');
     const finishBtn = document.getElementById('finishBtn');
     const actions = document.querySelector('.actions'); // container for navigation buttons
@@ -224,6 +224,22 @@
 
     }
 
+    function ensureBackButton() {
+        if (backBtn && backBtn.isConnected) return backBtn;
+        if (!actions) return null;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'backBtn';
+        btn.className = 'btn btn-secondary';
+        btn.textContent = 'Back';
+        btn.addEventListener('click', back);
+
+        actions.prepend(btn);
+        backBtn = btn;
+        return backBtn;
+    }
+
 
     function updateUI() {
     // Activate current slide; hide others
@@ -231,14 +247,19 @@
         const progress = ((step + 1) / TOTAL_STEPS) * 100;
         progressBar.style.width = progress + '%';
 
-            // Hide Back button entirely on first slide, show on others
-            if (step === 0) {
-                backBtn.style.display = 'none';
-            } else {
-                backBtn.style.display = 'inline-block';
-                backBtn.disabled = false;
-                backBtn.textContent = 'Back';
+        // Create Back button only when needed (steps > 0) to avoid first-paint flicker.
+        if (step === 0) {
+            if (backBtn && backBtn.parentElement) {
+                backBtn.parentElement.removeChild(backBtn);
             }
+            backBtn = null;
+        } else {
+            const dynamicBackBtn = ensureBackButton();
+            if (dynamicBackBtn) {
+                dynamicBackBtn.disabled = false;
+                dynamicBackBtn.textContent = 'Back';
+            }
+        }
         if (step < TOTAL_STEPS - 1) {
             nextBtn.style.display = 'inline-block';
             finishBtn.classList.add('finish-hidden');
@@ -805,7 +826,6 @@
 
 
     nextBtn.addEventListener('click', next);
-    backBtn.addEventListener('click', back);
     finishBtn.addEventListener('click', finish);
 
 
