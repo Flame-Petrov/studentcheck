@@ -49,7 +49,7 @@ function ensureClassOptionsOverlay() {
             </div>
             <p id="classOptionsError" class="class-options-error" aria-live="polite"></p>
             <div class="class-options-footer">
-                <button type="button" id="classOptionsBillingBtn" class="role-button secondary-green">Billing Page</button>
+                <button type="button" id="classOptionsBillingBtn" class="role-button secondary-green" data-i18n="billing_page">Billing Page</button>
                 <button type="button" id="classOptionsDeleteBtn" class="role-button danger" data-i18n="delete_class_btn">Delete Class</button>
             </div>
         </div>`;
@@ -94,7 +94,7 @@ export function openClassOptionsOverlay(className) {
     setClassOptionsError('');
     
     const titleEl = classOptionsOverlay.querySelector('#classOptionsTitle');
-    if (titleEl) titleEl.textContent = 'Class Options';
+    if (titleEl) titleEl.textContent = i18nText('class_options_title', 'Class Options');
     const nameEl = classOptionsOverlay.querySelector('#classOptionsClassName');
     if (nameEl) nameEl.textContent = resolvedName || 'Class';
     
@@ -400,7 +400,7 @@ function showClassOptionsToast(message, tone = 'success') {
 function onDeleteClassFromOptions() {
     const name = getActiveClassName();
     openConfirmOverlay(
-        'Are you sure you want to delete this class?',
+        i18nText('confirm_delete_class', 'Are you sure you want to delete this class?'),
         () => {
             deleteClass(name);
             closeClassOptionsOverlay();

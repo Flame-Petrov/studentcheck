@@ -154,6 +154,8 @@
       full_name_label: 'Full Name',
       attended_classes_label: 'Attended Classes',
       remove_from_class: 'Remove from Class',
+      billing_page: 'Billing Page',
+      confirm_delete_class: 'Are you sure you want to delete this class?',
       confirm_remove_student_prefix: 'Are you sure you want to remove',
       confirm_remove_student_suffix: 'from the class?',
       this_student: 'this student',
@@ -286,6 +288,8 @@
       full_name_label: 'Три имена',
       attended_classes_label: 'Посетени занятия',
       remove_from_class: 'Премахни от дисциплината',
+      billing_page: 'Страница за плащане',
+      confirm_delete_class: 'Сигурни ли сте, че искате да изтриете тази дисциплина?',
       confirm_remove_student_prefix: 'Сигурни ли сте, че искате да премахнете',
       confirm_remove_student_suffix: 'от дисциплината?',
       this_student: 'този студент',
@@ -597,8 +601,12 @@
   function updateNavClusterLabels() {
     const brandLabel = document.getElementById('navControlBrandLabel');
     const languageLabel = document.getElementById('navControlLanguageLabel');
+    const logoutLabel = document.getElementById('navMenuLogoutLabel');
+    const logoutBtn = document.getElementById('navMenuLogoutBtn');
     if (brandLabel) brandLabel.textContent = t('brand_label') || 'E-Trek';
     if (languageLabel) languageLabel.textContent = t('language_label') || 'Language';
+    if (logoutLabel) logoutLabel.textContent = t('log_out') || 'Log out';
+    if (logoutBtn) logoutBtn.setAttribute('aria-label', t('log_out') || 'Log out');
   }
 
   function ensureNavControlCluster(btn) {
