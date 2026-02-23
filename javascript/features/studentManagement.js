@@ -47,8 +47,66 @@ function getStudentFacultyNumber(student) {
     return student?.faculty_number || student?.facultyNumber || student?.faculty || '';
 }
 
+function decodeBase64Utf8(input) {
+    try {
+        const normalized = String(input || '').trim().replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+        const raw = atob(padded);
+        const bytes = Uint8Array.from(raw, (c) => c.charCodeAt(0));
+        return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    } catch (_) {
+        return '';
+    }
+}
+
+function looksLikeEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+
+function decryptStudentEmail(rawValue) {
+    const raw = String(rawValue || '').trim();
+    if (!raw) return '';
+    if (looksLikeEmail(raw)) return raw;
+
+    // Optional app-level hook for encrypted values (if provided elsewhere).
+    // Expected signature: window.decryptStudentEmail(cipherText) => plainEmail
+    try {
+        if (typeof window.decryptStudentEmail === 'function') {
+            const decrypted = String(window.decryptStudentEmail(raw) || '').trim();
+            if (looksLikeEmail(decrypted)) return decrypted;
+        }
+    } catch (_) {}
+
+    // Optional object hook: window.EmailCrypto.decryptEmail(cipherText)
+    try {
+        if (window.EmailCrypto && typeof window.EmailCrypto.decryptEmail === 'function') {
+            const decrypted = String(window.EmailCrypto.decryptEmail(raw) || '').trim();
+            if (looksLikeEmail(decrypted)) return decrypted;
+        }
+    } catch (_) {}
+
+    // Common transport format: "enc:<base64>"
+    if (raw.toLowerCase().startsWith('enc:')) {
+        const decoded = decodeBase64Utf8(raw.slice(4));
+        if (looksLikeEmail(decoded)) return decoded;
+    }
+
+    // Fallback: treat value as base64-encoded UTF-8 text.
+    const decoded = decodeBase64Utf8(raw);
+    if (looksLikeEmail(decoded)) return decoded;
+
+    return raw;
+}
+
 function getStudentEmail(student) {
-    return student?.email || student?.email_address || student?.emailAddress || '';
+    const emailRaw =
+        student?.email
+        || student?.email_address
+        || student?.emailAddress
+        || student?.encrypted_email
+        || student?.email_encrypted
+        || '';
+    return decryptStudentEmail(emailRaw);
 }
 
 function getStudentGroup(student) {
