@@ -273,6 +273,7 @@ body[aria-busy="true"] .navbar-logo {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  height: 100%;
 }
 
 .nav-menu-item {
@@ -285,6 +286,33 @@ body[aria-busy="true"] .navbar-logo {
 .nav-menu-item-brand {
   grid-template-columns: auto 1fr;
   align-items: center;
+}
+
+.nav-menu-spacer {
+  margin-top: auto;
+}
+
+.nav-menu-logout-btn {
+  width: 100%;
+  min-height: 52px;
+  border: 2px solid #7f1d1d;
+  border-radius: 12px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(127, 29, 29, 0.32);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+
+.nav-menu-logout-btn:hover {
+  background: #b91c1c;
+}
+
+.nav-menu-logout-btn:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 4px 12px rgba(127, 29, 29, 0.28);
 }
 
 .nav-control-brand-btn {

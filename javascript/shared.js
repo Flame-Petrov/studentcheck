@@ -621,6 +621,8 @@
               <span id="navControlBrandLabel" class="nav-control-label nav-control-label-brand">E-Trek</span>
             </div>
             <div class="nav-menu-item nav-menu-item-language" id="navMenuLanguageRow"></div>
+            <div class="nav-menu-spacer" aria-hidden="true"></div>
+            <button id="navMenuLogoutBtn" class="nav-menu-logout-btn" type="button">Log out</button>
           </div>
         </aside>
       `;
@@ -643,6 +645,7 @@
     const panel = document.getElementById('navControlCluster');
     const backdrop = document.getElementById('navMenuBackdrop');
     const brandBtn = document.getElementById('navControlBrandBtn');
+    const logoutBtn = document.getElementById('navMenuLogoutBtn');
     if (!panel || !backdrop) return;
 
     logoBtn.setAttribute('aria-controls', 'navControlCluster');
@@ -671,6 +674,17 @@
         brandBtn.addEventListener('click', () => {
           closeMenu();
           window.location.reload();
+        });
+      }
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          try {
+            sessionStorage.removeItem('studentData');
+            sessionStorage.removeItem('teacherData');
+            localStorage.removeItem('teacherEmail');
+          } catch (_) {}
+          closeMenu();
+          window.location.replace('index.html');
         });
       }
       panel.addEventListener('click', (e) => {
