@@ -617,12 +617,7 @@
       </div>
     `;
 
-    const navSlot = document.getElementById('navbarLanguageSlot');
-    if (navSlot) {
-      navSlot.appendChild(btn);
-    } else {
-      document.body.appendChild(btn);
-    }
+    document.body.appendChild(btn);
     document.body.appendChild(overlay);
 
     const updateLangButtons = () => {
@@ -668,3 +663,4 @@
 
   window.i18n = { t, setLanguage, getLanguage, applyTranslations };
 })();
+
