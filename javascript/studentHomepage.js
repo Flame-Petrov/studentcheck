@@ -318,9 +318,21 @@ function closeClassDetailsOverlay(){
 }
 
 async function loadAttendedClassesCount(className, studentId, facultyNumber){
+	const classMeta = await getClassMetaByName(className);
+	const classId = classMeta?.class_id ?? classMeta?.id ?? null;
+	let total_completed_classes_count = classMeta?.completed_classes_count
+		?? classMeta?.total_completed_classes_count
+		?? null;
 
+	if (!classId) {
+		console.error("Error resolving class ID for class:", className);
+		return;
+	}
 
-	const classId = await getClassIdByName(className);
+	// Prefer value from class record (classes.completed_classes_count)
+	if (total_completed_classes_count === null || total_completed_classes_count === undefined) {
+		total_completed_classes_count = await fetchCompletedClassesCountFromClassRecord(classId);
+	}
 
 	const response = await fetch(serverBaseUrl + ENDPOINTS.getClassAttendanceSummary + `?class_id=${encodeURIComponent(classId)}`, {
 		method: 'GET',
@@ -350,31 +362,18 @@ async function loadAttendedClassesCount(className, studentId, facultyNumber){
 			}
 		}
 
-		let total_completed_classes_count = data.total_completed_classes_count
-			?? data.total_classes_count
-			?? data.total_completed
-			?? data.total
-			?? data.total_started_classes_count
-			?? data.started_classes_count
-			?? data.total_sessions
-			?? data.total_sessions_count
-			?? data.completed_classes_count
-			?? null;
-
-		// Fallback: infer class total from attendance rows when aggregate field is missing.
-		// Typical summaries include per-student count; class total is the max count value.
-		if (total_completed_classes_count === null && Array.isArray(list) && list.length > 0) {
-			const maxCount = list.reduce((max, item) => {
-				const rowCount = Number(
-					item?.count
-					?? item?.attendance_count
-					?? item?.attended_classes_count
-					?? item?.completed_classes_count
-					?? 0
-				);
-				return Number.isFinite(rowCount) ? Math.max(max, rowCount) : max;
-			}, 0);
-			total_completed_classes_count = maxCount;
+		// Only fallback to summary-level aggregate if class-record value is unavailable.
+		if (total_completed_classes_count === null || total_completed_classes_count === undefined) {
+			total_completed_classes_count = data.total_completed_classes_count
+				?? data.total_classes_count
+				?? data.total_completed
+				?? data.total
+				?? data.total_started_classes_count
+				?? data.started_classes_count
+				?? data.total_sessions
+				?? data.total_sessions_count
+				?? data.completed_classes_count
+				?? 0;
 		}
 
 		const attendanceCountElement = document.getElementById('attendedClassesCount');
@@ -393,7 +392,7 @@ async function loadAttendedClassesCount(className, studentId, facultyNumber){
 
 // End of Class Details Overlay functions ========================
 
-async function getClassIdByName(className){
+async function getClassMetaByName(className){
 	const response = await fetch(serverBaseUrl + ENDPOINTS.getClassIdByName + `?class_name=${encodeURIComponent(className)}`, {
 		method: 'GET',
 		headers: {
@@ -402,11 +401,42 @@ async function getClassIdByName(className){
 	});
 
 	if(response.ok){
-		const data = await response.json();
-		
-
-		return data.class_id;
+		return await response.json();
 	}
+	return null;
+}
+
+async function fetchCompletedClassesCountFromClassRecord(classId) {
+	const id = encodeURIComponent(classId);
+	const attempts = [
+		`${serverBaseUrl}/classes/${id}`,
+		`${serverBaseUrl}/classes?class_id=${id}`,
+		`${serverBaseUrl}/get_class_by_id?class_id=${id}`
+	];
+
+	for (const url of attempts) {
+		try {
+			const response = await fetch(url, {
+				method: 'GET',
+				headers: { 'Content-Type': 'application/json' }
+			});
+			if (!response.ok) continue;
+			const data = await response.json();
+			const record = Array.isArray(data) ? data[0] : (data?.class || data?.data || data);
+			const value = record?.completed_classes_count;
+			if (value !== null && value !== undefined) {
+				const parsed = Number(value);
+				return Number.isFinite(parsed) ? parsed : 0;
+			}
+		} catch (_) {}
+	}
+
+	return null;
+}
+
+async function getClassIdByName(className){
+	const classMeta = await getClassMetaByName(className);
+	return classMeta?.class_id ?? classMeta?.id ?? null;
 }
 
 
