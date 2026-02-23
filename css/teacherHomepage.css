@@ -1211,6 +1211,9 @@ body.delete-popup-active #addClassBtn {
     border-radius: 16px;
     width: min(92vw, 560px);
     min-height: 320px;
+    height: 90vh;
+    height: 90dvh;
+    max-height: 90dvh;
     box-shadow: 0 12px 30px rgba(0,0,0,0.25);
     padding: 24px 22px 26px 22px;
     position: relative;
@@ -1225,7 +1228,7 @@ body.delete-popup-active #addClassBtn {
 }
 #attendanceOverlay .attendance-list {
     flex: 1 1 auto;
-    max-height: 25vh;
+    max-height: none;
     overflow-y: auto;
     padding: 0 2px;
 }
@@ -1235,13 +1238,18 @@ body.delete-popup-active #addClassBtn {
         max-height: 40vh;
     }
     #attendanceOverlay .attendance-list {
-        max-height: 25vh;
+        max-height: none;
     }
 }
 
 @media (max-width: 420px) {
+    #attendanceOverlay .attendance-popup {
+        height: 90vh;
+        height: 90dvh;
+        max-height: 90dvh;
+    }
     #attendanceOverlay .attendance-list {
-        max-height: 25vh;
+        max-height: none;
     }
 }
 #attendanceOverlay .attendance-ul {
