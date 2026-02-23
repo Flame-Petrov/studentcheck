@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Rajdhani:wght@500;700&display=swap');
+
 /* Global reset and mobile viewport fixes */
 html, body {
   margin: 0;
@@ -24,8 +26,30 @@ html, body {
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0,0,0,0.12);
   z-index: 10000;
+  overflow: visible;
   -webkit-user-select: none;
   user-select: none;
+}
+
+.navbar-logo::after {
+  content: "StudentCheck";
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  color: #111827;
+  font-family: "Orbitron", "Rajdhani", sans-serif;
+  font-size: clamp(1rem, 1.6vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .navbar-logo img {
@@ -45,6 +69,12 @@ html, body {
     width: 44px;    /* smaller on mobile */
     height: 44px;   /* smaller on mobile */
     padding: 0;     /* remove inner padding */
+  }
+
+  .navbar-logo::after {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
   }
 }
 
@@ -72,11 +102,29 @@ body[aria-busy="true"] .navbar-logo {
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
+  overflow: visible;
 }
 .lang-toggle-btn .lang-toggle-icon {
   width: 22px;
   height: 22px;
   display: block;
+}
+
+.lang-toggle-btn::after {
+  content: "Language";
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4b5563;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .lang-overlay {
@@ -178,6 +226,11 @@ body[aria-busy="true"] .navbar-logo {
     left: 10px;
     width: 44px;
     height: 44px;
+  }
+
+  .lang-toggle-btn::after {
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
   }
 }
 
