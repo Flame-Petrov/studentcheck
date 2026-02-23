@@ -9,6 +9,23 @@ html, body {
   overflow-x: hidden; /* avoid sideways scroll due to small overflows */
 }
 
+/* Shared page width wrapper for auth/home cards */
+.page-container {
+  width: 100%;
+  max-width: 560px;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 480px) {
+  .page-container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
 /* Reusable navbar logo component */
 
 .navbar-logo {
