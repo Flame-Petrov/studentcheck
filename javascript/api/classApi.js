@@ -10,6 +10,7 @@ import { saveClassesMap } from '../storage/classStorage.js';
 import { saveClassStudents, loadClassStudentsFromStorage } from '../storage/studentStorage.js';
 
 let cachedFetchClassesRoute = null;
+const FETCH_CLASSES_ROUTE_KEY = 'fetchClassesRouteKey';
 
 /**
  * Create a new class
@@ -50,16 +51,24 @@ export async function fetchClasses(teacherEmail) {
     };
 
     const routeOrder = [
-        'classes_query_teacherEmail',
-        'classes_query_teacher_email',
-        'classes_path_email',
         'get_teacher_classes_teacherEmail',
         'get_teacher_classes_teacher_email',
         'get_classes_by_teacher_teacherEmail',
-        'get_classes_by_teacher_teacher_email'
+        'get_classes_by_teacher_teacher_email',
+        'classes_query_teacherEmail',
+        'classes_query_teacher_email',
+        'classes_path_email'
     ];
 
     const orderedRoutes = [];
+    if (!cachedFetchClassesRoute) {
+        try {
+            const persisted = localStorage.getItem(FETCH_CLASSES_ROUTE_KEY);
+            if (persisted && routeBuilders[persisted]) {
+                cachedFetchClassesRoute = persisted;
+            }
+        } catch (_) {}
+    }
     if (cachedFetchClassesRoute && routeBuilders[cachedFetchClassesRoute]) {
         orderedRoutes.push(cachedFetchClassesRoute);
     }
@@ -84,6 +93,9 @@ export async function fetchClasses(teacherEmail) {
 
             const data = await result.json();
             cachedFetchClassesRoute = routeKey;
+            try {
+                localStorage.setItem(FETCH_CLASSES_ROUTE_KEY, routeKey);
+            } catch (_) {}
             // Normalize to { classes: [...] } for all callers
             if (Array.isArray(data)) return { classes: data };
             if (Array.isArray(data?.classes)) return { classes: data.classes };
