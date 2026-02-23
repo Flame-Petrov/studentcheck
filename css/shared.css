@@ -270,7 +270,7 @@ body[aria-busy="true"] .navbar-logo {
 .nav-control-brand-btn {
   width: var(--menu-control-size);
   height: var(--menu-control-size);
-  border: 2px solid #cbd5e1;
+  border: 2px solid #000000;
   border-radius: 10px;
   padding: 0;
   margin: 0;
@@ -280,6 +280,7 @@ body[aria-busy="true"] .navbar-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
 }
 
 .nav-control-brand-btn img {
@@ -310,8 +311,15 @@ body[aria-busy="true"] .navbar-logo {
   margin: 0;
   width: var(--menu-control-size);
   height: var(--menu-control-size);
-  border: 2px solid #cbd5e1;
+  border: 2px solid #000000;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.38);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.nav-control-brand-btn:active,
+.nav-menu-panel .lang-toggle-btn:active {
+  transform: translateY(2px) scale(0.97);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
 }
 
 .nav-control-label {
