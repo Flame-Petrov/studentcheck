@@ -365,12 +365,12 @@ body[aria-busy="true"] .navbar-logo {
   }
 
   .nav-control-label-brand {
-    font-size: 0.9rem;
+    font-size: 1.1rem;
     letter-spacing: 0.06em;
   }
 
   .nav-control-label-language {
-    font-size: 0.75rem;
+    font-size: 0.95rem;
     letter-spacing: 0.06em;
   }
 }
