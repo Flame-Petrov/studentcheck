@@ -168,8 +168,39 @@
 	}
 }
 
-.navbar-logo {
+.student-navbar {
+	position: fixed;
+	top: 12px;
+	left: 12px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 12px;
 	z-index: 0;
+}
+
+.student-navbar .navbar-logo {
+	position: static;
+	margin: 0;
+}
+
+.student-navbar .navbar-language-slot {
+	display: flex;
+	align-items: center;
+}
+
+.student-navbar .lang-toggle-btn {
+	position: static;
+	top: auto;
+	right: auto;
+}
+
+@media (max-width: 480px) {
+	.student-navbar {
+		top: 10px;
+		left: 10px;
+		gap: 10px;
+	}
 }
 
 .overlay-background {
