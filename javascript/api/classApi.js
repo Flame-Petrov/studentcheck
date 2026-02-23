@@ -35,21 +35,24 @@ export async function fetchClasses(teacherEmail) {
     if (!teacherEmail) {
         throw new Error('Teacher email is required');
     }
-    
-    const result = await fetch(
-        `${SERVER_BASE_URL + ENDPOINTS.createClass}?teacherEmail=${encodeURIComponent(teacherEmail)}`,
-        {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
-        }
-    );
-    
+
+    // Server route contract for class listing is path-based:
+    // GET /classes/:teacherEmail
+    const url = `${SERVER_BASE_URL + ENDPOINTS.createClass}/${encodeURIComponent(teacherEmail)}`;
+    const result = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+    });
+
     if (!result.ok) {
-        throw new Error(`Failed to fetch classes: ${result.status} ${result.statusText}`);
+        throw new Error(`Failed to fetch classes: ${result.status} ${result.statusText} (${url})`);
     }
-    
+
     const data = await result.json();
-    return data;
+    // Normalize to { classes: [...] } for all callers
+    if (Array.isArray(data)) return { classes: data };
+    if (Array.isArray(data?.classes)) return { classes: data.classes };
+    return { classes: [] };
 }
 
 /**
