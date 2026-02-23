@@ -597,6 +597,9 @@
         <aside id="navControlCluster" class="nav-menu-panel" aria-hidden="true">
           <div class="nav-menu-content">
             <div class="nav-menu-item nav-menu-item-brand">
+              <button id="navControlBrandBtn" class="nav-control-brand-btn" type="button" aria-label="Home">
+                <img src="images/new_main_logo.png" alt="Home">
+              </button>
               <span id="navControlBrandLabel" class="nav-control-label nav-control-label-brand">E-Trek</span>
             </div>
             <div class="nav-menu-item nav-menu-item-language" id="navMenuLanguageRow"></div>
@@ -621,6 +624,7 @@
 
     const panel = document.getElementById('navControlCluster');
     const backdrop = document.getElementById('navMenuBackdrop');
+    const brandBtn = document.getElementById('navControlBrandBtn');
     if (!panel || !backdrop) return;
 
     logoBtn.setAttribute('aria-controls', 'navControlCluster');
@@ -645,6 +649,12 @@
 
     if (!shell.dataset.bound) {
       backdrop.addEventListener('click', closeMenu);
+      if (brandBtn) {
+        brandBtn.addEventListener('click', () => {
+          closeMenu();
+          window.location.href = 'index.html';
+        });
+      }
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeMenu();
       });

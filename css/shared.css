@@ -262,7 +262,31 @@ body[aria-busy="true"] .navbar-logo {
 }
 
 .nav-menu-item-brand {
-  grid-template-columns: 1fr;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.nav-control-brand-btn {
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: 10px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-control-brand-btn img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  border-radius: inherit;
 }
 
 .nav-menu-shell.open {
@@ -293,11 +317,6 @@ body[aria-busy="true"] .navbar-logo {
 .nav-control-label-brand {
   display: inline-flex;
   align-items: center;
-  width: fit-content;
-  padding: 8px 16px;
-  border-radius: 10px;
-  background: #f8fafc;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.10);
   color: #111827;
   font-family: "Orbitron", "Rajdhani", sans-serif;
   font-size: clamp(1rem, 1.6vw, 1.35rem);
@@ -323,8 +342,12 @@ body[aria-busy="true"] .navbar-logo {
 }
 
 @media (max-width: 480px) {
+  .nav-control-brand-btn {
+    width: 40px;
+    height: 40px;
+  }
+
   .nav-control-label-brand {
-    padding: 6px 10px;
     font-size: 0.9rem;
     letter-spacing: 0.06em;
   }
