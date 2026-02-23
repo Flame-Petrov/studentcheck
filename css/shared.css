@@ -295,10 +295,10 @@ body[aria-busy="true"] .navbar-logo {
 .nav-menu-logout-btn {
   width: var(--menu-control-size);
   height: var(--menu-control-size);
-  border: 2px solid #000000;
+  border: 2px solid #fecaca;
   border-radius: 10px;
-  background: #ffffff;
-  color: #111827;
+  background: #fff1f2;
+  color: #991b1b;
   cursor: pointer;
   box-shadow: none;
   transition: transform 0.14s ease, background 0.14s ease, color 0.14s ease;
@@ -309,8 +309,8 @@ body[aria-busy="true"] .navbar-logo {
 }
 
 .nav-menu-logout-btn:hover {
-  background: #f3f4f6;
-  color: #111827;
+  background: #ffe4e6;
+  color: #7f1d1d;
 }
 
 .nav-menu-logout-btn:active {
