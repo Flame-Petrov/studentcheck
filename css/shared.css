@@ -32,7 +32,7 @@ html, body {
 }
 
 .navbar-logo::after {
-  content: "StudentCheck";
+  content: "E-Trek";
   position: absolute;
   left: calc(100% + 12px);
   top: 50%;
