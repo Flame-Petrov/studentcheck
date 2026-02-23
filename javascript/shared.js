@@ -655,6 +655,18 @@
           window.location.href = 'index.html';
         });
       }
+      panel.addEventListener('click', (e) => {
+        const selected = e.target && e.target.closest
+          ? e.target.closest('button, a, input, select, textarea, [tabindex]')
+          : null;
+        if (!selected) return;
+        requestAnimationFrame(() => {
+          closeMenu();
+          if (typeof selected.focus === 'function') {
+            selected.focus({ preventScroll: true });
+          }
+        });
+      });
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeMenu();
       });
