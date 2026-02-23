@@ -13,8 +13,15 @@ html, body {
 .page-container {
   width: 100%;
   max-width: 560px;
+  display: flex;
+  justify-content: center;
   padding-left: 16px;
   padding-right: 16px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.page-container > .card {
   margin-left: auto;
   margin-right: auto;
 }
