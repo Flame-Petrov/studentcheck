@@ -216,32 +216,68 @@ body[aria-busy="true"] .navbar-logo {
 
 }
 
-/* Unified top-left controls block (for easier animation/editing) */
-.nav-control-cluster {
+/* Slide-out menu shell (logo stays visible; menu appears on click) */
+.nav-menu-shell {
   position: fixed;
-  top: 12px;
-  left: 12px;
+  inset: 0;
+  z-index: 10020;
+  pointer-events: none;
+}
+
+.nav-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.42);
+  opacity: 0;
+  transition: opacity 0.24s ease;
+}
+
+.nav-menu-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: min(420px, 30vw);
+  min-width: 280px;
+  max-width: 90vw;
+  background: #ffffff;
+  box-shadow: 12px 0 30px rgba(0, 0, 0, 0.24);
+  transform: translateX(-104%);
+  transition: transform 0.28s ease;
+  padding: 20px 16px;
+  box-sizing: border-box;
+}
+
+.nav-menu-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.nav-menu-item {
   display: grid;
-  grid-template-columns: auto auto;
-  grid-template-areas:
-    "logo brand"
-    "lang langlabel";
+  grid-template-columns: auto 1fr;
   align-items: center;
-  column-gap: 12px;
-  row-gap: 12px;
-  z-index: 10000;
+  gap: 12px;
 }
 
-.nav-control-cluster .navbar-logo {
-  grid-area: logo;
-  position: static;
-  top: auto;
-  left: auto;
-  margin: 0;
+.nav-menu-item-brand {
+  grid-template-columns: 1fr;
 }
 
-.nav-control-cluster .lang-toggle-btn {
-  grid-area: lang;
+.nav-menu-shell.open {
+  pointer-events: auto;
+}
+
+.nav-menu-shell.open .nav-menu-backdrop {
+  opacity: 1;
+}
+
+.nav-menu-shell.open .nav-menu-panel {
+  transform: translateX(0);
+}
+
+.nav-menu-panel .lang-toggle-btn {
   position: static;
   top: auto;
   left: auto;
@@ -252,17 +288,16 @@ body[aria-busy="true"] .navbar-logo {
 .nav-control-label {
   line-height: 1;
   white-space: nowrap;
-  pointer-events: none;
 }
 
 .nav-control-label-brand {
-  grid-area: brand;
   display: inline-flex;
   align-items: center;
+  width: fit-content;
   padding: 8px 16px;
   border-radius: 10px;
-  background: #ffffff;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  background: #f8fafc;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.10);
   color: #111827;
   font-family: "Orbitron", "Rajdhani", sans-serif;
   font-size: clamp(1rem, 1.6vw, 1.35rem);
@@ -272,7 +307,6 @@ body[aria-busy="true"] .navbar-logo {
 }
 
 .nav-control-label-language {
-  grid-area: langlabel;
   color: #4b5563;
   font-family: "Rajdhani", sans-serif;
   font-size: 0.9rem;
@@ -281,14 +315,14 @@ body[aria-busy="true"] .navbar-logo {
   text-transform: uppercase;
 }
 
-@media (max-width: 480px) {
-  .nav-control-cluster {
-    top: 10px;
-    left: 10px;
-    column-gap: 8px;
-    row-gap: 10px;
+@media (max-width: 768px) {
+  .nav-menu-panel {
+    width: 80vw;
+    min-width: 0;
   }
+}
 
+@media (max-width: 480px) {
   .nav-control-label-brand {
     padding: 6px 10px;
     font-size: 0.9rem;

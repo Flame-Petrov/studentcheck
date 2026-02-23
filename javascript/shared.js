@@ -1,36 +1,12 @@
 // Shared navbar logo click handler
 // Uses ONLY sessionStorage so login dies with the tab/window.
 (function(){
-  function getAuthStatus() {
-    // Teacher session data set by teacherLogin.js
-    try {
-      const teacherData = sessionStorage.getItem('teacherData');
-      if (teacherData) return { loggedIn: true, role: 'teacher' };
-    } catch(_) {}
-    // Student session data set by studentLogin.js
-    try {
-      const studentData = sessionStorage.getItem('studentData');
-      if (studentData) return { loggedIn: true, role: 'student' };
-    } catch(_) {}
-    // authToken optional; stored in sessionStorage after registration/login if needed
-    // We don't infer role from token alone to avoid accidental auto-login.
-    return { loggedIn: false, role: null };
-  }
-
   function handleLogoClick() {
-    const path = (window.location.pathname || '').toLowerCase();
-    const isStudentHome = path.endsWith('studenthomepage.html');
-    const isTeacherHome = path.endsWith('teacherhomepage.html');
-    if (!isStudentHome && !isTeacherHome) {
-      window.location.href = 'index.html';
+    if (window.NavMenu && typeof window.NavMenu.toggle === 'function' && window.NavMenu.isReady()) {
+      window.NavMenu.toggle();
       return;
     }
-    const { loggedIn, role } = getAuthStatus();
-    if (loggedIn) {
-      window.location.href = role === 'teacher' ? 'teacherHomepage.html' : 'studentHomepage.html';
-    } else {
-      window.location.href = 'index.html';
-    }
+    window.location.href = 'index.html';
   }
 
   window.handleLogoClick = handleLogoClick;
@@ -608,26 +584,31 @@
   }
 
   function ensureNavControlCluster(btn) {
-    let cluster = document.getElementById('navControlCluster');
-    if (!cluster) {
-      cluster = document.createElement('div');
-      cluster.id = 'navControlCluster';
-      cluster.className = 'nav-control-cluster';
+    const logoBtn = document.querySelector('.navbar-logo');
+    if (!logoBtn) return;
+
+    let shell = document.getElementById('navMenuShell');
+    if (!shell) {
+      shell = document.createElement('div');
+      shell.id = 'navMenuShell';
+      shell.className = 'nav-menu-shell';
+      shell.innerHTML = `
+        <div id="navMenuBackdrop" class="nav-menu-backdrop"></div>
+        <aside id="navControlCluster" class="nav-menu-panel" aria-hidden="true">
+          <div class="nav-menu-content">
+            <div class="nav-menu-item nav-menu-item-brand">
+              <span id="navControlBrandLabel" class="nav-control-label nav-control-label-brand">E-Trek</span>
+            </div>
+            <div class="nav-menu-item nav-menu-item-language" id="navMenuLanguageRow"></div>
+          </div>
+        </aside>
+      `;
+      document.body.appendChild(shell);
     }
 
-    const logoBtn = cluster.querySelector('.navbar-logo') || document.querySelector('.navbar-logo');
-    if (logoBtn) cluster.appendChild(logoBtn);
-
-    cluster.appendChild(btn);
-
-    let brandLabel = document.getElementById('navControlBrandLabel');
-    if (!brandLabel) {
-      brandLabel = document.createElement('span');
-      brandLabel.id = 'navControlBrandLabel';
-      brandLabel.className = 'nav-control-label nav-control-label-brand';
-      brandLabel.textContent = 'E-Trek';
-      cluster.appendChild(brandLabel);
-    }
+    const languageRow = document.getElementById('navMenuLanguageRow');
+    if (!languageRow) return;
+    if (!languageRow.contains(btn)) languageRow.prepend(btn);
 
     let languageLabel = document.getElementById('navControlLanguageLabel');
     if (!languageLabel) {
@@ -635,12 +616,47 @@
       languageLabel.id = 'navControlLanguageLabel';
       languageLabel.className = 'nav-control-label nav-control-label-language';
       languageLabel.textContent = 'Language';
-      cluster.appendChild(languageLabel);
+      languageRow.appendChild(languageLabel);
     }
 
-    if (!cluster.isConnected) {
-      document.body.appendChild(cluster);
+    const panel = document.getElementById('navControlCluster');
+    const backdrop = document.getElementById('navMenuBackdrop');
+    if (!panel || !backdrop) return;
+
+    logoBtn.setAttribute('aria-controls', 'navControlCluster');
+    logoBtn.setAttribute('aria-expanded', 'false');
+
+    function closeMenu() {
+      shell.classList.remove('open');
+      panel.setAttribute('aria-hidden', 'true');
+      logoBtn.setAttribute('aria-expanded', 'false');
     }
+
+    function openMenu() {
+      shell.classList.add('open');
+      panel.setAttribute('aria-hidden', 'false');
+      logoBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    function toggleMenu() {
+      if (shell.classList.contains('open')) closeMenu();
+      else openMenu();
+    }
+
+    if (!shell.dataset.bound) {
+      backdrop.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMenu();
+      });
+      shell.dataset.bound = 'true';
+    }
+
+    window.NavMenu = {
+      open: openMenu,
+      close: closeMenu,
+      toggle: toggleMenu,
+      isReady: () => !!document.getElementById('navMenuShell')
+    };
   }
 
   function ensureLanguageUI() {
