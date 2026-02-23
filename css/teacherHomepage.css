@@ -81,7 +81,7 @@
 
 /* Add Class button (darker gray) */
 .add-class-btn {
-    width: min(100%, 260px);
+    width: 100%;
     min-height: 54px;
     font-size: 1.15rem;
     font-weight: 600;
@@ -107,7 +107,7 @@
 
 /* Individual class buttons (blue) */
 .newClassBtn {
-    width: min(100%, 260px);
+    width: 100%;
     min-height: 54px;
     font-size: 1.2rem; /* slightly bigger text */
     font-weight: 600;
