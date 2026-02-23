@@ -9,6 +9,8 @@ import { SERVER_BASE_URL, ENDPOINTS, getTeacherEmail } from '../config/api.js';
 import { saveClassesMap } from '../storage/classStorage.js';
 import { saveClassStudents, loadClassStudentsFromStorage } from '../storage/studentStorage.js';
 
+let cachedFetchClassesRoute = null;
+
 /**
  * Create a new class
  * @param {string} name - Class name
@@ -37,20 +39,38 @@ export async function fetchClasses(teacherEmail) {
     }
 
     const encoded = encodeURIComponent(teacherEmail);
-    const candidateUrls = [
-        // Most common variants across backend revisions:
-        `${SERVER_BASE_URL + ENDPOINTS.createClass}?teacherEmail=${encoded}`,
-        `${SERVER_BASE_URL + ENDPOINTS.createClass}?teacher_email=${encoded}`,
-        `${SERVER_BASE_URL + ENDPOINTS.createClass}/${encoded}`,
-        `${SERVER_BASE_URL}/get_teacher_classes?teacherEmail=${encoded}`,
-        `${SERVER_BASE_URL}/get_teacher_classes?teacher_email=${encoded}`,
-        `${SERVER_BASE_URL}/get_classes_by_teacher?teacherEmail=${encoded}`,
-        `${SERVER_BASE_URL}/get_classes_by_teacher?teacher_email=${encoded}`
+    const routeBuilders = {
+        classes_query_teacherEmail: () => `${SERVER_BASE_URL + ENDPOINTS.createClass}?teacherEmail=${encoded}`,
+        classes_query_teacher_email: () => `${SERVER_BASE_URL + ENDPOINTS.createClass}?teacher_email=${encoded}`,
+        classes_path_email: () => `${SERVER_BASE_URL + ENDPOINTS.createClass}/${encoded}`,
+        get_teacher_classes_teacherEmail: () => `${SERVER_BASE_URL}/get_teacher_classes?teacherEmail=${encoded}`,
+        get_teacher_classes_teacher_email: () => `${SERVER_BASE_URL}/get_teacher_classes?teacher_email=${encoded}`,
+        get_classes_by_teacher_teacherEmail: () => `${SERVER_BASE_URL}/get_classes_by_teacher?teacherEmail=${encoded}`,
+        get_classes_by_teacher_teacher_email: () => `${SERVER_BASE_URL}/get_classes_by_teacher?teacher_email=${encoded}`
+    };
+
+    const routeOrder = [
+        'classes_query_teacherEmail',
+        'classes_query_teacher_email',
+        'classes_path_email',
+        'get_teacher_classes_teacherEmail',
+        'get_teacher_classes_teacher_email',
+        'get_classes_by_teacher_teacherEmail',
+        'get_classes_by_teacher_teacher_email'
     ];
+
+    const orderedRoutes = [];
+    if (cachedFetchClassesRoute && routeBuilders[cachedFetchClassesRoute]) {
+        orderedRoutes.push(cachedFetchClassesRoute);
+    }
+    routeOrder.forEach((key) => {
+        if (!orderedRoutes.includes(key)) orderedRoutes.push(key);
+    });
 
     const attempts = [];
 
-    for (const url of candidateUrls) {
+    for (const routeKey of orderedRoutes) {
+        const url = routeBuilders[routeKey]();
         try {
             const result = await fetch(url, {
                 method: 'GET',
@@ -63,6 +83,7 @@ export async function fetchClasses(teacherEmail) {
             }
 
             const data = await result.json();
+            cachedFetchClassesRoute = routeKey;
             // Normalize to { classes: [...] } for all callers
             if (Array.isArray(data)) return { classes: data };
             if (Array.isArray(data?.classes)) return { classes: data.classes };

@@ -5,7 +5,7 @@
  * Pure functions that return promises.
  */
 
-import { SERVER_BASE_URL, ENDPOINTS } from '../config/api.js';
+import { SERVER_BASE_URL, ENDPOINTS, getTeacherEmail } from '../config/api.js';
 import { serializeTimestamp } from '../utils/helpers.js';
 import { logError } from '../utils/helpers.js';
 
@@ -239,12 +239,60 @@ export async function saveStudentTimestamps(classId, timestampsMap) {
  * @returns {Promise<Response>} Fetch response
  */
 export async function updateCompletedClassesCount(classId) {
-    const response = await fetch(SERVER_BASE_URL + ENDPOINTS.updateCompletedClassesCount, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            class_id: classId
-        })
-    });
-    return response;
+    const teacherEmail = getTeacherEmail();
+    const endpointBase = SERVER_BASE_URL + ENDPOINTS.updateCompletedClassesCount;
+    const encodedTeacherEmail = teacherEmail ? encodeURIComponent(teacherEmail) : '';
+
+    const attempts = [
+        {
+            url: endpointBase,
+            body: { class_id: classId }
+        },
+        {
+            url: endpointBase,
+            body: { classId: classId }
+        },
+        {
+            url: endpointBase,
+            body: { class_id: classId, teacherEmail: teacherEmail || undefined }
+        },
+        {
+            url: endpointBase,
+            body: { classId: classId, teacher_email: teacherEmail || undefined }
+        },
+        {
+            url: `${endpointBase}?class_id=${encodeURIComponent(classId)}`,
+            body: null
+        },
+        {
+            url: teacherEmail ? `${endpointBase}/${encodedTeacherEmail}` : endpointBase,
+            body: { class_id: classId }
+        }
+    ];
+
+    const errors = [];
+
+    for (const attempt of attempts) {
+        try {
+            const response = await fetch(attempt.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: attempt.body ? JSON.stringify(attempt.body) : undefined
+            });
+
+            if (response.ok) {
+                return response;
+            }
+
+            let bodyText = '';
+            try {
+                bodyText = await response.text();
+            } catch (_) {}
+            errors.push(`${response.status} ${response.statusText} (${attempt.url}) ${bodyText}`.trim());
+        } catch (e) {
+            errors.push(`NETWORK_ERROR (${attempt.url}): ${e.message}`);
+        }
+    }
+
+    throw new Error(`Failed to update completed classes count. Tried: ${errors.join(' | ')}`);
 }
