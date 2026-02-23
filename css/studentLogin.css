@@ -126,6 +126,13 @@ main.card {
 	}
 }
 
+@media (max-width: 360px) {
+	.actions .btn.btn-primary {
+		min-width: 0;
+		width: 100%;
+	}
+}
+
 		/* Extra spacing above first field (Faculty Number) for clearer separation from header */
 		form#studentLoginForm .field:first-child { margin-top: 16px; }
 
