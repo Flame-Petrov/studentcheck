@@ -350,11 +350,32 @@ async function loadAttendedClassesCount(className, studentId, facultyNumber){
 			}
 		}
 
-		const total_completed_classes_count = data.total_completed_classes_count
+		let total_completed_classes_count = data.total_completed_classes_count
 			?? data.total_classes_count
 			?? data.total_completed
 			?? data.total
+			?? data.total_started_classes_count
+			?? data.started_classes_count
+			?? data.total_sessions
+			?? data.total_sessions_count
+			?? data.completed_classes_count
 			?? null;
+
+		// Fallback: infer class total from attendance rows when aggregate field is missing.
+		// Typical summaries include per-student count; class total is the max count value.
+		if (total_completed_classes_count === null && Array.isArray(list) && list.length > 0) {
+			const maxCount = list.reduce((max, item) => {
+				const rowCount = Number(
+					item?.count
+					?? item?.attendance_count
+					?? item?.attended_classes_count
+					?? item?.completed_classes_count
+					?? 0
+				);
+				return Number.isFinite(rowCount) ? Math.max(max, rowCount) : max;
+			}, 0);
+			total_completed_classes_count = maxCount;
+		}
 
 		const attendanceCountElement = document.getElementById('attendedClassesCount');
 		const totalClassesCountElement = document.getElementById('totalClassesCount'); 
