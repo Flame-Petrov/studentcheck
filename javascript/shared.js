@@ -622,7 +622,10 @@
             </div>
             <div class="nav-menu-item nav-menu-item-language" id="navMenuLanguageRow"></div>
             <div class="nav-menu-spacer" aria-hidden="true"></div>
-            <button id="navMenuLogoutBtn" class="nav-menu-logout-btn" type="button">Log out</button>
+            <button id="navMenuLogoutBtn" class="nav-menu-logout-btn" type="button" aria-label="Log out">
+              <img src="icons/logout.svg" alt="" class="nav-menu-logout-icon">
+              <span class="nav-menu-logout-label">Log out</span>
+            </button>
           </div>
         </aside>
       `;
