@@ -455,7 +455,7 @@
     box-sizing: border-box;
 }
 .teacher-navbar .navbar-logo {
-    position: static;
+    position: relative;
     margin: 0;
 }
 .teacher-navbar .navbar-language-slot {
