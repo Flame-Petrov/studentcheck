@@ -179,31 +179,9 @@
 	z-index: 0;
 }
 
-.student-navbar-row {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-}
-
 .student-navbar .navbar-logo {
-	position: static;
+	position: relative;
 	margin: 4px;
-}
-
-.student-navbar-brand-label {
-	display: inline-flex;
-	align-items: center;
-	padding: 8px 16px;
-	border-radius: 10px;
-	background: var(--student-color-white);
-	box-shadow: var(--student-shadow-button);
-	color: var(--student-color-gray-900);
-	font-family: "Orbitron", "Rajdhani", sans-serif;
-	font-size: clamp(1rem, 1.6vw, 1.35rem);
-	font-weight: 700;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	line-height: 1;
 }
 
 .student-navbar .navbar-language-slot {
@@ -211,17 +189,8 @@
 	align-items: center;
 }
 
-.student-navbar-language-label {
-	font-family: "Rajdhani", sans-serif;
-	font-size: 0.9rem;
-	font-weight: 700;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	color: var(--student-color-gray-700);
-}
-
 .student-navbar .lang-toggle-btn {
-	position: static;
+	position: relative;
 	top: auto;
 	right: auto;
 }
@@ -231,20 +200,6 @@
 		top: 10px;
 		left: 10px;
 		gap: 10px;
-	}
-
-	.student-navbar-row {
-		gap: 8px;
-	}
-
-	.student-navbar-brand-label {
-		padding: 6px 10px;
-		font-size: 0.9rem;
-		letter-spacing: 0.06em;
-	}
-
-	.student-navbar-language-label {
-		font-size: 0.75rem;
 	}
 }
 
