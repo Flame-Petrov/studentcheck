@@ -1303,6 +1303,14 @@ body.delete-popup-active #addClassBtn {
         padding-bottom: 31px;/* was ~16px */
         font-size: 1.06rem;
     }
+
+    /* Keep class buttons rounded on mobile (including iOS native rendering). */
+    .add-class-btn,
+    .newClassBtn {
+        border-radius: 14px !important;
+        -webkit-appearance: none;
+        appearance: none;
+    }
 }
 
 @media (max-width: 480px) {
