@@ -644,8 +644,13 @@
   }
 
   function ensureLanguageUI() {
-    if (document.getElementById('langToggleBtn')) return;
-    const btn = document.createElement('button');
+    let btn = document.getElementById('langToggleBtn');
+    if (btn) {
+      ensureNavControlCluster(btn);
+      updateNavClusterLabels();
+      return;
+    }
+    btn = document.createElement('button');
     btn.id = 'langToggleBtn';
     btn.className = 'lang-toggle-btn';
     btn.type = 'button';
