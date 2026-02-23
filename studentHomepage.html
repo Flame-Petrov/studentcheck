@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/shared.css">
     <link rel="icon" href="images/new_main_logo.png" type="image/png">
     <!-- Reuse registration theme for consistent card, buttons, inputs, actions -->
@@ -13,10 +16,16 @@
 <body>
 
     <header class="student-navbar" id="studentNavbar">
-        <button class="navbar-logo" type="button" aria-label="Home" onclick="handleLogoClick()">
-            <img src="images/new_main_logo.png" alt="Home">
-        </button>
-        <div id="navbarLanguageSlot" class="navbar-language-slot"></div>
+        <div class="student-navbar-row student-navbar-row-brand">
+            <button class="navbar-logo" type="button" aria-label="Home" onclick="handleLogoClick()">
+                <img src="images/new_main_logo.png" alt="Home">
+            </button>
+            <span class="student-navbar-brand-label">StudentCheck</span>
+        </div>
+        <div class="student-navbar-row student-navbar-row-language">
+            <div id="navbarLanguageSlot" class="navbar-language-slot"></div>
+            <span class="student-navbar-language-label">Language</span>
+        </div>
     </header>
 
     <div class="overlay-background" id="overlay-background"></div>
