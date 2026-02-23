@@ -7,7 +7,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	justify-content: center; /* Center heading and buttons together vertically */
-	font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+	font-family: inherit;
 }
 
 /* Center the Welcome title and remove separating lines specific to the home card */
@@ -47,4 +47,3 @@ body {
 
 /* Optional: center the heading text */
 /* Heading is provided via .card-header .title now; no extra rules needed */
-
