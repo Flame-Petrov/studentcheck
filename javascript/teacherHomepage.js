@@ -140,9 +140,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dot.className = 'scanner-unsaved-dot';
                 dot.setAttribute('aria-hidden', 'true');
                 dot.style.position = 'absolute';
-                dot.style.top = '-5px';
-                dot.style.left = '50%';
-                dot.style.transform = 'translateX(-50%)';
+                dot.style.top = '-6px';
+                dot.style.right = '18px';
+                dot.style.left = 'auto';
+                dot.style.transform = 'none';
                 dot.style.width = '14px';
                 dot.style.height = '14px';
                 dot.style.borderRadius = '50%';
