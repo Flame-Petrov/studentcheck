@@ -6,24 +6,53 @@
  */
 
 import { SERVER_BASE_URL, ENDPOINTS, getTeacherEmail } from '../config/api.js';
-import { saveClassesMap } from '../storage/classStorage.js';
 import { saveClassStudents, loadClassStudentsFromStorage } from '../storage/studentStorage.js';
+import { authJsonFetch } from './authFetch.js';
+import { clearAuthState, hasAuthHeaderToken } from '../auth/authStore.js';
 
 let cachedFetchClassesRoute = null;
 const FETCH_CLASSES_ROUTE_KEY = 'fetchClassesRouteKey';
 
-function getAuthToken() {
-    try {
-        return (
-            sessionStorage.getItem('authToken')
-            || localStorage.getItem('authToken')
-            || sessionStorage.getItem('token')
-            || localStorage.getItem('token')
-            || ''
-        );
-    } catch (_) {
-        return '';
+const AUTH_401_ERRORS = new Set([
+    'Missing bearer token',
+    'Invalid bearer token format',
+    'Invalid or expired token'
+]);
+
+function isAuthError(err) {
+    const msg = String(err?.body?.error || err?.message || '').trim();
+    return err?.status === 401 && AUTH_401_ERRORS.has(msg);
+}
+
+function isForbiddenClassOwnership(err) {
+    const msg = String(err?.body?.error || err?.message || '').toLowerCase();
+    return err?.status === 403 && msg.includes('does not belong to authenticated teacher');
+}
+
+function handleMutationApiError(endpoint, err) {
+    console.warn('[API_AUTH_FAIL]', {
+        endpoint,
+        status: err?.status,
+        error: err?.body?.error || err?.message,
+        hadAuthHeader: Boolean(err?.hadAuthHeader ?? hasAuthHeaderToken())
+    });
+
+    if (isAuthError(err)) {
+        clearAuthState();
+        alert('Session expired. Please log in again.');
+        window.location.href = 'teacherLogin.html';
+        err.redirectingAuth = true;
+        throw err;
     }
+
+    if (isForbiddenClassOwnership(err)) {
+        const forbidden = new Error("You don't have permission to modify this class.");
+        forbidden.status = 403;
+        forbidden.body = err?.body || {};
+        throw forbidden;
+    }
+
+    throw err;
 }
 
 /**
@@ -34,13 +63,14 @@ function getAuthToken() {
  * @returns {Promise<{class_id: number}>} Created class data
  */
 export async function createClass(name, studentIds, teacherEmail) {
-    const res = await fetch(SERVER_BASE_URL + ENDPOINTS.createClass, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, students: studentIds, teacherEmail })
-    });
-    if (!res.ok) throw new Error('Class create failed');
-    return res.json();
+    try {
+        return await authJsonFetch(SERVER_BASE_URL + ENDPOINTS.createClass, {
+            method: 'POST',
+            body: JSON.stringify({ name, students: studentIds, teacherEmail })
+        });
+    } catch (err) {
+        handleMutationApiError('/classes', err);
+    }
 }
 
 /**
@@ -235,54 +265,17 @@ export async function addStudentsToClass(classId, students) {
         throw new Error('Invalid students: no students with faculty_number found');
     }
     
-    const token = getAuthToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-        headers.Authorization = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${SERVER_BASE_URL + ENDPOINTS.class_students}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-            classId: numericClassId,
-            students: validStudents
-        })
-    });
-
-    // WORKAROUND: Server may return 200 even on errors, so check response body
-    let responseData = null;
     try {
-        responseData = await response.json();
-    } catch (e) {
-        // If response is not JSON, treat as error if status is not OK
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        return await authJsonFetch(`${SERVER_BASE_URL + ENDPOINTS.class_students}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                classId: numericClassId,
+                students: validStudents
+            })
+        });
+    } catch (err) {
+        handleMutationApiError('/class_students', err);
     }
-    
-    // Check if server returned an error message in the response body (even with 200 status)
-    if (responseData && (responseData.error || responseData.message)) {
-        const errorMsg = responseData.error || responseData.message;
-        if (errorMsg.toLowerCase().includes('error') || errorMsg.toLowerCase().includes('fail')) {
-            console.error('[addStudentsToClass] Server returned error in response body', {
-                status: response.status,
-                error: errorMsg,
-                classId: numericClassId
-            });
-            throw new Error(errorMsg);
-        }
-    }
-    
-    if (!response.ok) {
-        const errorMessage = responseData?.error || responseData?.message || `HTTP ${response.status}`;
-        throw new Error(errorMessage);
-    }
-    
-    // WORKAROUND: Server may not await inserts properly, so we need to wait
-    // a bit before verifying the insert was successful. The caller should
-    // wait and then verify by fetching the class students again.
-    return response;
 }
 
 /**
@@ -299,25 +292,14 @@ export async function removeStudentFromClass(classId, facultyNumber, teacherEmai
         teacherEmail: teacherEmail
     };
 
-    const response = await fetch(`${SERVER_BASE_URL}/class_students/remove`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-            const errorText = await response.text();
-            console.error('[removeStudentFromClass] Error response text:', errorText);
-        }
-        throw new Error(errorMessage);
+    try {
+        return await authJsonFetch(`${SERVER_BASE_URL}/class_students/remove`, {
+            method: 'POST',
+            body: JSON.stringify(requestBody)
+        });
+    } catch (err) {
+        handleMutationApiError('/class_students/remove', err);
     }
-
-    return await response.json();
 }
 
 /**
@@ -338,31 +320,17 @@ export async function renameClassById(classId, newName, teacherEmail) {
         throw new Error('teacherEmail is required');
     }
 
-    const response = await fetch(`${SERVER_BASE_URL + ENDPOINTS.updateClass}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            classId: Number(classId),
-            name: newName,
-            teacherEmail
-        })
-    });
-
-    if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-            // Ignore parse errors
-        }
-        throw new Error(errorMessage);
-    }
-
     try {
-        return await response.json();
-    } catch (e) {
-        return { success: true };
+        return await authJsonFetch(`${SERVER_BASE_URL + ENDPOINTS.updateClass}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                classId: Number(classId),
+                name: newName,
+                teacherEmail
+            })
+        });
+    } catch (err) {
+        handleMutationApiError('/classes', err);
     }
 }
 /**
@@ -379,29 +347,15 @@ export async function deleteClassById(classId, teacherEmail) {
         throw new Error('teacherEmail is required');
     }
 
-    const response = await fetch(`${SERVER_BASE_URL + ENDPOINTS.deleteClass}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            classId: Number(classId),
-            teacherEmail
-        })
-    });
-
-    if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-            // Ignore parse errors
-        }
-        throw new Error(errorMessage);
-    }
-
     try {
-        return await response.json();
-    } catch (e) {
-        return { success: true };
+        return await authJsonFetch(`${SERVER_BASE_URL + ENDPOINTS.deleteClass}`, {
+            method: 'DELETE',
+            body: JSON.stringify({
+                classId: Number(classId),
+                teacherEmail
+            })
+        });
+    } catch (err) {
+        handleMutationApiError('/classes', err);
     }
 }

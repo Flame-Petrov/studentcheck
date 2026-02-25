@@ -11,6 +11,7 @@
 
 // ===== IMPORTS =====
 import { getTeacherEmail, SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
+import { bootstrapTeacherAuthState, clearAuthState } from './auth/authStore.js';
 import { fetchClasses } from './api/classApi.js';
 import { fetchAllStudents } from './api/studentApi.js';
 import { fetchClassStudents } from './api/classApi.js';
@@ -45,6 +46,13 @@ import { getActiveClassName, getRawClassNameFromButton } from './utils/helpers.j
 
 // ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', async () => {
+    if (!bootstrapTeacherAuthState()) {
+        clearAuthState();
+        alert('Session expired. Please log in again.');
+        window.location.href = 'teacherLogin.html';
+        return;
+    }
+
     const classList = document.getElementById('classList');
     const addBtn = document.getElementById('addClassBtn');
     const teacherEmail = getTeacherEmail();

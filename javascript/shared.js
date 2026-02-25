@@ -782,6 +782,12 @@
           try {
             sessionStorage.removeItem('studentData');
             sessionStorage.removeItem('teacherData');
+            sessionStorage.removeItem('auth.teacher.token');
+            sessionStorage.removeItem('auth.teacher.expiresAt');
+            ['authToken', 'token', 'accessToken', 'jwt'].forEach((k) => {
+              sessionStorage.removeItem(k);
+              localStorage.removeItem(k);
+            });
             localStorage.removeItem('teacherEmail');
           } catch (_) {}
           closeMenu();

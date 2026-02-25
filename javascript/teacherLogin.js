@@ -1,4 +1,6 @@
 // Loading overlay now handled by shared LoadingOverlay utility
+const AUTH_TOKEN_KEY = 'auth.teacher.token';
+const AUTH_EXPIRES_AT_KEY = 'auth.teacher.expiresAt';
 
 document.getElementById('teacherLoginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -49,13 +51,20 @@ document.getElementById('teacherLoginForm').addEventListener('submit', async fun
         const t1 = performance.now();
             if (response.ok) {
             const data = await response.json();
-            if (data.loginSuccess) {
+            const token = data?.token || data?.accessToken || '';
+            if (data.loginSuccess && token) {
                 try {
+                    const now = Date.now();
+                    const expiresAt = now + (Number(data.expiresIn || 0) * 1000);
                     // Store minimal teacher session data in sessionStorage only (normalized email).
                     sessionStorage.setItem('teacherData', JSON.stringify({ email: teacherData.email }));
-                    if (data.token) {
-                        sessionStorage.setItem('authToken', data.token);
-                    }
+                    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+                    sessionStorage.setItem(AUTH_EXPIRES_AT_KEY, String(expiresAt));
+                    // Cleanup legacy token keys
+                    ['authToken', 'token', 'accessToken', 'jwt'].forEach((k) => {
+                        sessionStorage.removeItem(k);
+                        localStorage.removeItem(k);
+                    });
                     // Also remember last teacher email for reload fallbacks
                     try { localStorage.setItem('teacherEmail', teacherData.email); } catch(_) {}
                 } catch (e) {
@@ -73,7 +82,9 @@ document.getElementById('teacherLoginForm').addEventListener('submit', async fun
             } else {
                 LoadingOverlay.hide();
                 if (errorMessage) {
-                errorMessage.textContent = t('err_login_failed', 'Login failed');
+                errorMessage.textContent = token
+                    ? t('err_login_failed', 'Login failed')
+                    : 'Login failed: token missing';
                 if (data.message) {
                     errorMessage.textContent = `${t('err_login_failed', 'Login failed')}: ${data.message}`;
                 } else if (!data.loginSuccess) {

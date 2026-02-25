@@ -1673,6 +1673,7 @@ export async function finalizeAddStudentsToClass(className) {
             // Continue even if verification fails - server may still be processing
         }
     } catch (error) {
+        if (error?.redirectingAuth) return;
         console.error('[finalizeAddStudentsToClass] Failed to add students to class', {
             className,
             classId,
