@@ -54,13 +54,14 @@ function showUnsavedAttendanceNotice() {
     const message = isBg
         ? 'Има незапазени присъствия за тази дисциплина. Моля, завършете или откажете сесията на сканиране.'
         : t('unsaved_scanner_notice_message', 'There are unsaved attendances for this class. Please finish or discard the scanner session when done.');
+    const okText = isBg ? 'Разбирам' : 'I understand';
     openConfirmOverlay(
         message,
         () => {},
         null,
         {
             title,
-            okText: t('confirm_btn', 'OK'),
+            okText,
             okClass: 'confirm-accept',
             hideCancel: true,
             popupClass: 'unsaved-scanner-popup'

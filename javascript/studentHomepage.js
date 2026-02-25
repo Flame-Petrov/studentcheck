@@ -323,6 +323,11 @@ async function loadAttendedClassesCount(className, studentId, facultyNumber){
 	let total_completed_classes_count = classMeta?.completed_classes_count
 		?? classMeta?.total_completed_classes_count
 		?? null;
+	const normalizeCount = (value) => {
+		const parsed = Number(value);
+		return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+	};
+	total_completed_classes_count = normalizeCount(total_completed_classes_count);
 
 	if (!classId) {
 		console.error("Error resolving class ID for class:", className);
@@ -362,8 +367,18 @@ async function loadAttendedClassesCount(className, studentId, facultyNumber){
 			}
 		}
 
+		// Derive class total from summary rows when class-level counter is missing/stale.
+		let derivedTotalFromRows = null;
+		if (Array.isArray(list) && list.length > 0) {
+			const maxFromRows = list.reduce((max, item) => {
+				const val = Number(item?.count ?? item?.attendance_count ?? item?.attended_classes_count ?? 0);
+				return Number.isFinite(val) && val > max ? val : max;
+			}, 0);
+			derivedTotalFromRows = Number.isFinite(maxFromRows) ? maxFromRows : null;
+		}
+
 		// Only fallback to summary-level aggregate if class-record value is unavailable.
-		if (total_completed_classes_count === null || total_completed_classes_count === undefined) {
+		if (total_completed_classes_count === null || total_completed_classes_count === undefined || total_completed_classes_count === 0) {
 			total_completed_classes_count = data.total_completed_classes_count
 				?? data.total_classes_count
 				?? data.total_completed
@@ -373,7 +388,13 @@ async function loadAttendedClassesCount(className, studentId, facultyNumber){
 				?? data.total_sessions
 				?? data.total_sessions_count
 				?? data.completed_classes_count
+				?? derivedTotalFromRows
 				?? 0;
+		}
+		total_completed_classes_count = normalizeCount(total_completed_classes_count) ?? 0;
+		// Sanity floor: total classes cannot be lower than this student's attended classes.
+		if (total_completed_classes_count < attendance_count) {
+			total_completed_classes_count = attendance_count;
 		}
 
 		const attendanceCountElement = document.getElementById('attendedClassesCount');
