@@ -371,13 +371,6 @@
             setError(errorSlide3_group, 'err_select_group');
             return false;
         }
-        const groupNum = Number(selectGroup.value);
-        const groupOutOfRange = (!Number.isFinite(groupNum) || groupNum < 37 || groupNum > 42);
-        if (groupOutOfRange) {
-            setError(errorSlide3_group, 'err_group_invalid');
-            setInvalid(selectGroup, true);
-            return false;
-        }
         clearError(errorSlide3_group);
 
         const courseInvalid = (selectCourse.value === "" || selectCourse.selectedIndex === 0);
