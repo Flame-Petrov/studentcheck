@@ -53,6 +53,9 @@ document.getElementById('teacherLoginForm').addEventListener('submit', async fun
                 try {
                     // Store minimal teacher session data in sessionStorage only (normalized email).
                     sessionStorage.setItem('teacherData', JSON.stringify({ email: teacherData.email }));
+                    if (data.token) {
+                        sessionStorage.setItem('authToken', data.token);
+                    }
                     // Also remember last teacher email for reload fallbacks
                     try { localStorage.setItem('teacherEmail', teacherData.email); } catch(_) {}
                 } catch (e) {

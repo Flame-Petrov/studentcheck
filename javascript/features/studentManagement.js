@@ -1623,62 +1623,67 @@ export async function finalizeAddStudentsToClass(className) {
             });
         }
     });
-    selectedFacultyNumbers.forEach((facultyNumber) => assignSet.add(facultyNumber));
-
-    addNewStudentsToStorage(className, [...existingStudentsInClass, ...newlyAddedStudents]);
-
-    const classId = await resolveClassId(className);
-    let addedToServer = false;
-    if (classId && newlyAddedStudents.length > 0) {
-        try {
-            const response = await addStudentsToClass(classId, newlyAddedStudents);
-            addedToServer = true;
-            
-            // WORKAROUND: Server may not await inserts, so wait a bit then verify
-            // This ensures inserts complete before we try to fetch the updated list
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Verify by fetching the class students again
-            try {
-                const verifyTimeout = setTimeout(() => {
-                    console.warn('[finalizeAddStudentsToClass] Verification fetch timed out, proceeding anyway');
-                }, 2000);
-                
-                const verifiedStudents = await fetchClassStudents(classId, className);
-                clearTimeout(verifyTimeout);
-                
-                // If verification shows fewer students than expected, log warning but continue
-                if (verifiedStudents && verifiedStudents.length < newlyAddedStudents.length) {
-                    console.warn('[finalizeAddStudentsToClass] Verification shows fewer students than added', {
-                        className,
-                        classId,
-                        addedCount: newlyAddedStudents.length,
-                        verifiedCount: verifiedStudents.length,
-                        note: 'Server inserts may still be processing'
-                    });
-                }
-            } catch (verifyError) {
-                console.warn('[finalizeAddStudentsToClass] Verification fetch failed, proceeding anyway', {
-                    className,
-                    classId,
-                    error: verifyError.message
-                });
-                // Continue even if verification fails - server may still be processing
-            }
-            
-        } catch (error) {
-            console.error('[finalizeAddStudentsToClass] Failed to add students to class', {
-                className,
-                classId,
-                error: error.message,
-                status: error.status
-            });
-            alert(`Failed to add students to class: ${error.message}`);
-            // Continue with UI update even if server call fails (optimistic update)
-        }
+    if (newlyAddedStudents.length === 0) {
+        closeAddStudentsToClass();
+        return;
     }
 
-    if (newlyAddedStudents.length > 0 && addedToServer) {
+    const classId = await resolveClassId(className);
+    if (!classId) {
+        alert('Failed to add students to class: Missing class id');
+        return;
+    }
+
+    try {
+        await addStudentsToClass(classId, newlyAddedStudents);
+
+        // Commit local state only after the server accepts the write.
+        selectedFacultyNumbers.forEach((facultyNumber) => assignSet.add(facultyNumber));
+        addNewStudentsToStorage(className, [...existingStudentsInClass, ...newlyAddedStudents]);
+
+        // WORKAROUND: Server may not await inserts, so wait a bit then verify
+        // This ensures inserts complete before we try to fetch the updated list
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Verify by fetching the class students again
+        try {
+            const verifyTimeout = setTimeout(() => {
+                console.warn('[finalizeAddStudentsToClass] Verification fetch timed out, proceeding anyway');
+            }, 2000);
+
+            const verifiedStudents = await fetchClassStudents(classId, className);
+            clearTimeout(verifyTimeout);
+
+            // If verification shows fewer students than expected, log warning but continue
+            if (verifiedStudents && verifiedStudents.length < newlyAddedStudents.length) {
+                console.warn('[finalizeAddStudentsToClass] Verification shows fewer students than added', {
+                    className,
+                    classId,
+                    addedCount: newlyAddedStudents.length,
+                    verifiedCount: verifiedStudents.length,
+                    note: 'Server inserts may still be processing'
+                });
+            }
+        } catch (verifyError) {
+            console.warn('[finalizeAddStudentsToClass] Verification fetch failed, proceeding anyway', {
+                className,
+                classId,
+                error: verifyError.message
+            });
+            // Continue even if verification fails - server may still be processing
+        }
+    } catch (error) {
+        console.error('[finalizeAddStudentsToClass] Failed to add students to class', {
+            className,
+            classId,
+            error: error.message,
+            status: error.status
+        });
+        alert(`Failed to add students to class: ${error.message}`);
+        return;
+    }
+
+    if (newlyAddedStudents.length > 0) {
         const nounKey = newlyAddedStudents.length === 1 ? 'toast_student_added' : 'toast_students_added';
         const fallback = newlyAddedStudents.length === 1
             ? 'Successfully added student'

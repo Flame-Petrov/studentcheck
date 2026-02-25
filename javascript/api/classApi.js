@@ -12,6 +12,20 @@ import { saveClassStudents, loadClassStudentsFromStorage } from '../storage/stud
 let cachedFetchClassesRoute = null;
 const FETCH_CLASSES_ROUTE_KEY = 'fetchClassesRouteKey';
 
+function getAuthToken() {
+    try {
+        return (
+            sessionStorage.getItem('authToken')
+            || localStorage.getItem('authToken')
+            || sessionStorage.getItem('token')
+            || localStorage.getItem('token')
+            || ''
+        );
+    } catch (_) {
+        return '';
+    }
+}
+
 /**
  * Create a new class
  * @param {string} name - Class name
@@ -221,9 +235,15 @@ export async function addStudentsToClass(classId, students) {
         throw new Error('Invalid students: no students with faculty_number found');
     }
     
+    const token = getAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${SERVER_BASE_URL + ENDPOINTS.class_students}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
             classId: numericClassId,
             students: validStudents
