@@ -59,6 +59,10 @@ function scannerDraftKey(className) {
     return `${SCANNER_DRAFT_KEY_PREFIX}${String(className || '').trim()}`;
 }
 
+function isDraftFresh(savedAt) {
+    return Number.isFinite(savedAt) && (Date.now() - savedAt) <= SCANNER_DRAFT_MAX_AGE_MS;
+}
+
 export function saveScannerDraftForClass(className) {
     const key = scannerDraftKey(className);
     if (!String(className || '').trim()) return false;
@@ -72,6 +76,7 @@ export function saveScannerDraftForClass(className) {
             timestamps: Array.from(timestampsMap.entries())
         };
         localStorage.setItem(key, JSON.stringify(payload));
+        document.dispatchEvent(new CustomEvent('scannerDraftChanged', { detail: { className: String(className) } }));
         return true;
     } catch (_) {
         return false;
@@ -86,7 +91,7 @@ export function restoreScannerDraftForClass(className) {
         if (!raw) return false;
         const parsed = JSON.parse(raw);
         const savedAt = Number(parsed?.savedAt || 0);
-        if (!Number.isFinite(savedAt) || (Date.now() - savedAt) > SCANNER_DRAFT_MAX_AGE_MS) {
+        if (!isDraftFresh(savedAt)) {
             clearScannerDraftForClass(className);
             return false;
         }
@@ -117,7 +122,28 @@ export function clearScannerDraftForClass(className) {
     if (!String(className || '').trim()) return;
     try {
         localStorage.removeItem(scannerDraftKey(className));
+        document.dispatchEvent(new CustomEvent('scannerDraftChanged', { detail: { className: String(className) } }));
     } catch (_) {}
+}
+
+export function hasScannerDraftForClass(className) {
+    const key = scannerDraftKey(className);
+    if (!String(className || '').trim()) return false;
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        const savedAt = Number(parsed?.savedAt || 0);
+        if (!isDraftFresh(savedAt)) {
+            clearScannerDraftForClass(className);
+            return false;
+        }
+        const attendanceEntries = Array.isArray(parsed?.attendance) ? parsed.attendance : [];
+        const timestampEntries = Array.isArray(parsed?.timestamps) ? parsed.timestamps : [];
+        return attendanceEntries.length > 0 || timestampEntries.length > 0;
+    } catch (_) {
+        return false;
+    }
 }
 
 /**

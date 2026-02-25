@@ -32,7 +32,12 @@ import { openClassCreationWizard, closeClassCreationWizard } from './features/cl
 import { openClassOptionsOverlay, closeClassOptionsOverlay, renameClass, deleteClass } from './features/classManagement.js';
 import { openManageStudentsOverlay, openStudentInfoOverlay, openAddStudentsToClass, finalizeAddStudentsToClass, closeAllClassOverlays } from './features/studentManagement.js';
 import { openScannerOverlay, closeScanner, setScanMode } from './features/scanner.js';
-import { openCloseScannerConfirm, openDiscardScannerConfirm, getStudentAttendanceCountForClass } from './features/attendance.js';
+import {
+    openCloseScannerConfirm,
+    openDiscardScannerConfirm,
+    getStudentAttendanceCountForClass,
+    hasScannerDraftForClass
+} from './features/attendance.js';
 import { renderAttendanceForClass } from './ui/attendanceUI.js';
 import { handleDownloadAttendanceTable } from './features/export.js';
 import { showOverlay, hideOverlay, getOverlay, openConfirmOverlay } from './ui/overlays.js';
@@ -128,6 +133,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         const optionsBtn = readyPopupOverlay?.querySelector('#classOptionsBtn');
         const closeBtn = readyPopupOverlay?.querySelector('#closeReadyPopupBtn');
 
+        if (scannerBtn) {
+            scannerBtn.style.position = 'relative';
+            if (!scannerBtn.querySelector('.scanner-unsaved-dot')) {
+                const dot = document.createElement('span');
+                dot.className = 'scanner-unsaved-dot';
+                dot.setAttribute('aria-hidden', 'true');
+                dot.style.position = 'absolute';
+                dot.style.top = '6px';
+                dot.style.right = '8px';
+                dot.style.width = '10px';
+                dot.style.height = '10px';
+                dot.style.borderRadius = '50%';
+                dot.style.background = '#dc2626';
+                dot.style.boxShadow = '0 0 0 2px #fff';
+                dot.style.display = 'none';
+                scannerBtn.appendChild(dot);
+            }
+        }
+
+        const updateScannerUnsavedDot = () => {
+            if (!scannerBtn) return;
+            const dot = scannerBtn.querySelector('.scanner-unsaved-dot');
+            if (!dot) return;
+            const current = getCurrentClass();
+            const className = (current.name || (current.button ? getRawClassNameFromButton(current.button) : '') || '').trim();
+            dot.style.display = hasScannerDraftForClass(className) ? 'block' : 'none';
+        };
+
         manageBtn?.addEventListener('click', async () => {
             const current = getCurrentClass();
             const className = current.name || (current.button ? getRawClassNameFromButton(current.button) : '');
@@ -138,6 +171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         scannerBtn?.addEventListener('click', () => {
             const current = getCurrentClass();
             openScannerOverlay(current.name);
+            updateScannerUnsavedDot();
         });
 
         downloadBtn?.addEventListener('click', () => {
@@ -165,6 +199,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 closeReadyClassPopup();
             }
         });
+
+        document.addEventListener('scannerDraftChanged', () => {
+            updateScannerUnsavedDot();
+        });
+
+        readyPopupOverlay.dataset.updateScannerUnsavedDotBound = 'true';
+        readyPopupOverlay.updateScannerUnsavedDot = updateScannerUnsavedDot;
     }
 
     function openReadyClassPopup(nameOptional) {
@@ -192,6 +233,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (readyPopupOverlay) {
             showOverlay(readyPopupOverlay);
+            if (typeof readyPopupOverlay.updateScannerUnsavedDot === 'function') {
+                readyPopupOverlay.updateScannerUnsavedDot();
+            }
         }
     }
 
