@@ -119,6 +119,17 @@ export function ensureConfirmOverlay() {
 export function openConfirmOverlay(message, onConfirm, onCancel, options = {}) {
     options = options || {};
     ensureConfirmOverlay();
+    const popupEl = confirmOverlay.querySelector('.confirm-popup');
+    if (popupEl) {
+        if (popupEl.dataset.dynamicPopupClass) {
+            popupEl.classList.remove(popupEl.dataset.dynamicPopupClass);
+            delete popupEl.dataset.dynamicPopupClass;
+        }
+        if (options.popupClass) {
+            popupEl.classList.add(options.popupClass);
+            popupEl.dataset.dynamicPopupClass = options.popupClass;
+        }
+    }
     const msgEl = confirmOverlay.querySelector('#confirmMessage');
     if (msgEl) msgEl.textContent = message || 'Are you sure?';
     const titleEl = confirmOverlay.querySelector('#confirmTitle');

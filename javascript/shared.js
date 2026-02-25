@@ -258,7 +258,9 @@
       scanner_finish_title: 'Finish class?',
       scanner_finish_message: 'Attendance data will be saved.',
       scanner_close_title: 'Close Scanner',
-      scanner_close_message: 'Closing the scanner will discard attendance data.'
+      scanner_close_message: 'Closing the scanner will discard attendance data.',
+      unsaved_scanner_notice_title: 'Unsaved Attendances',
+      unsaved_scanner_notice_message: 'There are unsaved attendances for this class. Please finish or discard the scanner session when done.'
     },
     bg: {
       language_label: 'Език',

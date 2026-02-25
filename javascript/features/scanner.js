@@ -41,15 +41,29 @@ function t(key, fallback) {
 }
 
 function showUnsavedAttendanceNotice() {
+    const isBg = (() => {
+        try {
+            return (localStorage.getItem('language') || 'en') === 'bg';
+        } catch (_) {
+            return false;
+        }
+    })();
+    const title = isBg
+        ? 'Незапазени присъствия'
+        : t('unsaved_scanner_notice_title', 'Unsaved Attendances');
+    const message = isBg
+        ? 'Има незапазени присъствия за тази дисциплина. Моля, завършете или откажете сесията на сканиране.'
+        : t('unsaved_scanner_notice_message', 'There are unsaved attendances for this class. Please finish or discard the scanner session when done.');
     openConfirmOverlay(
-        t('unsaved_scanner_notice_message', 'There are unsaved attendances for this class. Please finish or discard the scanner session when done.'),
+        message,
         () => {},
         null,
         {
-            title: t('unsaved_scanner_notice_title', 'Unsaved Attendances'),
+            title,
             okText: t('confirm_btn', 'OK'),
             okClass: 'confirm-accept',
-            hideCancel: true
+            hideCancel: true,
+            popupClass: 'unsaved-scanner-popup'
         }
     );
 }

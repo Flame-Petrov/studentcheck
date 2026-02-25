@@ -1455,6 +1455,14 @@ body.delete-popup-active #addClassBtn {
     }
 }
 
+/* Mobile: unsaved scanner notice should stay compact (~85% width). */
+@media (max-width: 480px) {
+    #confirmOverlay .confirm-popup.unsaved-scanner-popup {
+        width: 85vw !important;
+        max-width: 85vw !important;
+    }
+}
+
 
 
 
