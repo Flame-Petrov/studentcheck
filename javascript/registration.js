@@ -28,37 +28,42 @@
     selectFaculty.addEventListener('change', () => {
 
         errorSlide2_faculty.textContent = "";
+        clearError(errorSlide2_specialization);
+        setInvalid(selectFaculty, false);
+        setInvalid(selectSpecialization, false);
 
-        try{
-            populateSpecializations(faculty, level);
-        }catch(e){
-            resetFaculty();
-            resetLevel();
+        const faculty = selectFaculty.value;
+        const level = selectLevel.value;
+        if (!level) {
             resetSpecializations();
-            alert(t('err_specializations_unavailable'));
             return;
         }
-         
+
+        const hasSpecializations = populateSpecializations(faculty, level);
+        if (!hasSpecializations) {
+            alert(t('err_specializations_unavailable'));
+        }
     });
 
     const selectLevel = document.getElementById('level');
     selectLevel.addEventListener('change', () => {
 
         errorSlide2_level.textContent = "";
+        clearError(errorSlide2_specialization);
+        setInvalid(selectLevel, false);
+        setInvalid(selectSpecialization, false);
 
         const faculty = selectFaculty.value;
         const level = selectLevel.value;
 
-        if(faculty && level) {
-            try{
-                populateSpecializations(faculty, level);
-            }catch(e){
-                resetFaculty();
-                resetLevel();
-                resetSpecializations();
-                alert(t('err_specializations_unavailable'));
-                return;
-            }
+        if(!faculty || !level) {
+            resetSpecializations();
+            return;
+        }
+
+        const hasSpecializations = populateSpecializations(faculty, level);
+        if (!hasSpecializations) {
+            alert(t('err_specializations_unavailable'));
         }
 
     });
@@ -202,15 +207,21 @@
 
         if(faculty === "" || level === "") {
             console.error("Faculty or level is empty:", faculty, level);
-            return;
+            return false;
         }
 
 
-        let list = SPECIALIZATIONS[faculty][level];
+        const facultySpecializations = SPECIALIZATIONS[faculty];
+        if (!facultySpecializations) {
+            console.error("No faculty specializations found for faculty:", faculty);
+            return false;
+        }
 
-        if (!list) {
-            console.error("No specializations found for faculty:", faculty);
-            return;
+        const list = facultySpecializations[level];
+
+        if (!Array.isArray(list) || list.length === 0) {
+            console.error("No specializations found for faculty and level:", faculty, level);
+            return false;
         }
 
         for(const specialization of list){
@@ -221,6 +232,7 @@
         if (window.i18n && typeof window.i18n.applyTranslations === 'function') {
             window.i18n.applyTranslations();
         }
+        return true;
 
     }
 
@@ -870,6 +882,7 @@
 
     // Hide contact error initially until user attempts to Continue.
     if (errorSlide4) errorSlide4.style.display = 'none';
+    resetSpecializations();
     updateUI();
     focusFirstInput();
 
