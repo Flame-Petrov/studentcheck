@@ -2,6 +2,12 @@
 const AUTH_TOKEN_KEY = 'auth.teacher.token';
 const AUTH_EXPIRES_AT_KEY = 'auth.teacher.expiresAt';
 
+function normalizeToken(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    return raw.replace(/^Bearer\s+/i, '').trim();
+}
+
 document.getElementById('teacherLoginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -51,7 +57,13 @@ document.getElementById('teacherLoginForm').addEventListener('submit', async fun
         const t1 = performance.now();
             if (response.ok) {
             const data = await response.json();
-            const token = data?.token || data?.accessToken || '';
+            const token = normalizeToken(
+                data?.token
+                || data?.accessToken
+                || data?.data?.token
+                || data?.data?.accessToken
+                || ''
+            );
             if (data.loginSuccess && token) {
                 try {
                     const now = Date.now();

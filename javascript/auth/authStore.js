@@ -8,9 +8,15 @@ function safeParseNumber(value) {
     return Number.isFinite(num) ? num : 0;
 }
 
+function normalizeToken(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    return raw.replace(/^Bearer\s+/i, '').trim();
+}
+
 export function saveAuthState({ token, expiresAt, teacher } = {}) {
     if (!token) throw new Error('Cannot save auth state without token');
-    const normalizedToken = String(token).trim();
+    const normalizedToken = normalizeToken(token);
     if (!normalizedToken) throw new Error('Cannot save auth state without token');
 
     try {
@@ -29,7 +35,7 @@ export function saveAuthState({ token, expiresAt, teacher } = {}) {
 export function getAuthToken() {
     try {
         const token = sessionStorage.getItem(AUTH_TOKEN_KEY);
-        return token ? String(token).trim() : '';
+        return token ? normalizeToken(token) : '';
     } catch (_) {
         return '';
     }
@@ -76,4 +82,3 @@ export function bootstrapTeacherAuthState() {
 export function hasAuthHeaderToken() {
     return Boolean(getAuthToken());
 }
-
