@@ -336,6 +336,48 @@ body[aria-busy="true"] .navbar-logo {
   color: #7f1d1d;
 }
 
+.nav-menu-item-billing {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-menu-billing-btn {
+  width: var(--menu-control-size);
+  height: var(--menu-control-size);
+  border: 2px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  cursor: pointer;
+  box-shadow: none;
+  transition: transform 0.14s ease, background 0.14s ease, color 0.14s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.nav-menu-billing-btn:hover {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.nav-menu-billing-btn:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: none;
+}
+
+.nav-menu-billing-glyph {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+#navMenuBillingLabel {
+  color: #1e3a8a;
+}
+
 .nav-control-brand-btn {
   width: var(--menu-control-size);
   height: var(--menu-control-size);

@@ -49,7 +49,6 @@ function ensureClassOptionsOverlay() {
             </div>
             <p id="classOptionsError" class="class-options-error" aria-live="polite"></p>
             <div class="class-options-footer">
-                <button type="button" id="classOptionsBillingBtn" class="role-button secondary-green" data-i18n="billing_page">Billing Page</button>
                 <button type="button" id="classOptionsDeleteBtn" class="role-button danger" data-i18n="delete_class_btn">Delete Class</button>
             </div>
         </div>`;
@@ -69,12 +68,8 @@ function ensureClassOptionsOverlay() {
     
     const saveBtn = classOptionsOverlay.querySelector('#classOptionsSaveBtn');
     const deleteBtn = classOptionsOverlay.querySelector('#classOptionsDeleteBtn');
-    const billingBtn = classOptionsOverlay.querySelector('#classOptionsBillingBtn');
     saveBtn?.addEventListener('click', onSaveClassOptions);
     deleteBtn?.addEventListener('click', onDeleteClassFromOptions);
-    billingBtn?.addEventListener('click', () => {
-        window.location.href = 'billing.html';
-    });
     const nameInput = classOptionsOverlay.querySelector('#classOptionsNameInput');
     nameInput?.addEventListener('input', () => setClassOptionsError(''));
     

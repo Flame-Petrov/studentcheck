@@ -635,10 +635,14 @@
   function updateNavClusterLabels() {
     const brandLabel = document.getElementById('navControlBrandLabel');
     const languageLabel = document.getElementById('navControlLanguageLabel');
+    const billingLabel = document.getElementById('navMenuBillingLabel');
+    const billingBtn = document.getElementById('navMenuBillingBtn');
     const logoutLabel = document.getElementById('navMenuLogoutLabel');
     const logoutBtn = document.getElementById('navMenuLogoutBtn');
     if (brandLabel) brandLabel.textContent = t('brand_label') || 'E-Trek';
     if (languageLabel) languageLabel.textContent = t('language_label') || 'Language';
+    if (billingLabel) billingLabel.textContent = t('billing_page') || 'Billing Page';
+    if (billingBtn) billingBtn.setAttribute('aria-label', t('billing_page') || 'Billing Page');
     if (logoutLabel) logoutLabel.textContent = t('log_out') || 'Log out';
     if (logoutBtn) logoutBtn.setAttribute('aria-label', t('log_out') || 'Log out');
   }
@@ -663,6 +667,12 @@
               <span id="navControlBrandLabel" class="nav-control-label nav-control-label-brand">E-Trek</span>
             </div>
             <div class="nav-menu-item nav-menu-item-language" id="navMenuLanguageRow"></div>
+            <div class="nav-menu-item nav-menu-item-billing" id="navMenuBillingRow">
+              <button id="navMenuBillingBtn" class="nav-menu-billing-btn" type="button" aria-label="Billing Page">
+                <span class="nav-menu-billing-glyph" aria-hidden="true">$</span>
+              </button>
+              <span id="navMenuBillingLabel" class="nav-control-label nav-control-label-language">Billing Page</span>
+            </div>
             <div class="nav-menu-spacer" aria-hidden="true"></div>
             <div class="nav-menu-item nav-menu-item-logout" id="navMenuLogoutRow">
               <button id="navMenuLogoutBtn" class="nav-menu-logout-btn" type="button" aria-label="Log out">
@@ -692,6 +702,8 @@
     const panel = document.getElementById('navControlCluster');
     const backdrop = document.getElementById('navMenuBackdrop');
     const brandBtn = document.getElementById('navControlBrandBtn');
+    const billingBtn = document.getElementById('navMenuBillingBtn');
+    const billingRow = document.getElementById('navMenuBillingRow');
     const logoutBtn = document.getElementById('navMenuLogoutBtn');
     const logoutRow = document.getElementById('navMenuLogoutRow');
     if (!panel || !backdrop) return;
@@ -706,12 +718,28 @@
       }
     }
 
+    function hasTeacherSession() {
+      try {
+        return !!sessionStorage.getItem('teacherData');
+      } catch (_) {
+        return false;
+      }
+    }
+
     function syncLogoutVisibility() {
       if (!logoutBtn || !logoutRow) return;
       const visible = hasActiveProfileSession();
       logoutRow.style.display = visible ? 'grid' : 'none';
       logoutBtn.setAttribute('aria-hidden', visible ? 'false' : 'true');
       logoutBtn.tabIndex = visible ? 0 : -1;
+    }
+
+    function syncBillingVisibility() {
+      if (!billingBtn || !billingRow) return;
+      const visible = hasTeacherSession();
+      billingRow.style.display = visible ? 'grid' : 'none';
+      billingBtn.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      billingBtn.tabIndex = visible ? 0 : -1;
     }
 
     logoBtn.setAttribute('aria-controls', 'navControlCluster');
@@ -725,6 +753,7 @@
 
     function openMenu() {
       syncLogoutVisibility();
+      syncBillingVisibility();
       shell.classList.add('open');
       panel.setAttribute('aria-hidden', 'false');
       logoBtn.setAttribute('aria-expanded', 'true');
@@ -741,6 +770,11 @@
         brandBtn.addEventListener('click', () => {
           closeMenu();
           window.location.reload();
+        });
+      }
+      if (billingBtn) {
+        billingBtn.addEventListener('click', () => {
+          window.location.href = 'billing.html';
         });
       }
       if (logoutBtn) {
@@ -773,6 +807,7 @@
     }
 
     syncLogoutVisibility();
+    syncBillingVisibility();
 
     window.NavMenu = {
       open: openMenu,
