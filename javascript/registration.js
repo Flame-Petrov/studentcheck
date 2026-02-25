@@ -33,6 +33,7 @@
         setInvalid(selectSpecialization, false);
 
         const faculty = selectFaculty.value;
+        updateLevelOptionsForFaculty(faculty);
         const level = selectLevel.value;
         if (!level) {
             resetSpecializations();
@@ -492,6 +493,18 @@
         }
     }
 
+    function updateLevelOptionsForFaculty(faculty) {
+        const supported = new Set(Object.keys(SPECIALIZATIONS[faculty] || {}));
+        Array.from(selectLevel.options).forEach((opt, idx) => {
+            if (idx === 0) return; // placeholder option
+            opt.disabled = supported.size > 0 && !supported.has(opt.value);
+        });
+        if (selectLevel.value && supported.size > 0 && !supported.has(selectLevel.value)) {
+            selectLevel.selectedIndex = 0;
+            resetSpecializations();
+        }
+    }
+
     async function checkFacultyNumberAvailability() {
         const facultyValue = (facultyNumber.value || '').trim().replace(/\s+/g,'');
         if (!facultyValue) return false;
@@ -905,6 +918,7 @@
 
     // Hide contact error initially until user attempts to Continue.
     if (errorSlide4) errorSlide4.style.display = 'none';
+    updateLevelOptionsForFaculty(selectFaculty.value);
     resetSpecializations();
     updateUI();
     focusFirstInput();

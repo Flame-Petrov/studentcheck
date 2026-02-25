@@ -140,13 +140,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dot.className = 'scanner-unsaved-dot';
                 dot.setAttribute('aria-hidden', 'true');
                 dot.style.position = 'absolute';
-                dot.style.top = '6px';
-                dot.style.right = '8px';
-                dot.style.width = '10px';
-                dot.style.height = '10px';
+                dot.style.top = '-5px';
+                dot.style.left = '50%';
+                dot.style.transform = 'translateX(-50%)';
+                dot.style.width = '14px';
+                dot.style.height = '14px';
                 dot.style.borderRadius = '50%';
                 dot.style.background = '#dc2626';
-                dot.style.boxShadow = '0 0 0 2px #fff';
+                dot.style.boxShadow = 'none';
                 dot.style.display = 'none';
                 scannerBtn.appendChild(dot);
             }
