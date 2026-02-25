@@ -29,6 +29,7 @@ import { closeScanner } from './scanner.js';
 const recentScanTimestamps = new Map();
 const SCAN_DEBOUNCE_MS = 1500;
 const SCANNER_DRAFT_KEY_PREFIX = 'scanner:draft:';
+const SCANNER_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h safety window
 
 function i18nText(key, fallback) {
     try {
@@ -70,7 +71,7 @@ export function saveScannerDraftForClass(className) {
             attendance: Array.from(attendanceMap.entries()),
             timestamps: Array.from(timestampsMap.entries())
         };
-        sessionStorage.setItem(key, JSON.stringify(payload));
+        localStorage.setItem(key, JSON.stringify(payload));
         return true;
     } catch (_) {
         return false;
@@ -81,9 +82,14 @@ export function restoreScannerDraftForClass(className) {
     const key = scannerDraftKey(className);
     if (!String(className || '').trim()) return false;
     try {
-        const raw = sessionStorage.getItem(key);
+        const raw = localStorage.getItem(key);
         if (!raw) return false;
         const parsed = JSON.parse(raw);
+        const savedAt = Number(parsed?.savedAt || 0);
+        if (!Number.isFinite(savedAt) || (Date.now() - savedAt) > SCANNER_DRAFT_MAX_AGE_MS) {
+            clearScannerDraftForClass(className);
+            return false;
+        }
         const attendanceEntries = Array.isArray(parsed?.attendance) ? parsed.attendance : [];
         const timestampEntries = Array.isArray(parsed?.timestamps) ? parsed.timestamps : [];
 
@@ -110,7 +116,7 @@ export function restoreScannerDraftForClass(className) {
 export function clearScannerDraftForClass(className) {
     if (!String(className || '').trim()) return;
     try {
-        sessionStorage.removeItem(scannerDraftKey(className));
+        localStorage.removeItem(scannerDraftKey(className));
     } catch (_) {}
 }
 
