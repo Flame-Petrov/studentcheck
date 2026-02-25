@@ -28,6 +28,7 @@ import { closeScanner } from './scanner.js';
 
 const recentScanTimestamps = new Map();
 const SCAN_DEBOUNCE_MS = 1500;
+const SCANNER_DRAFT_KEY_PREFIX = 'scanner:draft:';
 
 function i18nText(key, fallback) {
     try {
@@ -51,6 +52,66 @@ function showScanToast(message, tone) {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 450);
     }, 2200);
+}
+
+function scannerDraftKey(className) {
+    return `${SCANNER_DRAFT_KEY_PREFIX}${String(className || '').trim()}`;
+}
+
+export function saveScannerDraftForClass(className) {
+    const key = scannerDraftKey(className);
+    if (!String(className || '').trim()) return false;
+    try {
+        const attendanceMap = getAttendanceState(className) || new Map();
+        const timestampsMap = getStudentTimestamps() || new Map();
+        const payload = {
+            className: String(className),
+            savedAt: Date.now(),
+            attendance: Array.from(attendanceMap.entries()),
+            timestamps: Array.from(timestampsMap.entries())
+        };
+        sessionStorage.setItem(key, JSON.stringify(payload));
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
+export function restoreScannerDraftForClass(className) {
+    const key = scannerDraftKey(className);
+    if (!String(className || '').trim()) return false;
+    try {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        const attendanceEntries = Array.isArray(parsed?.attendance) ? parsed.attendance : [];
+        const timestampEntries = Array.isArray(parsed?.timestamps) ? parsed.timestamps : [];
+
+        const attendanceMap = ensureAttendanceState(className);
+        attendanceEntries.forEach(([studentId, status]) => {
+            if (!studentId) return;
+            const normalizedStatus = (status === 'joined' || status === 'completed') ? status : 'none';
+            attendanceMap.set(String(studentId), normalizedStatus);
+            updateAttendanceDot(String(studentId), normalizedStatus);
+        });
+
+        timestampEntries.forEach(([facultyNumber, ts]) => {
+            if (!facultyNumber || !ts || typeof ts !== 'object') return;
+            const joinedAt = Number.isFinite(ts.joined_at) ? ts.joined_at : null;
+            const leftAt = Number.isFinite(ts.left_at) ? ts.left_at : null;
+            setStudentTimestamp(String(facultyNumber), joinedAt, leftAt);
+        });
+        return attendanceEntries.length > 0 || timestampEntries.length > 0;
+    } catch (_) {
+        return false;
+    }
+}
+
+export function clearScannerDraftForClass(className) {
+    if (!String(className || '').trim()) return;
+    try {
+        sessionStorage.removeItem(scannerDraftKey(className));
+    } catch (_) {}
 }
 
 /**
@@ -152,6 +213,7 @@ export function updateAttendanceState(className, studentFacultyNumber, mode, upd
         // Update UI dot
         updateAttendanceDot(studentFacultyNumber, next);
         changed = true;
+        saveScannerDraftForClass(className);
 
         // When completing a session, only update local state; server update happens on scanner close.
     }
@@ -312,6 +374,7 @@ export async function openCloseScannerConfirm(className, onClosed) {
 
                 // Always clear state and close overlays, even if saves failed
                 clearAttendanceState(className);
+                clearScannerDraftForClass(className);
                 const attendanceOverlay = getOverlay('attendanceOverlay');
                 if (attendanceOverlay && isOverlayVisible(attendanceOverlay)) {
                     hideOverlay(attendanceOverlay, false);
@@ -369,6 +432,7 @@ export async function openCloseScannerConfirm(className, onClosed) {
 export async function closeScannerDiscard(className, onClosed) {
     try {
         clearAttendanceState(className);
+        clearScannerDraftForClass(className);
         clearStudentTimestamps();
         const attendanceOverlay = getOverlay('attendanceOverlay');
         if (attendanceOverlay && attendanceOverlay.style.visibility === 'visible') {

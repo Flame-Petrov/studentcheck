@@ -17,11 +17,33 @@ import {
     setStudentTimestamp
 } from '../state/appState.js';
 import { loadClassStudentsFromStorage } from '../storage/studentStorage.js';
-import { initAttendanceStateForClass, handleScannedCode } from './attendance.js';
+import {
+    initAttendanceStateForClass,
+    handleScannedCode,
+    saveScannerDraftForClass,
+    restoreScannerDraftForClass
+} from './attendance.js';
 import { showOverlay, hideOverlay, getOverlay } from '../ui/overlays.js';
 
 // Cache for html5-qrcode load promise
 let html5qrcodeLoadPromise = null;
+let scannerLifecycleCleanup = null;
+let activeScannerClassName = '';
+
+function bindScannerLifecyclePersistence(className) {
+    const cls = String(className || '').trim();
+    if (!cls) return;
+    const persist = () => { saveScannerDraftForClass(cls); };
+    const onVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') persist();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', persist);
+    scannerLifecycleCleanup = () => {
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        window.removeEventListener('pagehide', persist);
+    };
+}
 
 /**
  * Stop all camera tracks (safety cleanup)
@@ -174,6 +196,11 @@ export function initializeScanner(mode, className, onScanCallback) {
  */
 export function closeScanner(onClosed) {
     const finish = () => {
+        if (typeof scannerLifecycleCleanup === 'function') {
+            scannerLifecycleCleanup();
+            scannerLifecycleCleanup = null;
+        }
+        activeScannerClassName = '';
         const scannerOverlay = getOverlay('scannerOverlay');
         if (scannerOverlay) hideOverlay(scannerOverlay);
         stopAllCameraTracks();
@@ -235,7 +262,11 @@ export function openScannerOverlay(className) {
     
     if (!scannerOverlay) return;
     
-    clearStudentTimestamps();
+    activeScannerClassName = (className || current.name || '').trim();
+    const restored = restoreScannerDraftForClass(activeScannerClassName);
+    if (!restored) {
+        clearStudentTimestamps();
+    }
     
     const bindCloseButton = (btn, eventName) => {
         if (!btn || btn.dataset.closeBound === 'true') return;
@@ -301,6 +332,7 @@ export function openScannerOverlay(className) {
     if (leaveRadio) leaveRadio.checked = false;
     
     showOverlay(scannerOverlay);
+    bindScannerLifecyclePersistence(activeScannerClassName);
     
     initializeScanner('joining', className || current.name, (decodedText, mode, clsName) => {
         handleScannedCode(decodedText, mode, clsName, null);
