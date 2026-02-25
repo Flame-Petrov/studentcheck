@@ -451,30 +451,29 @@
         const emailValue = (email.value || '').trim();
         if (!emailValue) return false;
 
-        const normalized = emailValue.toLowerCase();
         nextBtn.disabled = true;
-
         try {
-            const result = await fetch('https://studentcheck-server.onrender.com/students', {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' }
+            // Preferred secure/performant contract: backend existence probe endpoint.
+            // If endpoint is missing, defer duplicate detection to final registration response.
+            const response = await fetch('https://studentcheck-server.onrender.com/students/check-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ email: emailValue.toLowerCase() })
             });
 
-            if (!result.ok) {
+            if (response.status === 404 || response.status === 405) {
+                return true;
+            }
+
+            if (!response.ok) {
                 setError(errorSlide4, 'err_email_verify');
                 errorSlide4.style.display = 'block';
                 contactErrorActivated = true;
                 return false;
             }
 
-            const data = await result.json();
-            const students = Array.isArray(data?.students) ? data.students : (Array.isArray(data) ? data : []);
-
-            const exists = students.some((student) => {
-                const candidate = (student?.email || student?.student_email || student?.email_address || '').toString().trim().toLowerCase();
-                return candidate && candidate === normalized;
-            });
-
+            const data = await response.json();
+            const exists = Boolean(data?.exists ?? data?.taken ?? data?.duplicate);
             if (exists) {
                 lastDuplicateEmail = emailValue;
                 email.classList.add('invalid');
@@ -486,10 +485,8 @@
 
             return true;
         } catch (_) {
-            setError(errorSlide4, 'err_email_verify');
-            errorSlide4.style.display = 'block';
-            contactErrorActivated = true;
-            return false;
+            // Network/API probe failure: allow continue and rely on server-side validation on submit.
+            return true;
         } finally {
             nextBtn.disabled = false;
         }
@@ -499,33 +496,28 @@
         const facultyValue = (facultyNumber.value || '').trim().replace(/\s+/g,'');
         if (!facultyValue) return false;
 
-        const normalized = facultyValue.toUpperCase();
         nextBtn.disabled = true;
-
         try {
-            const result = await fetch('https://studentcheck-server.onrender.com/students', {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' }
+            // Preferred secure/performant contract: backend existence probe endpoint.
+            const response = await fetch('https://studentcheck-server.onrender.com/students/check-faculty-number', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ facultyNumber: facultyValue.toUpperCase() })
             });
 
-            if (!result.ok) {
+            if (response.status === 404 || response.status === 405) {
+                return true;
+            }
+
+            if (!response.ok) {
                 setError(errorSlide4, 'err_faculty_verify');
                 errorSlide4.style.display = 'block';
                 contactErrorActivated = true;
                 return false;
             }
 
-            const data = await result.json();
-            const students = Array.isArray(data?.students) ? data.students : (Array.isArray(data) ? data : []);
-
-            const exists = students.some((student) => {
-                const candidate = (student?.faculty_number || student?.facultyNumber || student?.faculty || '')
-                    .toString()
-                    .trim()
-                    .toUpperCase();
-                return candidate && candidate === normalized;
-            });
-
+            const data = await response.json();
+            const exists = Boolean(data?.exists ?? data?.taken ?? data?.duplicate);
             if (exists) {
                 lastDuplicateFaculty = facultyValue;
                 facultyNumber.classList.add('invalid');
@@ -537,10 +529,7 @@
 
             return true;
         } catch (_) {
-            setError(errorSlide4, 'err_faculty_verify');
-            errorSlide4.style.display = 'block';
-            contactErrorActivated = true;
-            return false;
+            return true;
         } finally {
             nextBtn.disabled = false;
         }
@@ -739,6 +728,16 @@
                 // Try to parse JSON error payload for more detail (e.g. duplicate email)
                 try { data = await resp.json(); } catch(_) { data = null; }
                 const serverMsg = data && (data.message || data.error || data.detail) || (resp.status + ' ' + resp.statusText);
+                if (/duplicate|exists|already/i.test(serverMsg) && /faculty/i.test(serverMsg)) {
+                    lastDuplicateFaculty = facultyNumber.value.trim().replace(/\s+/g,'');
+                    facultyNumber.classList.add('invalid');
+                    contactErrorActivated = true;
+                    setError(errorSlide4, 'err_faculty_exists');
+                    errorSlide4.style.display = 'block';
+                    step = 3;
+                    updateUI();
+                    return;
+                }
                 if (/duplicate|exists|already/i.test(serverMsg) && email) {
                     // Prepare duplicate state BEFORE updating UI so live validator preserves the message
                     lastDuplicateEmail = email.value.trim();
@@ -749,16 +748,6 @@
                     step = 3; // ensure email slide visible
                     updateUI();
                     // Avoid auto-focus to prevent mobile keyboard opening unexpectedly
-                    return;
-                }
-                if (/duplicate|exists|already/i.test(serverMsg) && /faculty/i.test(serverMsg)) {
-                    lastDuplicateFaculty = facultyNumber.value.trim().replace(/\s+/g,'');
-                    facultyNumber.classList.add('invalid');
-                    contactErrorActivated = true;
-                    setError(errorSlide4, 'err_faculty_exists');
-                    errorSlide4.style.display = 'block';
-                    step = 3;
-                    updateUI();
                     return;
                 }
                 alert(t('err_registration_failed_prefix') + serverMsg);
@@ -802,7 +791,14 @@
 
                 window.location.href = 'studentHomepage.html';
             } else {
-                if (/duplicate|exists|already/i.test(data.message || '')) {
+                if (/duplicate|exists|already/i.test(data.message || '') && /faculty/i.test(data.message || '')) {
+                    lastDuplicateFaculty = facultyNumber.value.trim().replace(/\s+/g,'');
+                    facultyNumber.classList.add('invalid');
+                    contactErrorActivated = true;
+                    setError(errorSlide4, 'err_faculty_exists');
+                    errorSlide4.style.display = 'block';
+                    step = 3; updateUI();
+                } else if (/duplicate|exists|already/i.test(data.message || '')) {
                     // Prepare duplicate state BEFORE updating UI so live validator preserves the message
                     lastDuplicateEmail = email.value.trim();
                     email.classList.add('invalid');
@@ -811,13 +807,6 @@
                     errorSlide4.style.display = 'block';
                     step = 3; updateUI();
                     // Avoid auto-focus to prevent mobile keyboard opening unexpectedly
-                } else if (/duplicate|exists|already/i.test(data.message || '') && /faculty/i.test(data.message || '')) {
-                    lastDuplicateFaculty = facultyNumber.value.trim().replace(/\s+/g,'');
-                    facultyNumber.classList.add('invalid');
-                    contactErrorActivated = true;
-                    setError(errorSlide4, 'err_faculty_exists');
-                    errorSlide4.style.display = 'block';
-                    step = 3; updateUI();
                 } else {
                     alert(t('err_registration_failed_prefix') + (data.message || t('err_registration_failed_unknown')));
                 }

@@ -95,7 +95,8 @@ function decryptStudentEmail(rawValue) {
     const decoded = decodeBase64Utf8(raw);
     if (looksLikeEmail(decoded)) return decoded;
 
-    return raw;
+    // Do not leak ciphertext-ish values to UI.
+    return '';
 }
 
 function getStudentEmail(student) {
@@ -123,8 +124,8 @@ function getStudentEmail(student) {
         if (looksLikeEmail(decoded)) return decoded;
     }
 
-    // Final fallback: preserve previous behavior (show something instead of blank).
-    return decryptStudentEmail(candidates.find(Boolean) || '');
+    // Final fallback: keep UI clean and only show valid emails.
+    return '';
 }
 
 function getStudentGroup(student) {
