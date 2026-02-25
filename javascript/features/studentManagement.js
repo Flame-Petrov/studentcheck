@@ -99,14 +99,32 @@ function decryptStudentEmail(rawValue) {
 }
 
 function getStudentEmail(student) {
-    const emailRaw =
-        student?.email
-        || student?.email_address
-        || student?.emailAddress
-        || student?.encrypted_email
-        || student?.email_encrypted
-        || '';
-    return decryptStudentEmail(emailRaw);
+    const candidates = [
+        student?.email,
+        student?.email_address,
+        student?.emailAddress,
+        student?.student_email,
+        student?.decrypted_email,
+        student?.plain_email,
+        student?.original_email,
+        student?.encrypted_email,
+        student?.email_encrypted
+    ];
+
+    // Prefer any candidate that is already a valid plain email.
+    for (const candidate of candidates) {
+        const raw = String(candidate || '').trim();
+        if (looksLikeEmail(raw)) return raw;
+    }
+
+    // Then try decrypt/decoding each candidate and keep first valid email.
+    for (const candidate of candidates) {
+        const decoded = decryptStudentEmail(candidate);
+        if (looksLikeEmail(decoded)) return decoded;
+    }
+
+    // Final fallback: preserve previous behavior (show something instead of blank).
+    return decryptStudentEmail(candidates.find(Boolean) || '');
 }
 
 function getStudentGroup(student) {
