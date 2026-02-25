@@ -12,6 +12,38 @@
   window.handleLogoClick = handleLogoClick;
 })();
 
+// Best-effort health ping while the app tab is open.
+(function(){
+  const url = 'https://studentcheck-server.onrender.com/healthz';
+  const minMs = 5 * 60 * 1000;
+  const maxMs = 10 * 60 * 1000;
+  let timerId = null;
+
+  function nextDelayMs() {
+    return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+  }
+
+  function ping() {
+    fetch(url, { method: 'GET', cache: 'no-store' })
+      .then((res) => {
+        if (res && res.ok === true) {
+          // Health endpoint responded OK.
+        }
+      })
+      .catch(() => {
+        // Ignore failures; this ping is best-effort only.
+      })
+      .finally(() => {
+        timerId = setTimeout(ping, nextDelayMs());
+      });
+  }
+
+  timerId = setTimeout(ping, nextDelayMs());
+  window.addEventListener('beforeunload', () => {
+    if (timerId) clearTimeout(timerId);
+  });
+})();
+
 // Reusable loading/submitting overlay with long-wait timer
 // Usage: LoadingOverlay.show('Logging in...'); ... LoadingOverlay.hide();
 (function(){
