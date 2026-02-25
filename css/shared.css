@@ -503,8 +503,8 @@ body[aria-busy="true"] .navbar-logo {
 @media (max-width: 480px) {
   .btn,
   .role-button {
-    padding-top: 27px;   /* base ~12px + 15px */
-    padding-bottom: 27px;
+    padding-top: 22px;
+    padding-bottom: 22px;
     font-size: 1.06rem;
   }
 }
