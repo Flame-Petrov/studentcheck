@@ -693,6 +693,28 @@
     let submitting = false;
     async function finish() {
         if (submitting) return; // guard against double click
+        // Re-validate contact data at submit time in case user changed it earlier
+        // and reached Finish with stale availability state.
+        if (!validateSlide4()) {
+            step = 3;
+            updateUI();
+            return;
+        }
+        const emailAvailableOnFinish = await checkEmailAvailability();
+        if (!emailAvailableOnFinish) {
+            step = 3;
+            updateUI();
+            return;
+        }
+        const facultyAvailableOnFinish = await checkFacultyNumberAvailability();
+        if (!facultyAvailableOnFinish) {
+            step = 3;
+            updateUI();
+            return;
+        }
+        email.classList.remove('invalid');
+        facultyNumber.classList.remove('invalid');
+
         // Re-validate contact & password on final step
         if (!validatePassword()) { alert(t('err_password_requirements')); return; }
 
@@ -748,6 +770,18 @@
                     step = 3; // ensure email slide visible
                     updateUI();
                     // Avoid auto-focus to prevent mobile keyboard opening unexpectedly
+                    return;
+                }
+                if (/different email or faculty number/i.test(serverMsg)) {
+                    // Server returned a generic duplicate message; route user to contact slide.
+                    contactErrorActivated = true;
+                    email.classList.add('invalid');
+                    facultyNumber.classList.add('invalid');
+                    errorSlide4.textContent = serverMsg;
+                    errorSlide4.removeAttribute('data-i18n-error-key');
+                    errorSlide4.style.display = 'block';
+                    step = 3;
+                    updateUI();
                     return;
                 }
                 alert(t('err_registration_failed_prefix') + serverMsg);
