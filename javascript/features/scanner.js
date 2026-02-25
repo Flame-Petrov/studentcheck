@@ -23,12 +23,36 @@ import {
     saveScannerDraftForClass,
     restoreScannerDraftForClass
 } from './attendance.js';
-import { showOverlay, hideOverlay, getOverlay } from '../ui/overlays.js';
+import { showOverlay, hideOverlay, getOverlay, openConfirmOverlay } from '../ui/overlays.js';
 
 // Cache for html5-qrcode load promise
 let html5qrcodeLoadPromise = null;
 let scannerLifecycleCleanup = null;
 let activeScannerClassName = '';
+
+function t(key, fallback) {
+    try {
+        if (window.i18n && typeof window.i18n.t === 'function') {
+            const value = window.i18n.t(key);
+            if (value && value !== key) return value;
+        }
+    } catch (_) {}
+    return fallback || key;
+}
+
+function showUnsavedAttendanceNotice() {
+    openConfirmOverlay(
+        t('unsaved_scanner_notice_message', 'There are unsaved attendances for this class. Please finish or discard the scanner session when done.'),
+        () => {},
+        null,
+        {
+            title: t('unsaved_scanner_notice_title', 'Unsaved Attendances'),
+            okText: t('confirm_btn', 'OK'),
+            okClass: 'confirm-accept',
+            hideCancel: true
+        }
+    );
+}
 
 function bindScannerLifecyclePersistence(className) {
     const cls = String(className || '').trim();
@@ -336,5 +360,9 @@ export function openScannerOverlay(className) {
     
     initializeScanner('joining', className || current.name, (decodedText, mode, clsName) => {
         handleScannedCode(decodedText, mode, clsName, null);
+    }).then(() => {
+        if (restored) {
+            showUnsavedAttendanceNotice();
+        }
     });
 }
