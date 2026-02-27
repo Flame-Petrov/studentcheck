@@ -43,8 +43,69 @@ function getStudentFullName(student) {
     return student?.fullName || student?.full_name || student?.name || '';
 }
 
+function looksLikeFacultyNumber(value) {
+    return /^[A-Za-z0-9_-]{5,}$/.test(String(value || '').trim());
+}
+
+function decryptStudentFacultyNumber(rawValue) {
+    const raw = String(rawValue || '').trim();
+    if (!raw) return '';
+    if (looksLikeFacultyNumber(raw)) return raw;
+
+    // Optional app-level hook.
+    // Expected signature: window.decryptStudentFacultyNumber(cipherText) => plainFacultyNumber
+    try {
+        if (typeof window.decryptStudentFacultyNumber === 'function') {
+            const decrypted = String(window.decryptStudentFacultyNumber(raw) || '').trim();
+            if (looksLikeFacultyNumber(decrypted)) return decrypted;
+        }
+    } catch (_) {}
+
+    // Optional object hook: window.StudentCrypto.decryptFacultyNumber(cipherText)
+    try {
+        if (window.StudentCrypto && typeof window.StudentCrypto.decryptFacultyNumber === 'function') {
+            const decrypted = String(window.StudentCrypto.decryptFacultyNumber(raw) || '').trim();
+            if (looksLikeFacultyNumber(decrypted)) return decrypted;
+        }
+    } catch (_) {}
+
+    // Common transport format: "enc:<base64>"
+    if (raw.toLowerCase().startsWith('enc:')) {
+        const decoded = String(decodeBase64Utf8(raw.slice(4)) || '').trim();
+        if (looksLikeFacultyNumber(decoded)) return decoded;
+    }
+
+    // Fallback: treat as base64-encoded UTF-8 text.
+    const decoded = String(decodeBase64Utf8(raw) || '').trim();
+    if (looksLikeFacultyNumber(decoded)) return decoded;
+
+    // Last fallback: keep the original if nothing could decode/decrypt.
+    return raw;
+}
+
 function getStudentFacultyNumber(student) {
-    return student?.faculty_number || student?.facultyNumber || student?.faculty || '';
+    const candidates = [
+        student?.faculty_number,
+        student?.facultyNumber,
+        student?.faculty,
+        student?.decrypted_faculty_number,
+        student?.plain_faculty_number,
+        student?.original_faculty_number,
+        student?.encrypted_faculty_number,
+        student?.faculty_number_encrypted
+    ];
+
+    for (const candidate of candidates) {
+        const raw = String(candidate || '').trim();
+        if (raw && looksLikeFacultyNumber(raw)) return raw;
+    }
+
+    for (const candidate of candidates) {
+        const decoded = decryptStudentFacultyNumber(candidate);
+        if (decoded && looksLikeFacultyNumber(decoded)) return decoded;
+    }
+
+    return '';
 }
 
 function decodeBase64Utf8(input) {
