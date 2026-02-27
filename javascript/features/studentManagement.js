@@ -1301,38 +1301,48 @@ function closeAddStudentsToClass() {
  * @returns {Promise<number|null>} Class ID or null if not found
  */
 async function resolveClassId(className) {
-    // Try appState first
-    let classId = getClassIdByName(className);
-    if (classId) return classId;
-
-    // Try localStorage
-    classId = getClassIdByNameFromStorage(className);
-    if (classId) {
-        // Update appState for future lookups
-        setClassId(className, classId);
-        return classId;
+    // Prefer currently selected class context (authoritative for this UI flow)
+    const current = getCurrentClass();
+    if ((current?.name || '').trim() === String(className || '').trim() && current?.id) {
+        const currentIdNum = Number(current.id);
+        if (Number.isFinite(currentIdNum) && currentIdNum > 0) return currentIdNum;
     }
 
-    // Last resort: fetch classes and update state
+    // Try appState first
+    let classId = getClassIdByName(className);
+    if (classId) {
+        const classIdNum = Number(classId);
+        if (Number.isFinite(classIdNum) && classIdNum > 0) return classIdNum;
+    }
+
+    // Server list is the source of truth for ownership; prefer it over storage fallback.
     try {
         const teacherEmail = getTeacherEmail();
         if (!teacherEmail) {
             console.error('[resolveClassId] No teacher email available');
-            return null;
-        }
-        const data = await fetchClasses(teacherEmail);
-        const classes = data.classes || [];
-        const classesMap = new Map();
-        
-        for (const _class of classes) {
-            classesMap.set(_class.id, _class.name);
-            setClassId(_class.name, _class.id);
-            if (_class.name === className) {
-                return _class.id;
+        } else {
+            const data = await fetchClasses(teacherEmail);
+            const classes = data.classes || [];
+            
+            for (const _class of classes) {
+                setClassId(_class.name, _class.id);
+                if (_class.name === className) {
+                    return Number(_class.id);
+                }
             }
         }
     } catch (e) {
         console.error('[resolveClassId] Failed to fetch classes:', e);
+    }
+
+    // Last resort: localStorage fallback (can be stale)
+    classId = getClassIdByNameFromStorage(className);
+    if (classId) {
+        const classIdNum = Number(classId);
+        if (Number.isFinite(classIdNum) && classIdNum > 0) {
+            setClassId(className, classIdNum);
+            return classIdNum;
+        }
     }
 
     return null;

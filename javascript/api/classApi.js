@@ -266,9 +266,12 @@ export async function addStudentsToClass(classId, students) {
     }
     
     const baseUrl = `${SERVER_BASE_URL + ENDPOINTS.class_students}?class_id=${encodeURIComponent(numericClassId)}`;
+    const teacherEmail = getTeacherEmail();
     const payloads = [
-        { class_id: numericClassId, students: validStudents },
-        { classId: numericClassId, students: validStudents }
+        { class_id: numericClassId, students: validStudents, teacherEmail: teacherEmail || undefined },
+        { classId: numericClassId, students: validStudents, teacherEmail: teacherEmail || undefined },
+        { class_id: numericClassId, students: validStudents, teacher_email: teacherEmail || undefined },
+        { classId: numericClassId, students: validStudents, teacher_email: teacherEmail || undefined }
     ];
 
     let lastErr = null;
