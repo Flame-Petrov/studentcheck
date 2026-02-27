@@ -239,33 +239,38 @@ export async function saveStudentTimestamps(classId, timestampsMap) {
  * @returns {Promise<Response>} Fetch response
  */
 export async function updateCompletedClassesCount(classId) {
+    if (classId === null || classId === undefined || String(classId).trim() === '') {
+        throw new Error('Missing classId for updateCompletedClassesCount');
+    }
+
     const teacherEmail = getTeacherEmail();
     const endpointBase = SERVER_BASE_URL + ENDPOINTS.updateCompletedClassesCount;
+    const classIdQuery = `class_id=${encodeURIComponent(classId)}`;
     const encodedTeacherEmail = teacherEmail ? encodeURIComponent(teacherEmail) : '';
 
     const attempts = [
         {
-            url: endpointBase,
+            url: `${endpointBase}?${classIdQuery}`,
             body: { class_id: classId }
         },
         {
-            url: endpointBase,
+            url: `${endpointBase}?${classIdQuery}`,
             body: { classId: classId }
         },
         {
-            url: endpointBase,
+            url: `${endpointBase}?${classIdQuery}`,
             body: { class_id: classId, teacherEmail: teacherEmail || undefined }
         },
         {
-            url: endpointBase,
+            url: `${endpointBase}?${classIdQuery}`,
             body: { classId: classId, teacher_email: teacherEmail || undefined }
         },
         {
-            url: `${endpointBase}?class_id=${encodeURIComponent(classId)}`,
+            url: `${endpointBase}?${classIdQuery}`,
             body: null
         },
         {
-            url: teacherEmail ? `${endpointBase}/${encodedTeacherEmail}` : endpointBase,
+            url: teacherEmail ? `${endpointBase}/${encodedTeacherEmail}?${classIdQuery}` : `${endpointBase}?${classIdQuery}`,
             body: { class_id: classId }
         }
     ];

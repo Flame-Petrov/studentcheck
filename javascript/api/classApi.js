@@ -265,17 +265,25 @@ export async function addStudentsToClass(classId, students) {
         throw new Error('Invalid students: no students with faculty_number found');
     }
     
-    try {
-        return await authJsonFetch(`${SERVER_BASE_URL + ENDPOINTS.class_students}`, {
-            method: 'POST',
-            body: JSON.stringify({
-                classId: numericClassId,
-                students: validStudents
-            })
-        });
-    } catch (err) {
-        handleMutationApiError('/class_students', err);
+    const baseUrl = `${SERVER_BASE_URL + ENDPOINTS.class_students}?class_id=${encodeURIComponent(numericClassId)}`;
+    const payloads = [
+        { class_id: numericClassId, students: validStudents },
+        { classId: numericClassId, students: validStudents }
+    ];
+
+    let lastErr = null;
+    for (const payload of payloads) {
+        try {
+            return await authJsonFetch(baseUrl, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        } catch (err) {
+            lastErr = err;
+        }
     }
+
+    handleMutationApiError('/class_students', lastErr);
 }
 
 /**
