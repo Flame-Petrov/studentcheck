@@ -25,6 +25,7 @@ import { renderClassItem, updateClassStatusUI, flashReadyBadge, attachNewClassBu
 import { getTeacherEmail, SERVER_BASE_URL, ENDPOINTS } from '../config/api.js';
 import { saveClassStudents, resolveStudentFacultyNumber } from '../storage/studentStorage.js';
 import { getStoredClassesMap, saveClassesMap } from '../storage/classStorage.js';
+import { authHeaders } from '../api/authFetch.js';
 
 function i18nText(key, fallback) {
     try {
@@ -39,6 +40,8 @@ function i18nText(key, fallback) {
 const WIZARD_TOTAL_SLIDES = 2;
 let createClassSlideIndex = 0;
 let createClassFiltersInitialized = false;
+let createClassWizardWired = false;
+let createClassSubmitting = false;
 let lastValidatedName = '';
 let lastValidatedAvailable = false;
 
@@ -206,7 +209,18 @@ function collectSelectedStudents() {
 /**
  * Submit new class creation
  */
+// Guard against double clicks: a second Finish while saving would create a duplicate class
 async function submitNewClass() {
+    if (createClassSubmitting) return;
+    createClassSubmitting = true;
+    try {
+        await submitNewClassUnguarded();
+    } finally {
+        createClassSubmitting = false;
+    }
+}
+
+async function submitNewClassUnguarded() {
     const className = collectClassName();
     if (!className) {
         alert('Class name missing.');
@@ -385,7 +399,6 @@ function renderStudentsInWizard(students) {
     
     const wizardSelections = getWizardSelections();
     const studentIndex = new Map();
-    setWizardStudentIndex(studentIndex);
     
     students.forEach((s, idx) => {
         const li = document.createElement('li');
@@ -431,6 +444,8 @@ function renderStudentsInWizard(students) {
         
         list.appendChild(li);
     });
+    // Store the index only after it is filled: setWizardStudentIndex copies the entries
+    setWizardStudentIndex(studentIndex);
     
     container.innerHTML = '';
     container.appendChild(list);
@@ -610,7 +625,7 @@ async function fetchFilteredStudents(filters = {}) {
 
     try {
         const url = `${SERVER_BASE_URL + ENDPOINTS.students}${params.toString() ? `?${params.toString()}` : ''}`;
-        const result = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
+        const result = await fetch(url, { method: 'GET', headers: authHeaders({ 'Accept': 'application/json' }) });
         if (!result.ok) {
             throw new Error(`HTTP ${result.status}`);
         }
@@ -640,35 +655,26 @@ export function openClassCreationWizard() {
     
     if (!overlay) return;
     
-    // Wire event listeners (idempotent - safe to call multiple times)
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeClassCreationWizard);
-    }
-    if (backBtn) {
-        backBtn.addEventListener('click', () => goToSlide(0));
-    }
-    if (nextBtn) {
-        nextBtn.addEventListener('click', handleWizardNext);
-    }
-    if (finishBtn) {
-        finishBtn.addEventListener('click', submitNewClass);
-    }
-    
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeClassCreationWizard();
-    });
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isOverlayVisible(overlay)) {
-            closeClassCreationWizard();
-        }
-    });
-    
-    if (searchInput) {
-        if (window.Utils && typeof window.Utils.debounce === 'function') {
-            const debounced = window.Utils.debounce((value) => filterStudentsWizard(value), 180);
-            searchInput.addEventListener('input', (e) => debounced(e.target.value));
-        } else {
+    // Wire event listeners only on the first open; re-adding them on every open
+    // made one Finish click run submitNewClass several times.
+    if (!createClassWizardWired) {
+        createClassWizardWired = true;
+        closeBtn?.addEventListener('click', closeClassCreationWizard);
+        backBtn?.addEventListener('click', () => goToSlide(0));
+        nextBtn?.addEventListener('click', handleWizardNext);
+        finishBtn?.addEventListener('click', submitNewClass);
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeClassCreationWizard();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isOverlayVisible(overlay)) {
+                closeClassCreationWizard();
+            }
+        });
+
+        if (searchInput) {
             let debounceTimer = null;
             searchInput.addEventListener('input', (e) => {
                 clearTimeout(debounceTimer);
@@ -676,7 +682,7 @@ export function openClassCreationWizard() {
             });
         }
     }
-    
+
     getCreateClassFilterPanel()?.classList.add('hidden');
     getCreateClassFilterBtn()?.classList.remove('filter-active');
     getCreateClassFilterBtn()?.classList.remove('panel-open');

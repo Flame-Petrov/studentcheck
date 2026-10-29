@@ -29,6 +29,7 @@ import { showOverlay, hideOverlay, getOverlay, openConfirmOverlay } from '../ui/
 import { updateClassStatusUI } from '../ui/classUI.js';
 import { renderAttendanceForClass } from '../ui/attendanceUI.js';
 import { getTeacherEmail, SERVER_BASE_URL, ENDPOINTS } from '../config/api.js';
+import { authHeaders } from '../api/authFetch.js';
 
 // Module state
 let studentIndex = new Map(); // id -> full student object
@@ -1637,7 +1638,7 @@ async function requestAddStudentsWithFilters(overrides = {}) {
 
     try {
         const url = `${SERVER_BASE_URL + ENDPOINTS.students}${params.toString() ? `?${params.toString()}` : ''}`;
-        const result = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
+        const result = await fetch(url, { method: 'GET', headers: authHeaders({ 'Accept': 'application/json' }) });
         if (!result.ok) {
             throw new Error(`HTTP ${result.status}`);
         }

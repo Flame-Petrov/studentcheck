@@ -1,4 +1,5 @@
 import { showOverlay, hideOverlay, getOverlay } from '../ui/overlays.js';
+import { authHeaders } from '../api/authFetch.js';
 import { SERVER_BASE_URL } from '../config/api.js'; // Fallback if you use full URLs
 
 export function initSupportChat() {
@@ -168,7 +169,7 @@ export function initSupportChat() {
             try {
                 const response = await fetch(`${SERVER_BASE_URL}/support/chat`, { 
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ 
                         message: text, 
                         history: chatHistory,
@@ -178,12 +179,14 @@ export function initSupportChat() {
 
                 if (!response.ok) {
                     let serverError = 'Failed to fetch from chat API';
+                    // Read the body once: calling text() after a failed json() throws,
+                    // which lost err.status and skipped the 503 retry.
+                    const bodyText = await response.text().catch(() => '');
                     try {
-                        // Try to read the exact error message from the server
-                        const errData = await response.json();
+                        const errData = JSON.parse(bodyText);
                         serverError = errData.error || errData.message || errData.details || serverError;
                     } catch (e) {
-                        serverError = await response.text() || serverError;
+                        serverError = bodyText || serverError;
                     }
                     const err = new Error(`Server Error (${response.status}): ${serverError}`);
                     err.status = response.status;

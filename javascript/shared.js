@@ -128,6 +128,17 @@
   const BRAND_LOGO_SRC = 'images/new_main_logo.png';
   const BRAND_LOGO_ALT = 'Home';
 
+  // Wipe every token and cached roster/class entry on logout so the next
+  // person on a shared device sees nothing; only the language choice survives.
+  function clearSessionData() {
+    try {
+      const language = localStorage.getItem(LANGUAGE_KEY);
+      sessionStorage.clear();
+      localStorage.clear();
+      if (language) localStorage.setItem(LANGUAGE_KEY, language);
+    } catch (_) {}
+  }
+
   const translations = {
     en: {
       language_change_title: 'Change Language',
@@ -166,7 +177,7 @@
       password_req_letter: 'Contains a letter',
       password_req_number: 'Contains a number',
       password_req_match: 'Passwords match',
-      already_have_account_html: 'Already have an account? <a href="studentLogin.html">Log in</a>',
+      already_have_account_html: 'Already have an account? <a href="index.html">Log in</a>',
       back: 'Back',
       continue: 'Continue',
       finish: 'Finish',
@@ -353,7 +364,7 @@
       password_req_letter: 'Съдържа буква',
       password_req_number: 'Съдържа число',
       password_req_match: 'Паролите съвпадат',
-      already_have_account_html: 'Вече имате акаунт? <a href="studentLogin.html">Вход</a>',
+      already_have_account_html: 'Вече имате акаунт? <a href="index.html">Вход</a>',
       back: 'Назад',
       continue: 'Продължи',
       finish: 'Завърши',
@@ -734,9 +745,9 @@
       ],
       'billing.html': [
         { selector: '#billingTitle', key: 'billing_title' },
-        { selector: '.billing-row:nth-child(1) .billing-label', key: 'billing_current_plan' },
-        { selector: '.billing-row:nth-child(2) .billing-label', key: 'billing_subscription_status' },
-        { selector: '.billing-row:nth-child(3) .billing-label', key: 'billing_renews_on' },
+        { selector: '.billing-row:nth-of-type(1) .billing-label', key: 'billing_current_plan' },
+        { selector: '.billing-row:nth-of-type(2) .billing-label', key: 'billing_subscription_status' },
+        { selector: '.billing-row:nth-of-type(3) .billing-label', key: 'billing_renews_on' },
         { selector: '#manageBillingBtn', key: 'billing_manage' },
         { selector: '#upgradeBillingBtn', key: 'billing_upgrade' }
       ]
@@ -919,17 +930,7 @@
       }
       if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-          try {
-            sessionStorage.removeItem('studentData');
-            sessionStorage.removeItem('teacherData');
-            sessionStorage.removeItem('auth.teacher.token');
-            sessionStorage.removeItem('auth.teacher.expiresAt');
-            ['authToken', 'token', 'accessToken', 'jwt'].forEach((k) => {
-              sessionStorage.removeItem(k);
-              localStorage.removeItem(k);
-            });
-            localStorage.removeItem('teacherEmail');
-          } catch (_) {}
+          clearSessionData();
           closeMenu();
           window.location.replace('index.html');
         });
@@ -1060,9 +1061,9 @@
       btn.innerHTML = '<span class="billing-fab-glyph" aria-hidden="true">$</span>';
       document.body.appendChild(btn);
 
-      // Redirect directly to the Stripe Payment Link
+      // Open the billing page (plan, status, Stripe portal)
       btn.addEventListener('click', () => {
-        window.location.href = 'YOUR_LINK_HERE';
+        window.location.href = 'billing.html';
       });
     }
 
@@ -1088,4 +1089,5 @@
   }
 
   window.i18n = { t, setLanguage, getLanguage, applyTranslations, openLanguageMenu };
+  window.clearSessionData = clearSessionData;
 })();

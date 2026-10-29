@@ -7,6 +7,7 @@
 
 import { SERVER_BASE_URL, ENDPOINTS } from '../config/api.js';
 import { setAllStudents, getAllStudents } from '../state/appState.js';
+import { authHeaders } from './authFetch.js';
 
 /**
  * Fetch all students from the database
@@ -39,7 +40,7 @@ export async function fetchAllStudents(options = {}) {
     try {
         const result = await fetch(`${SERVER_BASE_URL + ENDPOINTS.students}`, {
             method: 'GET',
-            headers: { 'Accept': 'application/json' }
+            headers: authHeaders({ 'Accept': 'application/json' })
         });
 
         if (result.ok) {

@@ -132,11 +132,10 @@ function stopHtml5QrCodeStream(html5QrCode) {
 function ensureHtml5QrcodeLoaded() {
     if (window.Html5Qrcode) return Promise.resolve(window.Html5Qrcode);
     if (html5qrcodeLoadPromise) return html5qrcodeLoadPromise;
+    // Self-hosted, pinned copy: loading '@latest' from a CDN let any new upstream
+    // release run on the teacher page (where the login token lives).
     const sources = [
-        'https://unpkg.com/html5-qrcode@latest/minified/html5-qrcode.min.js',
-        'https://unpkg.com/html5-qrcode@latest/html5-qrcode.min.js',
-        'https://cdn.jsdelivr.net/npm/html5-qrcode@latest/minified/html5-qrcode.min.js',
-        'https://cdn.jsdelivr.net/npm/html5-qrcode@latest/html5-qrcode.min.js'
+        'javascript/vendor/html5-qrcode-2.3.8.min.js'
     ];
     html5qrcodeLoadPromise = new Promise((resolve, reject) => {
         const tryNext = (i) => {

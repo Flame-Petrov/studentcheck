@@ -63,6 +63,8 @@ export function clearAuthState() {
         LEGACY_TOKEN_KEYS.forEach((legacyKey) => localStorage.removeItem(legacyKey));
         sessionStorage.removeItem('teacherData');
         localStorage.removeItem('teacherEmail');
+        // Also drop cached rosters/classes (defined in shared.js)
+        if (typeof window !== 'undefined' && window.clearSessionData) window.clearSessionData();
     } catch (_) {}
 }
 

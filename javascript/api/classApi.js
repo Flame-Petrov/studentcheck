@@ -7,7 +7,7 @@
 
 import { SERVER_BASE_URL, ENDPOINTS, getTeacherEmail } from '../config/api.js';
 import { saveClassStudents, loadClassStudentsFromStorage } from '../storage/studentStorage.js';
-import { authJsonFetch } from './authFetch.js';
+import { authJsonFetch, authHeaders } from './authFetch.js';
 import { clearAuthState, hasAuthHeaderToken } from '../auth/authStore.js';
 
 let cachedFetchClassesRoute = null;
@@ -40,7 +40,7 @@ function handleMutationApiError(endpoint, err) {
     if (isAuthError(err)) {
         clearAuthState();
         alert('Session expired. Please log in again.');
-        window.location.href = 'teacherLogin.html';
+        window.location.href = 'index.html';
         err.redirectingAuth = true;
         throw err;
     }
@@ -127,7 +127,7 @@ export async function fetchClasses(teacherEmail) {
         try {
             const result = await fetch(url, {
                 method: 'GET',
-                headers: { 'Accept': 'application/json' }
+                headers: authHeaders({ 'Accept': 'application/json' })
             });
 
             if (!result.ok) {
@@ -174,7 +174,7 @@ export async function fetchClassStudents(classId, className, retryCount = 0) {
         `${SERVER_BASE_URL + ENDPOINTS.class_students}?class_id=${encodeURIComponent(numericClassId)}`,
         {
             method: 'GET',
-            headers: { 'Accept': 'application/json' }
+            headers: authHeaders({ 'Accept': 'application/json' })
         }
     );
 

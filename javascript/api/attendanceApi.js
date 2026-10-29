@@ -5,9 +5,10 @@
  * Pure functions that return promises.
  */
 
-import { SERVER_BASE_URL, ENDPOINTS, getTeacherEmail } from '../config/api.js';
+import { SERVER_BASE_URL, ENDPOINTS } from '../config/api.js';
 import { serializeTimestamp } from '../utils/helpers.js';
 import { logError } from '../utils/helpers.js';
+import { authHeaders } from './authFetch.js';
 
 /**
  * Mark attendance for a student
@@ -20,7 +21,7 @@ export async function markAttendance(classId, studentId) {
     const primaryPayload = { class_id: classId, student_id: studentId };
     const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(primaryPayload)
     });
     if (res.ok) return res.json();
@@ -28,7 +29,7 @@ export async function markAttendance(classId, studentId) {
     const fallbackPayload = { class_id: classId, faculty_number: String(studentId) };
     const fallbackRes = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(fallbackPayload)
     });
     if (fallbackRes.ok) return fallbackRes.json();
@@ -43,7 +44,7 @@ export async function markAttendance(classId, studentId) {
  */
 export async function fetchClassAttendance(classId) {
     const res = await fetch(SERVER_BASE_URL + ENDPOINTS.classAttendanceSummary(classId), {
-        headers: { 'Accept': 'application/json' }
+        headers: authHeaders({ 'Accept': 'application/json' })
     });
     if (!res.ok) throw new Error('Attendance summary fetch failed');
     return res.json();
@@ -56,7 +57,7 @@ export async function fetchClassAttendance(classId) {
  */
 export async function fetchClassAttendanceTimestamps(classId) {
     const res = await fetch(SERVER_BASE_URL + ENDPOINTS.attendanceTimestamps(classId), {
-        headers: { 'Accept': 'application/json' }
+        headers: authHeaders({ 'Accept': 'application/json' })
     });
     if (!res.ok) throw new Error('Attendance timestamps fetch failed');
     return res.json();
@@ -73,7 +74,7 @@ export async function fetchClassAttendanceTimestamps(classId) {
 export async function fetchStudentAttendanceHistory(classId, { studentId, facultyNumber } = {}) {
     const res = await fetch(
         SERVER_BASE_URL + ENDPOINTS.attendanceHistory(classId, studentId, facultyNumber),
-        { headers: { 'Accept': 'application/json' } }
+        { headers: authHeaders({ 'Accept': 'application/json' }) }
     );
     if (!res.ok) throw new Error('Attendance history fetch failed');
     return res.json();
@@ -88,7 +89,7 @@ export async function fetchStudentAttendanceHistory(classId, { studentId, facult
 export async function saveAttendanceData(classId, studentIds) {
     const response = await fetch(SERVER_BASE_URL + ENDPOINTS.attendance, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
             class_id: classId,
             student_ids: studentIds
@@ -137,7 +138,7 @@ export async function saveAttendanceSession(classId, records, { className } = {}
 
     const response = await fetch(SERVER_BASE_URL + ENDPOINTS.finishAttendanceSession, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
     });
 
@@ -195,7 +196,7 @@ export async function saveStudentTimestamp(classId, facultyNumber, joinedAt, lef
     
     const response = await fetch(SERVER_BASE_URL + ENDPOINTS.saveStudentTimestamps, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
     });
     
@@ -305,61 +306,23 @@ export async function updateCompletedClassesCount(classId) {
         throw new Error('Missing classId for updateCompletedClassesCount');
     }
 
-    const teacherEmail = getTeacherEmail();
-    const endpointBase = SERVER_BASE_URL + ENDPOINTS.updateCompletedClassesCount;
-    const classIdQuery = `class_id=${encodeURIComponent(classId)}`;
-    const encodedTeacherEmail = teacherEmail ? encodeURIComponent(teacherEmail) : '';
+    // Single request: the server increments the count, so retrying with other
+    // payload shapes could count the same session more than once.
+    const response = await fetch(SERVER_BASE_URL + ENDPOINTS.updateCompletedClassesCount, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ class_id: classId })
+    });
 
-    const attempts = [
-        {
-            url: `${endpointBase}?${classIdQuery}`,
-            body: { class_id: classId }
-        },
-        {
-            url: `${endpointBase}?${classIdQuery}`,
-            body: { classId: classId }
-        },
-        {
-            url: `${endpointBase}?${classIdQuery}`,
-            body: { class_id: classId, teacherEmail: teacherEmail || undefined }
-        },
-        {
-            url: `${endpointBase}?${classIdQuery}`,
-            body: { classId: classId, teacher_email: teacherEmail || undefined }
-        },
-        {
-            url: `${endpointBase}?${classIdQuery}`,
-            body: null
-        },
-        {
-            url: teacherEmail ? `${endpointBase}/${encodedTeacherEmail}?${classIdQuery}` : `${endpointBase}?${classIdQuery}`,
-            body: { class_id: classId }
-        }
-    ];
-
-    const errors = [];
-
-    for (const attempt of attempts) {
+    if (!response.ok) {
+        let bodyText = '';
         try {
-            const response = await fetch(attempt.url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: attempt.body ? JSON.stringify(attempt.body) : undefined
-            });
-
-            if (response.ok) {
-                return response;
-            }
-
-            let bodyText = '';
-            try {
-                bodyText = await response.text();
-            } catch (_) {}
-            errors.push(`${response.status} ${response.statusText} (${attempt.url}) ${bodyText}`.trim());
-        } catch (e) {
-            errors.push(`NETWORK_ERROR (${attempt.url}): ${e.message}`);
-        }
+            bodyText = await response.text();
+        } catch (_) {}
+        const error = new Error(`Failed to update completed classes count: ${response.status} ${bodyText}`.trim());
+        error.status = response.status;
+        throw error;
     }
 
-    throw new Error(`Failed to update completed classes count. Tried: ${errors.join(' | ')}`);
+    return response;
 }

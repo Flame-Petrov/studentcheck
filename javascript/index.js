@@ -22,7 +22,7 @@ document.getElementById('unifiedLoginForm')?.addEventListener('submit', async fu
     e.preventDefault();
 
     const identifierInput = document.getElementById('loginIdentifier').value.trim();
-    const password = document.getElementById('password').value.trim();
+    const password = document.getElementById('password').value;
     const errorMessage = document.getElementById('error-message');
 
     if (!identifierInput || !password) {

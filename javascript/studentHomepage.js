@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		if (!rawData) {
 			// No session data: send user back to login
-			window.location.replace('studentLogin.html');
+			window.location.replace('index.html');
 			return;
 		}
 
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	if (!studentData) {
 		console.error("No student data found in sessionStorage.");
 		alert('Your session data is incomplete. Please log in again.');
-		window.location.replace('studentLogin.html');
+		window.location.replace('index.html');
 		revealPage();
 		return;
 	}
@@ -135,7 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	if (logoutBtn) {
 		logoutBtn.addEventListener('click', () => {
 
-			sessionStorage.removeItem('studentData');
+			if (window.clearSessionData) window.clearSessionData();
+			else sessionStorage.removeItem('studentData');
 			// Redirect to the landing page after logout
 			window.location.replace('index.html');
 

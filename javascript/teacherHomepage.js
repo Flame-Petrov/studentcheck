@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!bootstrapTeacherAuthState()) {
         clearAuthState();
         alert('Session expired. Please log in again.');
-        window.location.href = 'teacherLogin.html';
+        window.location.href = 'index.html';
         return;
     }
 

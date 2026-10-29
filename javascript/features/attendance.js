@@ -27,6 +27,9 @@ import { openConfirmOverlay, getOverlay, hideOverlay } from '../ui/overlays.js';
 import { closeScanner } from './scanner.js';
 
 const recentScanTimestamps = new Map();
+// True while a Finish is saving: blocks a second Finish (double-counted class)
+// and ignores scans that would be wiped when the session is cleared.
+let attendanceSaveInProgress = false;
 const SCAN_DEBOUNCE_MS = 1500;
 const SCANNER_DRAFT_KEY_PREFIX = 'scanner:draft:';
 const SCANNER_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h safety window
@@ -307,6 +310,7 @@ export function updateAttendanceState(className, studentFacultyNumber, mode, upd
  * @param {Function} updateStudentInfoCountFn - Callback to update student info count
  */
 export function handleScannedCode(data, mode, className, updateStudentInfoCountFn) {
+    if (attendanceSaveInProgress) return;
     // Parse JSON payload from student QR (expects facultyNumber, name, email)
     let payload = null;
     try {
@@ -446,6 +450,8 @@ export async function openCloseScannerConfirm(className, onClosed) {
     openConfirmOverlay(
         i18nText('scanner_finish_message', 'Attendance data will be saved.'),
         async () => {
+            if (attendanceSaveInProgress) return;
+            attendanceSaveInProgress = true;
             try {
                 let saveFailed = false;
                 const classId = getClassIdByName(className);
@@ -601,6 +607,8 @@ export async function openCloseScannerConfirm(className, onClosed) {
                         logError('closeScannerConfirm', callbackErr, { className, action: 'onClosed callback (error handler)' });
                     }
                 }
+            } finally {
+                attendanceSaveInProgress = false;
             }
         },
         () => { /* canceled */ },

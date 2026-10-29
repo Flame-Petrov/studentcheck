@@ -5,7 +5,7 @@
  * Manages class storage migration and UI updates.
  */
 
-import { getClassIdByNameFromStorage, classItemKey, removeClassFromStoredMap } from '../storage/classStorage.js';
+import { getClassIdByNameFromStorage, classItemKey, removeClassFromStoredMap, getStoredClassesMap, saveClassesMap } from '../storage/classStorage.js';
 import { loadClassStudentsFromStorage, saveClassStudents } from '../storage/studentStorage.js';
 import { fetchClassStudents, deleteClassById, renameClassById } from '../api/classApi.js';
 import {
@@ -136,11 +136,23 @@ export function renameClass(oldName, newName) {
         if (oldKey) localStorage.removeItem(oldKey);
         if (newKey) localStorage.removeItem(newKey);
 
-        // Remove the ${className}:students key for both names
-        const oldStudentsKey = `${from}:students`;
-        const newStudentsKey = `${to}:students`;
-        localStorage.removeItem(oldStudentsKey);
-        localStorage.removeItem(newStudentsKey);
+        // Move the cached roster and any unsaved scanner draft to the new name.
+        // The scanner and export look rosters up by name, so deleting them here
+        // made every scan be ignored (and exports empty) until a reload.
+        [[`${from}:students`, `${to}:students`], [`scanner:draft:${from}`, `scanner:draft:${to}`]].forEach(([oldK, newK]) => {
+            const value = localStorage.getItem(oldK);
+            localStorage.removeItem(oldK);
+            if (value !== null) localStorage.setItem(newK, value);
+            else localStorage.removeItem(newK);
+        });
+
+        // Keep the id -> name map in sync so getClassIdByNameFromStorage finds the class
+        const storedMap = getStoredClassesMap();
+        if (storedMap && typeof storedMap.forEach === 'function') {
+            const updatedMap = new Map();
+            storedMap.forEach((name, id) => updatedMap.set(id, name === from ? to : name));
+            saveClassesMap(updatedMap);
+        }
     } catch (e) {
         console.warn('Rename class storage cleanup failed', e);
     }
@@ -249,6 +261,8 @@ export async function deleteClass(name) {
         }
     } catch (e) {
         alert('Failed to delete class from server: ' + e.message);
+        // Keep it on screen: removing it locally would only make it reappear on reload
+        return false;
     }
     
     // Remove per-class item

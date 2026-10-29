@@ -1,4 +1,6 @@
 import { SERVER_BASE_URL } from './config/api.js';
+import { authHeaders } from './api/authFetch.js';
+import { bootstrapTeacherAuthState } from './auth/authStore.js';
 
 function t(key, fallback) {
     try {
@@ -65,7 +67,7 @@ function renderBillingState(state) {
 async function fetchBillingStatus() {
     setError('');
     const url = `${SERVER_BASE_URL}/api/billing/status`;
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const res = await fetch(url, { headers: authHeaders({ 'Accept': 'application/json' }) });
     if (!res.ok) {
         throw new Error(`Status request failed (${res.status})`);
     }
@@ -80,7 +82,7 @@ async function openBillingPortal() {
         const url = `${SERVER_BASE_URL}/api/billing/portal`;
         const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            headers: authHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
             body: JSON.stringify({ returnUrl: window.location.href })
         });
         if (!res.ok) {
@@ -113,7 +115,7 @@ async function startUpgradeCheckout() {
         const url = `${SERVER_BASE_URL}/api/billing/checkout`;
         const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            headers: authHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
             body: JSON.stringify({ priceId, returnUrl: window.location.href })
         });
         if (!res.ok) {
@@ -132,6 +134,11 @@ async function startUpgradeCheckout() {
 }
 
 async function initBilling() {
+    // Billing belongs to a signed-in teacher; without a session every call would 401
+    if (!bootstrapTeacherAuthState()) {
+        window.location.replace('index.html');
+        return;
+    }
     if (manageBtn) {
         manageBtn.addEventListener('click', openBillingPortal);
     }
@@ -150,6 +157,7 @@ async function initBilling() {
 
 document.addEventListener('DOMContentLoaded', initBilling);
 window.addEventListener('pageshow', () => {
+    if (!bootstrapTeacherAuthState()) return;
     fetchBillingStatus()
         .then(renderBillingState)
         .catch((error) => {
