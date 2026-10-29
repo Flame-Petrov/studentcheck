@@ -162,6 +162,37 @@
       email: 'Email',
       enter_email: 'Enter your email',
       enter_password: 'Enter your password',
+      // Student page
+      sp_home: 'Home',
+      sp_main_nav: 'Main navigation',
+      sp_nav_qr: 'QR code',
+      sp_nav_courses: 'Courses',
+      sp_nav_profile: 'Profile',
+      sp_my_qr: 'My QR',
+      sp_fac_no: 'Fac. No.',
+      sp_courses_title: 'Courses',
+      sp_attendance_word: 'attendance',
+      sp_low_attendance: 'Low attendance',
+      sp_lessons: 'Lessons',
+      sp_x_of_y_lessons: '{attended} of {total} lessons',
+      sp_x_of_y_lessons_one: '{attended} of {total} lesson',
+      sp_absences: '{n} absences',
+      sp_absences_one: '{n} absence',
+      sp_present: 'Present',
+      sp_absent: 'Absent',
+      sp_no_lessons_yet: 'No lessons held yet',
+      sp_no_courses: 'You\'re not enrolled in any courses yet.',
+      sp_load_error: 'Couldn\'t load your courses.',
+      sp_lessons_error: 'Couldn\'t load the lessons.',
+      sp_retry: 'Try again',
+      sp_relogin: 'Log in again to see your attendance.',
+      sp_unrecorded: '{n} earlier lessons have no per-lesson record.',
+      sp_unrecorded_one: '1 earlier lesson has no per-lesson record.',
+      sp_qr_unavailable: 'QR code could not be generated.',
+      sp_session_incomplete: 'Your session data is incomplete. Please log in again.',
+      sp_name: 'Name',
+      sp_faculty_number: 'Faculty number',
+      sp_language: 'Language',
       create_account_title: 'Create your account',
       first_name: 'First name',
       middle_name: 'Middle name',
@@ -349,6 +380,37 @@
       email: 'Имейл',
       enter_email: 'Въведете имейл',
       enter_password: 'Въведете парола',
+      // Student page
+      sp_home: 'Начало',
+      sp_main_nav: 'Основна навигация',
+      sp_nav_qr: 'QR код',
+      sp_nav_courses: 'Дисциплини',
+      sp_nav_profile: 'Профил',
+      sp_my_qr: 'Моят QR',
+      sp_fac_no: 'Фак. №',
+      sp_courses_title: 'Дисциплини',
+      sp_attendance_word: 'посещаемост',
+      sp_low_attendance: 'Ниска посещаемост',
+      sp_lessons: 'Занятия',
+      sp_x_of_y_lessons: '{attended} от {total} занятия',
+      sp_x_of_y_lessons_one: '{attended} от {total} занятие',
+      sp_absences: '{n} отсъствия',
+      sp_absences_one: '{n} отсъствие',
+      sp_present: 'Присъствие',
+      sp_absent: 'Отсъствие',
+      sp_no_lessons_yet: 'Все още няма проведени занятия',
+      sp_no_courses: 'Все още не сте добавени към дисциплина.',
+      sp_load_error: 'Дисциплините не можаха да се заредят.',
+      sp_lessons_error: 'Занятията не можаха да се заредят.',
+      sp_retry: 'Опитай отново',
+      sp_relogin: 'Влезте отново, за да видите посещаемостта си.',
+      sp_unrecorded: '{n} по-ранни занятия нямат запис по занятие.',
+      sp_unrecorded_one: '1 по-ранно занятие няма запис по занятие.',
+      sp_qr_unavailable: 'QR кодът не можа да се генерира.',
+      sp_session_incomplete: 'Данните за сесията са непълни. Моля, влезте отново.',
+      sp_name: 'Име',
+      sp_faculty_number: 'Факултетен номер',
+      sp_language: 'Език',
       create_account_title: 'Създай акаунт',
       first_name: 'Име',
       middle_name: 'Бащино име',
@@ -511,6 +573,8 @@
   function setLanguage(lang) {
     localStorage.setItem(LANGUAGE_KEY, lang);
     applyTranslations();
+    // Pages that render text from JS re-render on this event
+    document.dispatchEvent(new CustomEvent('app:languagechange', { detail: { lang } }));
   }
 
   function t(key) {
@@ -556,19 +620,6 @@
       }
       el.textContent = value;
     });
-  }
-
-  function applyStudentHomepageText() {
-    const welcomeP = document.querySelector('.muted-left');
-    const nameEl = document.getElementById('studentDisplayName');
-    if (welcomeP && nameEl && welcomeP.firstChild) {
-      welcomeP.firstChild.textContent = t('welcome_prefix');
-    }
-    const facP = document.querySelector('.muted-left-spaced');
-    const facEl = document.getElementById('studentFacultyNumber');
-    if (facP && facEl && facP.firstChild) {
-      facP.firstChild.textContent = t('faculty_number_prefix');
-    }
   }
 
   function updateModeLabels() {
@@ -689,17 +740,6 @@
         { selector: '#nextBtn', key: 'continue' },
         { selector: '#finishBtn', key: 'finish' }
       ],
-      'studenthomepage.html': [
-        { selector: '#studentHomeTitle', key: 'student_home_title' },
-        { selector: '#viewClassesOverlayTitle', key: 'classes' },
-        { selector: '#classDetailsOverlayTitle', key: 'class_details' },
-        { selector: '.attended-classes-label', key: 'attended_classes' },
-        { selector: '.total-classes-label', key: 'total_classes' },
-        { selector: '#closeClassDetailsOverlayBtn', key: 'back' },
-        { selector: '#viewClassesBtn', key: 'classes' },
-        { selector: '#logoutBtn', key: 'log_out' },
-        { selector: '#classesList .no-classes-message', key: 'student_no_classes' }
-      ],
       'teacherhomepage.html': [
         { selector: '#overlayTitle', key: 'students' },
         { selector: '#resetFiltersBtn', key: 'reset' },
@@ -755,9 +795,6 @@
 
     (pages[page] || []).forEach(applyEntry);
 
-    if (page === 'studenthomepage.html') {
-      applyStudentHomepageText();
-    }
     if (page === 'registration.html') {
       const errorEls = document.querySelectorAll('[data-i18n-error-key]');
       errorEls.forEach((el) => {

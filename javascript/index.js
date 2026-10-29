@@ -77,6 +77,11 @@ async function handleStudentLogin(facultyNumber, password, errorMessage) {
                 sessionStorage.removeItem('teacherData');
                 localStorage.removeItem('teacherEmail');
                 sessionStorage.setItem('studentData', JSON.stringify({ data }));
+                // Student token: lets the student page read only this student's attendance
+                if (data.token) {
+                    sessionStorage.setItem('auth.student.token', String(data.token));
+                    sessionStorage.setItem('auth.student.expiresAt', String(Date.now() + Number(data.expiresIn || 0) * 1000));
+                }
             } catch (e) {}
             if (window.LoadingOverlay) window.LoadingOverlay.hide();
             window.location.href = 'studentHomepage.html';

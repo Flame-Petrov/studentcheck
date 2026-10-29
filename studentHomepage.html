@@ -1,96 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="student-app-root">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Student Home</title>
     <link rel="stylesheet" href="css/shared.css">
     <link rel="icon" href="images/new_main_logo.png" type="image/png">
-    <!-- Reuse registration theme for consistent card, buttons, inputs, actions -->
-    <link rel="stylesheet" href="css/registration.css">
-    <link rel="stylesheet" href="css/studentHomepage.css?v=1.0.0">
+    <link rel="stylesheet" href="css/studentHomepage.css?v=2.0.0">
 </head>
-<body class="page-loading">
+<body class="student-app">
 
-    <header class="student-navbar" id="studentNavbar">
-        <button class="navbar-logo" type="button" aria-label="Home" onclick="handleLogoClick()">
-            <img src="images/new_main_logo.png" alt="Home">
-        </button>
-        <div id="navbarLanguageSlot" class="navbar-language-slot"></div>
+    <!-- Icons, referenced by the top and bottom navigation -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <symbol id="icon-qr" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path fill="currentColor" d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 17.5h2.5V20H14zM17.5 14H20v2.5h-2.5z"/></symbol>
+        <symbol id="icon-book" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/></symbol>
+        <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></symbol>
+        <symbol id="icon-back" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
+    </svg>
+
+    <header class="sp-header">
+        <div class="sp-header-inner">
+            <a class="sp-logo" href="#qr" data-i18n-attr="aria-label:sp_home">
+                <img src="images/new_main_logo.png" alt="">
+            </a>
+            <nav class="sp-topnav" data-i18n-attr="aria-label:sp_main_nav">
+                <a class="sp-tab" href="#qr" data-route="qr"><svg aria-hidden="true"><use href="#icon-qr"/></svg><span data-i18n="sp_nav_qr">QR code</span></a>
+                <a class="sp-tab" href="#courses" data-route="courses"><svg aria-hidden="true"><use href="#icon-book"/></svg><span data-i18n="sp_nav_courses">Courses</span></a>
+                <a class="sp-tab" href="#profile" data-route="profile"><svg aria-hidden="true"><use href="#icon-user"/></svg><span data-i18n="sp_nav_profile">Profile</span></a>
+            </nav>
+            <div class="sp-header-lang" id="spHeaderLang"></div>
+        </div>
     </header>
 
-    <div class="overlay-background" id="overlay-background"></div>
+    <main class="sp-main" id="spMain">
 
-
-    <div id="view-classes-overlay">
-
-        <div class="overlay-top-section" id="viewClassesOverlayContentTopSection">
-            <h2 id="viewClassesOverlayTitle">Classes</h2>
-        </div>
-
-
-        <div class="overlay-middle-section" id="viewClassesOverlayContentMainSection">
-            <ul id="classesList">
-                <!-- Dynamically populated list of classes will go here -->
-            </ul>
-        </div>
-
-
-        <div class="overlay-bottom-section" id="viewClassesOverlayContentBottomSection">
-        </div>
-        
-    </div>
-
-
-    <div id="class-details-overlay">
-
-        <div class="overlay-top-section" id="classDetailsOverlayContentTopSection">
-            <h2 id="classDetailsOverlayTitle">Class Details</h2>
-            <p id="classDetailsOverlayClassName" class="class-details-name"></p>
-        </div>
-
-        <div class="overlay-middle-section">
-            <div class="attended-classes-container">
-                <p class="attended-classes-label">Attended classes:</p>
-                <p id="attendedClassesCount">...</p>
+        <section class="sp-view sp-view-qr" id="viewQr" data-view="qr" aria-labelledby="qrTitle">
+            <h1 class="sp-title" id="qrTitle" tabindex="-1" data-i18n="sp_my_qr">My QR</h1>
+            <div class="sp-qr-card">
+                <div class="sp-qr" id="qrContainer"></div>
+                <p class="sp-qr-name" id="studentDisplayName"></p>
+                <p class="sp-qr-fac"><span data-i18n="sp_fac_no">Fac. No.</span> <strong id="studentFacultyNumber"></strong></p>
             </div>
-            
-            <div class="total-classes-container">
-                <p class="total-classes-label">Total classes:</p>
-                <p id="totalClassesCount">...</p>
+        </section>
+
+        <section class="sp-view sp-courses" id="viewCourses" data-view="courses" hidden>
+            <div class="sp-courses-grid" id="coursesGrid" data-mode="list">
+                <div class="sp-course-list-col">
+                    <h1 class="sp-title" id="coursesTitle" tabindex="-1" data-i18n="sp_courses_title">Courses</h1>
+                    <div id="courseListStatus" aria-live="polite"></div>
+                    <ul class="sp-course-list" id="courseList" data-i18n-attr="aria-label:sp_courses_title"></ul>
+                </div>
+                <section class="sp-detail" id="courseDetail" aria-labelledby="detailTitle">
+                    <button class="sp-back" id="detailBack" type="button">
+                        <svg aria-hidden="true"><use href="#icon-back"/></svg>
+                        <span data-i18n="sp_courses_title">Courses</span>
+                    </button>
+                    <div id="detailBody"></div>
+                </section>
             </div>
-            <!-- <p>Missed classes:</p> -->
-        </div>
+        </section>
 
-        <div class="overlay-bottom-section">
-            <button id="closeClassDetailsOverlayBtn" class="button" type="button">Back</button>
-        </div>
-    
-    </div>
-
-
-
-    <main class="mainSection" role="region" aria-label="Student Home">
-
-        <div class="card-section">
-            <p class="muted-left welcome-text">
-                Welcome, <strong id="studentDisplayName">Student</strong>
-            </p>
-            <p class="muted-left-spaced faculty-text">
-                Faculty Number: <strong id="studentFacultyNumber">—</strong>
-            </p>
-            <div id="qrContainer"></div>
-        </div>
-
-
-        
-
-        <div class="button-group">
-            <button id="viewClassesBtn" class="button" type="button">Classes</button>
-            <button id="logoutBtn" class="button" type="button">Log out</button>
-        </div>
+        <section class="sp-view sp-view-profile" id="viewProfile" data-view="profile" aria-labelledby="profileTitle" hidden>
+            <h1 class="sp-title" id="profileTitle" tabindex="-1" data-i18n="sp_nav_profile">Profile</h1>
+            <div class="sp-card">
+                <dl class="sp-profile-list" id="profileDetails"></dl>
+            </div>
+            <div class="sp-card sp-settings">
+                <button class="sp-setting" id="profileLanguageBtn" type="button">
+                    <span data-i18n="sp_language">Language</span>
+                    <span class="sp-setting-value" id="profileLanguageValue"></span>
+                </button>
+                <button class="sp-setting sp-logout" id="logoutBtn" type="button">
+                    <span data-i18n="log_out">Log out</span>
+                    <img src="icons/logout.svg" alt="" class="sp-setting-icon">
+                </button>
+            </div>
+        </section>
 
     </main>
+
+    <nav class="sp-bottomnav" data-i18n-attr="aria-label:sp_main_nav">
+        <a class="sp-tab" href="#qr" data-route="qr"><svg aria-hidden="true"><use href="#icon-qr"/></svg><span data-i18n="sp_nav_qr">QR code</span></a>
+        <a class="sp-tab" href="#courses" data-route="courses"><svg aria-hidden="true"><use href="#icon-book"/></svg><span data-i18n="sp_nav_courses">Courses</span></a>
+        <a class="sp-tab" href="#profile" data-route="profile"><svg aria-hidden="true"><use href="#icon-user"/></svg><span data-i18n="sp_nav_profile">Profile</span></a>
+    </nav>
 
     <!-- QR library: kjua (canvas/SVG QR renderer) -->
     <script src="javascript/vendor/kjua-0.9.0.min.js"></script>

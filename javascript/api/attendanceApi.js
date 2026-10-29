@@ -112,10 +112,11 @@ export async function saveAttendanceData(classId, studentIds) {
  * @param {string} [options.className] - Class name
  * @returns {Promise<{ok:boolean,status:number,data:any}>} Result object
  */
-export async function saveAttendanceSession(classId, records, { className } = {}) {
+export async function saveAttendanceSession(classId, records, { className, sessionId } = {}) {
     const payload = {
         class_id: classId,
         class_name: String(className || '').trim() || undefined,
+        session_id: sessionId || undefined,
         records: Array.isArray(records)
             ? records.map((record) => {
                 const joinedAt = serializeTimestamp(record?.joined_at ?? null);

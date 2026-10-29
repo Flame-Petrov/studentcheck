@@ -30,6 +30,21 @@ const recentScanTimestamps = new Map();
 // True while a Finish is saving: blocks a second Finish (double-counted class)
 // and ignores scans that would be wiped when the session is cleared.
 let attendanceSaveInProgress = false;
+// One id per scanner session (per class), kept in the draft so a retried Finish
+// updates the same absence rows on the server instead of adding new ones.
+const attendanceSessionIds = new Map();
+
+function getAttendanceSessionId(className) {
+    const key = String(className || '').trim();
+    let id = attendanceSessionIds.get(key);
+    if (!id) {
+        id = (window.crypto && typeof window.crypto.randomUUID === 'function')
+            ? window.crypto.randomUUID()
+            : `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+        attendanceSessionIds.set(key, id);
+    }
+    return id;
+}
 const SCAN_DEBOUNCE_MS = 1500;
 const SCANNER_DRAFT_KEY_PREFIX = 'scanner:draft:';
 const SCANNER_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h safety window
@@ -119,6 +134,7 @@ export function saveScannerDraftForClass(className) {
         const payload = {
             className: classLabel,
             savedAt: Date.now(),
+            sessionId: getAttendanceSessionId(className),
             attendance,
             timestamps
         };
@@ -147,6 +163,10 @@ export function restoreScannerDraftForClass(className) {
         if (attendanceEntries.length === 0 && timestampEntries.length === 0) {
             clearScannerDraftForClass(className);
             return false;
+        }
+
+        if (typeof parsed?.sessionId === 'string' && parsed.sessionId) {
+            attendanceSessionIds.set(String(className).trim(), parsed.sessionId);
         }
 
         const attendanceMap = ensureAttendanceState(className);
@@ -415,13 +435,25 @@ function buildAttendanceSessionRecords(attendanceMap, timestamps, storedStudents
         });
     }
 
+    // Rostered students who were never scanned are saved as absent
+    if (Array.isArray(storedStudents)) {
+        storedStudents.forEach((student) => {
+            const key = String(student?.faculty_number ?? student?.facultyNumber ?? '').trim();
+            if (key) keys.add(key);
+        });
+    }
+
     const records = [];
     keys.forEach((facultyNumber) => {
-        const status = attendanceMap?.get(facultyNumber) || 'none';
+        let status = attendanceMap?.get(facultyNumber) || 'none';
         const ts = timestamps?.get(facultyNumber) || null;
         const joinedAt = Number.isFinite(ts?.joined_at) ? ts.joined_at : null;
         const leftAt = Number.isFinite(ts?.left_at) ? ts.left_at : null;
-        if (status === 'none' && joinedAt === null && leftAt === null) return;
+        if (joinedAt === null && leftAt === null) {
+            // No scan in this session: record the absence so the student's
+            // lesson history can show it (it never counts as attendance).
+            status = 'absent';
+        }
 
         const info = getStudentInfoForFacultyNumber(facultyNumber, storedStudents);
         const studentIdRaw = info?.id ?? info?.student_id ?? null;
@@ -467,7 +499,7 @@ export async function openCloseScannerConfirm(className, onClosed) {
 
                     let persistedTransactionally = false;
                     try {
-                        const sessionResult = await saveAttendanceSession(classId, sessionRecords, { className });
+                        const sessionResult = await saveAttendanceSession(classId, sessionRecords, { className, sessionId: getAttendanceSessionId(className) });
                         persistedTransactionally = true;
                     } catch (e) {
                         const fallbackToLegacy = shouldFallbackToLegacyAttendanceSave(e);
@@ -565,6 +597,7 @@ export async function openCloseScannerConfirm(className, onClosed) {
                 );
                 clearAttendanceState(className);
                 clearScannerDraftForClass(className);
+                attendanceSessionIds.delete(String(className).trim());
                 const attendanceOverlay = getOverlay('attendanceOverlay');
                 if (attendanceOverlay && isOverlayVisible(attendanceOverlay)) {
                     hideOverlay(attendanceOverlay, false);
