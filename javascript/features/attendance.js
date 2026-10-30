@@ -20,7 +20,7 @@ import {
     getAttendanceDotIndex
 } from '../state/appState.js';
 import { loadClassStudentsFromStorage, getStudentInfoForFacultyNumber, resolveStudentFacultyNumber } from '../storage/studentStorage.js';
-import { fetchClassAttendance, saveStudentTimestamps, updateCompletedClassesCount, saveAttendanceData, saveAttendanceSession } from '../api/attendanceApi.js';
+import { fetchClassAttendance, saveAttendanceSession } from '../api/attendanceApi.js';
 import { updateAttendanceDot } from '../ui/attendanceUI.js';
 import { getActiveClassName, logError } from '../utils/helpers.js';
 import { openConfirmOverlay, getOverlay, hideOverlay } from '../ui/overlays.js';
@@ -415,11 +415,6 @@ export function getStudentAttendanceCountForClass(className, studentId, updateCo
     return 0;
 }
 
-function shouldFallbackToLegacyAttendanceSave(error) {
-    const status = Number(error?.status || 0);
-    return status === 404 || status === 405 || status === 501;
-}
-
 function buildAttendanceSessionRecords(attendanceMap, timestamps, storedStudents) {
     const keys = new Set();
     if (attendanceMap && typeof attendanceMap.forEach === 'function') {
@@ -497,84 +492,18 @@ export async function openCloseScannerConfirm(className, onClosed) {
                     const timestamps = getStudentTimestamps() || new Map();
                     const sessionRecords = buildAttendanceSessionRecords(attendanceMap, timestamps, storedStudents);
 
-                    let persistedTransactionally = false;
+                    // The server creates the lesson; a retry reuses it through the session id.
                     try {
-                        const sessionResult = await saveAttendanceSession(classId, sessionRecords, { className, sessionId: getAttendanceSessionId(className) });
-                        persistedTransactionally = true;
+                        await saveAttendanceSession(classId, sessionRecords, { className, sessionId: getAttendanceSessionId(className) });
                     } catch (e) {
-                        const fallbackToLegacy = shouldFallbackToLegacyAttendanceSave(e);
+                        saveFailed = true;
                         logError('closeScannerConfirm', e, {
                             className,
                             classId,
                             action: 'saveAttendanceSession',
-                            records: sessionRecords.length,
-                            fallbackToLegacy
+                            records: sessionRecords.length
                         });
-                        if (!fallbackToLegacy) {
-                            saveFailed = true;
-                        } else {
-                            console.warn('[closeScannerConfirm] saveAttendanceSession unavailable, falling back to legacy endpoints.', {
-                                className: String(className || '').trim(),
-                                classId,
-                                status: e?.status ?? null
-                            });
-                        }
                     }
-
-                    if (!saveFailed && !persistedTransactionally) {
-                        // Legacy fallback for environments where /attendance/finish is not deployed yet.
-                        try {
-                            const completedIds = [];
-                            attendanceMap.forEach((status, facultyNumber) => {
-                                if (status !== 'completed') return;
-                                const info = getStudentInfoForFacultyNumber(facultyNumber, storedStudents);
-                                const apiStudentId = info?.id || info?.student_id || info?.faculty_number || info?.facultyNumber || facultyNumber;
-                                completedIds.push(apiStudentId);
-                            });
-                            if (completedIds.length > 0) {
-                                const response = await saveAttendanceData(classId, completedIds);
-                                if (!response?.ok) {
-                                    saveFailed = true;
-                                    logError(
-                                        'closeScannerConfirm',
-                                        new Error(`Attendance save failed with status ${response?.status ?? 'unknown'}`),
-                                        { className, classId, action: 'saveAttendanceData', completedIds: completedIds.length }
-                                    );
-                                }
-                            }
-                        } catch (e) {
-                            saveFailed = true;
-                            logError('closeScannerConfirm', e, { className, classId, action: 'saveAttendanceData' });
-                        }
-
-                        if (!saveFailed && timestamps && timestamps.size > 0) {
-                            try {
-                                const result = await saveStudentTimestamps(classId, timestamps);
-                                if (result.failed > 0) {
-                                    saveFailed = true;
-                                    logError('closeScannerConfirm', new Error(`Failed to save timestamps for ${result.failed} student(s)`), {
-                                        className,
-                                        classId,
-                                        action: 'saveStudentTimestamps',
-                                        result
-                                    });
-                                }
-                            } catch (e) {
-                                saveFailed = true;
-                                logError('closeScannerConfirm', e, { className, classId, action: 'saveStudentTimestamps' });
-                            }
-                        }
-                    }
-
-                    if (!saveFailed) {
-                        try {
-                            await updateCompletedClassesCount(classId);
-                        } catch (e) {
-                            logError('closeScannerConfirm', e, { className, classId, action: 'updateCompletedClassesCount' });
-                            // Continue with cleanup
-                        }
-                    }
-
                 }
 
                 if (saveFailed) {

@@ -17,17 +17,11 @@ export const ENDPOINTS = {
     createClass: '/classes',
     deleteClass: '/classes',
     updateClass: '/classes',
-    attendance: '/attendance',
     finishAttendanceSession: '/attendance/finish',
     class_students: '/class_students',
     students: '/students',
     checkStudentEmail: '/students/check-email',
     checkStudentFacultyNumber: '/students/check-faculty-number',
-    getStudentClasses: '/get_student_classes',
-    getStudentClassesNamesByIds: '/get_classes_names_by_ids',
-    getClassIdByName: '/get_class_id_by_name',
-    updateCompletedClassesCount: '/update_completed_classes_count',
-    saveStudentTimestamps: '/save_student_timestamps',
     removeStudentFromClass: '/class_students/remove',
     // Fixed: Added missing endpoint for class attendance summary
     classAttendanceSummary: (classId) => `/attendance/summary?class_id=${classId}`,
@@ -39,19 +33,6 @@ export const ENDPOINTS = {
         if (facultyNumber) params.append('faculty_number', facultyNumber);
         return `/attendance/history?${params.toString()}`;
     },
-    getStudentAttendanceCount: (classId, { studentId, facultyNumber } = {}) => {
-        const params = new URLSearchParams();
-        if (classId !== null && classId !== undefined && String(classId).trim() !== '') {
-            params.append('class_id', String(classId));
-        }
-        if (studentId !== null && studentId !== undefined && String(studentId).trim() !== '') {
-            params.append('student_id', String(studentId));
-        }
-        if (facultyNumber !== null && facultyNumber !== undefined && String(facultyNumber).trim() !== '') {
-            params.append('faculty_number', String(facultyNumber));
-        }
-        return `/get_student_attendance_count?${params.toString()}`;
-    }
 };
 
 /**
