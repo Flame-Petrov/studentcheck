@@ -1,4 +1,5 @@
 import { SERVER_BASE_URL } from './config/api.js';
+import { el, progressBar, stateBox, retryButton, signInLink } from './ui/index.js';
 
 // A course is flagged "low attendance" when the attended share is below this.
 const LOW_ATTENDANCE_THRESHOLD_PERCENT = 50;
@@ -320,40 +321,10 @@ function goBackToList() {
 
 // ===== Rendering =====
 
-function el(tag, className, text) {
-	const node = document.createElement(tag);
-	if (className) node.className = className;
-	if (text !== undefined && text !== null) node.textContent = text;
-	return node;
-}
-
-function progressBar(stats, large = false) {
-	const bar = el('span', `sp-bar${large ? ' sp-bar-lg' : ''}${stats.low ? ' is-low' : ''}`);
-	const fill = el('span', 'sp-bar-fill');
-	fill.style.width = `${stats.hasData ? stats.ratio : 0}%`;
-	bar.appendChild(fill);
-	return bar;
-}
-
-function stateBox(message, action) {
-	const box = el('div', 'sp-state');
-	box.appendChild(el('p', null, message));
-	if (action) box.appendChild(action);
-	return box;
-}
-
-function retryButton(onClick) {
-	const btn = el('button', 'sp-button', t('sp_retry', 'Try again'));
-	btn.type = 'button';
-	btn.addEventListener('click', onClick);
-	return btn;
-}
-
-function signInLink() {
-	const link = el('a', 'sp-button', t('log_in', 'Log in'));
-	link.href = 'index.html';
-	return link;
-}
+// el, progressBar, stateBox, retryButton and signInLink now live in ui/.
+// retryButton/signInLink take their (translated) label as the first argument.
+const retryAction = (onClick) => retryButton(t('sp_retry', 'Try again'), onClick);
+const signInAction = () => signInLink(t('log_in', 'Log in'));
 
 function updateCourseSelection() {
 	document.querySelectorAll('.sp-course').forEach((btn) => {
@@ -393,11 +364,11 @@ function renderCourses({ force = false } = {}) {
 	list.removeAttribute('aria-busy');
 
 	if (state.coursesStatus === 'signin') {
-		status.appendChild(stateBox(t('sp_relogin', 'Log in again to see your attendance.'), signInLink()));
+		status.appendChild(stateBox(t('sp_relogin', 'Log in again to see your attendance.'), signInAction()));
 		return;
 	}
 	if (state.coursesStatus === 'error') {
-		status.appendChild(stateBox(t('sp_load_error', "Couldn't load your courses."), retryButton(() => loadCourses(true))));
+		status.appendChild(stateBox(t('sp_load_error', "Couldn't load your courses."), retryAction(() => loadCourses(true))));
 		return;
 	}
 	if (state.courses.length === 0) {
@@ -529,11 +500,11 @@ function renderLessons(course, stats) {
 		return wrap;
 	}
 	if (current.status === 'signin') {
-		wrap.appendChild(stateBox(t('sp_relogin', 'Log in again to see your attendance.'), signInLink()));
+		wrap.appendChild(stateBox(t('sp_relogin', 'Log in again to see your attendance.'), signInAction()));
 		return wrap;
 	}
 	if (current.status === 'error') {
-		wrap.appendChild(stateBox(t('sp_lessons_error', "Couldn't load the lessons."), retryButton(() => {
+		wrap.appendChild(stateBox(t('sp_lessons_error', "Couldn't load the lessons."), retryAction(() => {
 			loadLessons(course.id, true);
 			renderLessonsSection();
 		})));
