@@ -10,9 +10,6 @@ import { saveClassStudents, loadClassStudentsFromStorage } from '../storage/stud
 import { authJsonFetch, authHeaders } from './authFetch.js';
 import { clearAuthState, hasAuthHeaderToken } from '../auth/authStore.js';
 
-let cachedFetchClassesRoute = null;
-const FETCH_CLASSES_ROUTE_KEY = 'fetchClassesRouteKey';
-
 const AUTH_401_ERRORS = new Set([
     'Missing bearer token',
     'Invalid bearer token format',
@@ -74,83 +71,27 @@ export async function createClass(name, studentIds, teacherEmail) {
 }
 
 /**
- * Fetch all classes for a teacher
- * @param {string} teacherEmail - Teacher email
+ * Fetch all classes for the logged-in teacher.
+ * The server identifies the teacher from the auth token; the teacherEmail
+ * argument is accepted for backward compatibility but no longer sent.
  * @returns {Promise<{classes: Array<{id: number, name: string}>}>} Classes data
  */
-export async function fetchClasses(teacherEmail) {
-    if (!teacherEmail) {
-        throw new Error('Teacher email is required');
-    }
-
-    const encoded = encodeURIComponent(teacherEmail);
-    const routeBuilders = {
-        classes_query_teacherEmail: () => `${SERVER_BASE_URL + ENDPOINTS.createClass}?teacherEmail=${encoded}`,
-        classes_query_teacher_email: () => `${SERVER_BASE_URL + ENDPOINTS.createClass}?teacher_email=${encoded}`,
-        classes_path_email: () => `${SERVER_BASE_URL + ENDPOINTS.createClass}/${encoded}`,
-        get_teacher_classes_teacherEmail: () => `${SERVER_BASE_URL}/get_teacher_classes?teacherEmail=${encoded}`,
-        get_teacher_classes_teacher_email: () => `${SERVER_BASE_URL}/get_teacher_classes?teacher_email=${encoded}`,
-        get_classes_by_teacher_teacherEmail: () => `${SERVER_BASE_URL}/get_classes_by_teacher?teacherEmail=${encoded}`,
-        get_classes_by_teacher_teacher_email: () => `${SERVER_BASE_URL}/get_classes_by_teacher?teacher_email=${encoded}`
-    };
-
-    const routeOrder = [
-        'get_teacher_classes_teacherEmail',
-        'get_teacher_classes_teacher_email',
-        'get_classes_by_teacher_teacherEmail',
-        'get_classes_by_teacher_teacher_email',
-        'classes_query_teacherEmail',
-        'classes_query_teacher_email',
-        'classes_path_email'
-    ];
-
-    const orderedRoutes = [];
-    if (!cachedFetchClassesRoute) {
-        try {
-            const persisted = localStorage.getItem(FETCH_CLASSES_ROUTE_KEY);
-            if (persisted && routeBuilders[persisted]) {
-                cachedFetchClassesRoute = persisted;
-            }
-        } catch (_) {}
-    }
-    if (cachedFetchClassesRoute && routeBuilders[cachedFetchClassesRoute]) {
-        orderedRoutes.push(cachedFetchClassesRoute);
-    }
-    routeOrder.forEach((key) => {
-        if (!orderedRoutes.includes(key)) orderedRoutes.push(key);
+export async function fetchClasses() {
+    const result = await fetch(`${SERVER_BASE_URL + ENDPOINTS.createClass}`, {
+        method: 'GET',
+        headers: authHeaders({ 'Accept': 'application/json' })
     });
 
-    const attempts = [];
-
-    for (const routeKey of orderedRoutes) {
-        const url = routeBuilders[routeKey]();
-        try {
-            const result = await fetch(url, {
-                method: 'GET',
-                headers: authHeaders({ 'Accept': 'application/json' })
-            });
-
-            if (!result.ok) {
-                attempts.push(`${result.status} ${result.statusText} (${url})`);
-                continue;
-            }
-
-            const data = await result.json();
-            cachedFetchClassesRoute = routeKey;
-            try {
-                localStorage.setItem(FETCH_CLASSES_ROUTE_KEY, routeKey);
-            } catch (_) {}
-            // Normalize to { classes: [...] } for all callers
-            if (Array.isArray(data)) return { classes: data };
-            if (Array.isArray(data?.classes)) return { classes: data.classes };
-            if (Array.isArray(data?.data)) return { classes: data.data };
-            return { classes: [] };
-        } catch (e) {
-            attempts.push(`NETWORK_ERROR (${url}): ${e.message}`);
-        }
+    if (!result.ok) {
+        throw new Error(`Failed to fetch classes: ${result.status} ${result.statusText}`);
     }
 
-    throw new Error(`Failed to fetch classes. Tried routes: ${attempts.join(' | ')}`);
+    // Normalize to { classes: [...] } for all callers
+    const data = await result.json();
+    if (Array.isArray(data)) return { classes: data };
+    if (Array.isArray(data?.classes)) return { classes: data.classes };
+    if (Array.isArray(data?.data)) return { classes: data.data };
+    return { classes: [] };
 }
 
 /**
