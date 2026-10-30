@@ -10,6 +10,7 @@
 
 export * from './dom.js';
 export * from './studentUI.js';
+export * from './toast.js';
 export * from './overlays.js';
 export * from './classUI.js';
 export * from './attendanceUI.js';

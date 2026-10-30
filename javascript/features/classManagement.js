@@ -20,6 +20,7 @@ import {
     setClassId
 } from '../state/appState.js';
 import { updateClassStatusUI } from '../ui/classUI.js';
+import { toast as uiToast } from '../ui/toast.js';
 import { openConfirmOverlay, showOverlay, hideOverlay, getOverlay } from '../ui/overlays.js';
 import { getActiveClassName, getRawClassNameFromButton } from '../utils/helpers.js';
 import { getTeacherEmail, normalizeEmail } from '../config/api.js';
@@ -390,17 +391,7 @@ function i18nText(key, fallback) {
 }
 
 function showClassOptionsToast(message, tone = 'success') {
-    const existing = document.querySelector('.toast-bubble');
-    if (existing) existing.remove();
-    const toast = document.createElement('div');
-    toast.className = `toast-bubble toast-${tone} toast-wide`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('show'));
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 1600);
+    uiToast(message, { tone, size: 'wide', duration: 1600, fadeMs: 300, replace: true });
 }
 
 /**

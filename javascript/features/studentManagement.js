@@ -26,6 +26,7 @@ import { loadClassStudentsFromStorage, addNewStudentsToStorage, getStudentInfoFo
 import { getClassIdByNameFromStorage, getStoredClassesMap } from '../storage/classStorage.js';
 import { fetchClasses } from '../api/classApi.js';
 import { showOverlay, hideOverlay, getOverlay, openConfirmOverlay } from '../ui/overlays.js';
+import { toast as uiToast } from '../ui/toast.js';
 import { updateClassStatusUI } from '../ui/classUI.js';
 import { renderAttendanceForClass } from '../ui/attendanceUI.js';
 import { getTeacherEmail, SERVER_BASE_URL, ENDPOINTS } from '../config/api.js';
@@ -414,17 +415,7 @@ async function fetchAttendedClassesCount(className, studentId, updateEl) {
 }
 
 function showToast(message, tone = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast-bubble toast-${tone} toast-wide`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    requestAnimationFrame(() => toast.classList.add('show'));
-
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 1400);
+    uiToast(message, { tone, size: 'wide', duration: 1400, fadeMs: 300, replace: false });
 }
 let addStudentsSelections = new Set();
 let addStudentsRequestId = 0;

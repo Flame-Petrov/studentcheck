@@ -22,6 +22,7 @@ import {
 import { loadClassStudentsFromStorage, getStudentInfoForFacultyNumber, resolveStudentFacultyNumber } from '../storage/studentStorage.js';
 import { fetchClassAttendance, saveAttendanceSession } from '../api/attendanceApi.js';
 import { updateAttendanceDot } from '../ui/attendanceUI.js';
+import { toast as uiToast } from '../ui/toast.js';
 import { getActiveClassName, logError } from '../utils/helpers.js';
 import { openConfirmOverlay, getOverlay, hideOverlay } from '../ui/overlays.js';
 import { closeScanner } from './scanner.js';
@@ -60,17 +61,7 @@ function i18nText(key, fallback) {
 }
 
 function showScanToast(message, tone) {
-    const existing = document.querySelector('.toast-bubble');
-    if (existing) existing.remove();
-    const toast = document.createElement('div');
-    toast.className = `toast-bubble toast-${tone} toast-large`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('show'));
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 450);
-    }, 2200);
+    uiToast(message, { tone, size: 'large', duration: 2200, fadeMs: 450, replace: true });
 }
 
 function showInvalidQrToast() {
