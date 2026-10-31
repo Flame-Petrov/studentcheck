@@ -37,11 +37,16 @@ html.student-app-root body.student-app {
   overscroll-behavior-y: auto;
 }
 
-/* Views differ in height (QR fits the window, Courses scrolls). Without this,
-   a classic scrollbar appears/disappears on switching and the centred header
-   and bottom nav jump sideways by its width. Overlay scrollbars: no effect. */
+/* Views differ in height (QR fits the window, Courses scrolls). A classic
+   scrollbar appearing/disappearing on switching made the centred header and
+   bottom nav jump sideways, so the page scrollbar is not drawn at all; the
+   page still scrolls (wheel, touch, keyboard). */
 html.student-app-root {
-  scrollbar-gutter: stable;
+  scrollbar-width: none;      /* Firefox, Chromium 121+ */
+}
+
+html.student-app-root::-webkit-scrollbar {
+  display: none;              /* Safari, older Chromium */
 }
 
 body.student-app {
