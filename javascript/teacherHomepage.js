@@ -10,9 +10,8 @@
  */
 
 // ===== IMPORTS =====
-import { initSupportChat } from './features/chatSupport.js';
+import { mountTeacherShell } from './ui/teacherShell.js';
 import { initClassSearch } from './features/classSearch.js';
-import { initLanguageSelect } from './ui/languageSelect.js';
 import { getTeacherEmail, SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
 import { bootstrapTeacherAuthState, clearAuthState } from './auth/authStore.js';
 import { fetchClasses } from './api/classApi.js';
@@ -58,6 +57,11 @@ function i18nText(key, fallback) {
     return fallback || key;
 }
 
+// ===== SHARED TEACHER FRAME =====
+// Mounted at module load (before DOMContentLoaded) so shared.js finds the logo
+// when it wires the slide-out menu.
+mountTeacherShell({ active: 'classes', skipTarget: 'classesTitle' });
+
 // ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', async () => {
     if (!bootstrapTeacherAuthState()) {
@@ -66,9 +70,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'index.html';
         return;
     }
-
-    initSupportChat();
-    initLanguageSelect(document.getElementById('tpLang'));
 
     const classList = document.getElementById('classList');
     initClassSearch({

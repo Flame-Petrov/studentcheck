@@ -11,90 +11,19 @@
     <link rel="icon" href="images/new_main_logo.png" type="image/png">
     <!-- Reuse registration styles for class creation wizard -->
     <link rel="stylesheet" href="css/registration.css?v=1.0.0">
-    <link rel="stylesheet" href="css/teacherHomepage.css?v=2.0.0">
-    <link rel="stylesheet" href="css/teacherShell.css?v=1.0.0">
+    <link rel="stylesheet" href="css/teacherHomepage.css?v=2.1.0">
+    <link rel="stylesheet" href="css/teacherShell.css?v=1.1.0">
+    <link rel="stylesheet" href="css/supportChat.css?v=1.0.0">
 </head>
 <body class="tp-app">
 
-    <!-- Outline icons (Lucide-style, 24px grid), referenced with <use> -->
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-        <symbol id="tp-i-cap" viewBox="0 0 24 24"><path d="M21.42 10.92a1 1 0 0 0-.02-1.84L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
-        <symbol id="tp-i-currency" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15.5 8.5H11a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H8.5"/><path d="M12 6.5v11"/></symbol>
-        <symbol id="tp-i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8.5 10h7"/><path d="M8.5 14h4.5"/></symbol>
-        <symbol id="tp-i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/></symbol>
-        <symbol id="tp-i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
-        <symbol id="tp-i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
-        <symbol id="tp-i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
-        <symbol id="tp-i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
-        <symbol id="tp-i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
-    </svg>
-
-    <a class="tp-skip-link" href="#classesTitle" id="tpSkipLink">Към съдържанието</a>
-
+    <!-- Shared teacher frame: javascript/ui/teacherShell.js fills the slots
+         (brand + navigation, language selector) and adds the support chat. -->
     <div class="tp-shell">
-
-        <!-- Sidebar on desktop; below the desktop breakpoint the brand sits in the
-             top bar and the nav becomes a fixed bottom bar (pure CSS). -->
-        <div class="tp-sidebar">
-            <div class="tp-brand">
-                <!-- .navbar-logo: shared.js attaches the slide-out menu (language, log out) to it -->
-                <button class="navbar-logo tp-logo" type="button" aria-label="Home" data-custom-logo="true" onclick="handleLogoClick()">
-                    <svg class="tp-logo-mark" viewBox="0 0 38 35" aria-hidden="true" focusable="false">
-                        <path d="M0.6 19.6c1.3-1.5 2.7-2.6 4.2-3.4 2.6 2.2 5 4.9 7.3 8.1C18 14.6 25.6 6.6 35.4 0.4c0.9 0.5 1.7 1.2 2.2 2C28.7 10.8 21.3 21.4 15.6 34.6h-3.4C9 28.6 5.2 23.6 0.6 19.6z"/>
-                    </svg>
-                </button>
-            </div>
-
-            <nav class="tp-nav" id="tpNav" aria-label="Основна навигация">
-                <ul class="tp-nav-list">
-                    <li>
-                        <a class="tp-nav-item" href="teacherHomepage.html" aria-current="page">
-                            <svg class="tp-icon tp-nav-icon" aria-hidden="true"><use href="#tp-i-cap"/></svg>
-                            <span class="tp-nav-label" id="tpNavClasses">Дисциплини</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="tp-nav-item" href="billing.html">
-                            <svg class="tp-icon tp-nav-icon" aria-hidden="true"><use href="#tp-i-currency"/></svg>
-                            <span class="tp-nav-label" id="tpNavPayments">Плащания</span>
-                        </a>
-                    </li>
-                    <li>
-                        <button class="tp-nav-item" type="button" data-action="open-support-chat" aria-haspopup="dialog">
-                            <svg class="tp-icon tp-nav-icon" aria-hidden="true"><use href="#tp-i-chat"/></svg>
-                            <span class="tp-nav-label" id="tpNavChat">Чат</span>
-                        </button>
-                    </li>
-                </ul>
-            </nav>
-        </div>
+        <div class="tp-sidebar" id="tpSidebar"></div>
 
         <div class="tp-content">
-
-            <div class="tp-topbar">
-                <!-- Language selector (javascript/ui/languageSelect.js) -->
-                <div class="tp-lang" id="tpLang">
-                    <button class="tp-lang-btn" id="tpLangBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="tpLangMenu">
-                        <svg class="tp-icon tp-lang-globe" aria-hidden="true"><use href="#tp-i-globe"/></svg>
-                        <span class="tp-lang-code" id="tpLangCode">BG</span>
-                        <svg class="tp-icon tp-lang-chevron" aria-hidden="true"><use href="#tp-i-chevron-down"/></svg>
-                    </button>
-                    <ul class="tp-lang-menu" id="tpLangMenu" role="menu" aria-labelledby="tpLangBtn" hidden>
-                        <li role="none">
-                            <button class="tp-lang-option" type="button" role="menuitemradio" aria-checked="false" data-lang="bg" lang="bg" tabindex="-1">
-                                <span>Български</span>
-                                <svg class="tp-icon tp-lang-check" aria-hidden="true"><use href="#tp-i-check"/></svg>
-                            </button>
-                        </li>
-                        <li role="none">
-                            <button class="tp-lang-option" type="button" role="menuitemradio" aria-checked="false" data-lang="en" lang="en" tabindex="-1">
-                                <span>English</span>
-                                <svg class="tp-icon tp-lang-check" aria-hidden="true"><use href="#tp-i-check"/></svg>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+            <div class="tp-topbar" id="tpTopbar"></div>
 
     <main class="tp-main" id="mainContainer">
 
@@ -266,31 +195,6 @@
 
             </div>
         </div>
-
-
-
-
-
-        <!-- Support chat is opened from the "Чат" navigation item -->
-        <div id="supportChatOverlay" class="overlay" style="visibility: hidden;">
-            <div class="chat-popup">
-                <div class="chat-header">
-                    <h2 id="supportChatTitle">Support Chat</h2>
-                    <button id="supportChatLanguageBtn" class="chat-language-btn" type="button">Change Language</button>
-                    <button id="closeSupportChatBtn" class="close-small" aria-label="Close">×</button>
-                </div>
-
-                <div id="chatHistoryContainer" class="chat-history"> 
-                    <div class="chat-message model">Hello! I am the StudentCheck support assistant. How can I help you today?</div>
-                </div>
-
-                <div class="chat-input-area">
-                    <input type="text" id="chatInput" placeholder="Ask a question..." autocomplete="off" />
-                    <button id="sendChatBtn">Send</button>
-                </div>
-            </div>
-        </div>
-
 
 
 

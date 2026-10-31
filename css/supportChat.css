@@ -1,0 +1,222 @@
+/* Support chat — shared by every teacher page (markup from javascript/ui/teacherShell.js,
+   behaviour in javascript/features/chatSupport.js). Self-contained: does not rely on
+   any page's .overlay rules. Uses the tokens from css/teacherShell.css. */
+
+#supportChatOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: block;
+    visibility: hidden;
+    background-color: rgba(8, 15, 31, 0);
+    -webkit-backdrop-filter: blur(0);
+    backdrop-filter: blur(0);
+    transition: background-color 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
+}
+
+#supportChatOverlay.chat-slide-in {
+    background-color: rgba(8, 15, 31, 0.35);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+}
+
+#supportChatOverlay .chat-popup {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    height: 520px;
+    max-height: calc(100dvh - 48px);
+    overflow: hidden;
+    background: var(--tp-surface, #fff);
+    border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(8, 15, 31, 0.16);
+    color: var(--tp-text, #080F1F);
+    font-family: var(--tp-font, inherit);
+    transform: translateX(110%);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease;
+}
+
+#supportChatOverlay.chat-slide-in .chat-popup {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+/* Phones/tablets: sit above the fixed bottom navigation */
+@media (max-width: 1023.98px) {
+    #supportChatOverlay .chat-popup {
+        right: 16px;
+        left: 16px;
+        bottom: calc(var(--tp-bottomnav-h, 64px) + env(safe-area-inset-bottom, 0px) + 12px);
+        width: auto;
+        max-width: none;
+        height: min(520px, calc(100dvh - var(--tp-bottomnav-h, 64px) - env(safe-area-inset-bottom, 0px) - 40px));
+    }
+}
+
+#supportChatOverlay .chat-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px 12px 18px;
+    border-bottom: 1px solid var(--tp-border, #DFE6EC);
+}
+
+#supportChatOverlay .chat-header h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+#supportChatOverlay .chat-language-btn {
+    margin-left: auto;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 999px;
+    background: var(--tp-surface, #fff);
+    color: var(--tp-text, #080F1F);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#supportChatOverlay .chat-language-btn:hover {
+    background: var(--tp-surface-pressed, #F2F6F9);
+}
+
+#supportChatOverlay .tp-chat-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--tp-muted, #747C89);
+    cursor: pointer;
+}
+
+#supportChatOverlay .tp-chat-close .tp-icon {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+}
+
+#supportChatOverlay .tp-chat-close:hover {
+    background: var(--tp-surface-pressed, #F2F6F9);
+    color: var(--tp-text, #080F1F);
+}
+
+#supportChatOverlay :is(.chat-language-btn, .tp-chat-close, .chat-input-area button):focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+#supportChatOverlay .chat-history {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 18px;
+    overflow-y: auto;
+    background: var(--tp-bg, #F1F6F9);
+}
+
+#supportChatOverlay .chat-message {
+    max-width: 82%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+#supportChatOverlay .chat-message.user {
+    align-self: flex-end;
+    background: var(--tp-green, #00A174);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+#supportChatOverlay .chat-message.model {
+    align-self: flex-start;
+    background: var(--tp-surface, #fff);
+    color: var(--tp-text, #080F1F);
+    border-bottom-left-radius: 4px;
+}
+
+#supportChatOverlay .chat-message.error {
+    align-self: center;
+    background: #FDECEC;
+    color: #B42318;
+    font-size: 12px;
+}
+
+#supportChatOverlay .chat-input-area {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--tp-border, #DFE6EC);
+}
+
+#supportChatOverlay .chat-input-area input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 10px;
+    font: inherit;
+    font-size: 16px; /* no iOS zoom */
+    outline: none;
+}
+
+#supportChatOverlay .chat-input-area input:focus {
+    border-color: var(--tp-green, #00A174);
+    box-shadow: var(--tp-focus-ring, 0 0 0 3px rgba(0, 161, 116, 0.32));
+}
+
+#supportChatOverlay .chat-input-area button {
+    flex: none;
+    height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--tp-green, #00A174);
+    color: #fff;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#supportChatOverlay .chat-input-area button:hover {
+    background: var(--tp-green-hover, #00936A);
+}
+
+#supportChatOverlay .chat-input-area button:disabled {
+    background: #C9D2DA;
+    cursor: not-allowed;
+}
+
+body.tp-app #supportChatOverlay button:not(:disabled):hover,
+body.tp-app #supportChatOverlay button:not(:disabled):active {
+    transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #supportChatOverlay,
+    #supportChatOverlay .chat-popup {
+        transition-duration: 0.01ms !important;
+    }
+}

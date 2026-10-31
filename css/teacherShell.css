@@ -1,5 +1,5 @@
-/* Teacher page shell — "Дисциплини".
-   One markup, three tiers:
+/* Teacher shell — the frame shared by every teacher page (Дисциплини, Плащания),
+   built by javascript/ui/teacherShell.js. One markup, three tiers:
      < 720px   phone: brand + language in a top row, stacked toolbar, fixed bottom nav
      720-1023  tablet: same shell, toolbar in one row, roomier spacing
      >= 1024   desktop: fixed white sidebar with vertical nav, canvas offset by it
@@ -26,11 +26,11 @@
 
     /* type */
     --tp-font: "Inter", "Segoe UI", system-ui, -apple-system, "Roboto", "Noto Sans", Arial, sans-serif;
-    --tp-title-size: clamp(26px, 7.5vw, 32px);
+    --tp-title-size: clamp(24px, 7vw, 28px);
     --tp-control-font: 16px;          /* >= 16px so iOS never zooms the search field */
-    --tp-card-title-size: 17px;
-    --tp-control-font-strong: 16px;
-    --tp-nav-font: 13.5px;
+    --tp-card-title-size: 16px;
+    --tp-control-font-strong: 15px;
+    --tp-nav-font: 12px;
 
     /* shape */
     --tp-radius: 12px;
@@ -41,26 +41,32 @@
     --tp-ease: cubic-bezier(0.2, 0, 0, 1);
 
     /* layout (phone) */
-    --tp-gutter: clamp(16px, 5.6vw, 24px);
-    --tp-top-pad: 26px;
-    --tp-title-gap-top: 34px;
-    --tp-title-gap-bottom: 16px;
-    --tp-control-h: 50px;
-    --tp-toolbar-gap: 12px;
-    --tp-list-gap-top: 15px;
-    --tp-card-min-h: 62px;
-    --tp-card-gap: 11px;
-    --tp-card-pad-l: 18px;
-    --tp-card-pad-r: 9px;
-    --tp-chevron: 26px;
-    --tp-search-icon: 30px;
-    --tp-search-icon-left: 10px;
-    --tp-search-text-left: 54px;
-    --tp-btn-icon: 30px;
-    --tp-btn-gap: 8px;
-    --tp-bottomnav-h: 68px;
+    --tp-gutter: clamp(16px, 5vw, 22px);
+    --tp-top-pad: 18px;
+    --tp-title-gap-top: 22px;
+    --tp-title-gap-bottom: 14px;
+    --tp-control-h: 46px;
+    --tp-toolbar-gap: 10px;
+    --tp-list-gap-top: 14px;
+    --tp-card-min-h: 54px;
+    --tp-card-gap: 10px;
+    --tp-card-pad-l: 16px;
+    --tp-card-pad-r: 8px;
+    --tp-chevron: 22px;
+    --tp-search-icon: 24px;
+    --tp-search-icon-left: 11px;
+    --tp-search-text-left: 44px;
+    --tp-btn-icon: 22px;
+    --tp-btn-gap: 6px;
+    --tp-bottomnav-h: 60px;
+    --tp-nav-icon: 25px;
+    --tp-logo: 25px;
+    --tp-lang-h: 34px;
+    --tp-lang-font: 14px;
+    --tp-lang-globe: 18px;
+    --tp-lang-chevron: 16px;
     --tp-sidebar-w: 0px;
-    --tp-content-max: 1240px;
+    --tp-content-max: 1040px;
 
     /* shared.css reads this for the whole page (overlays included) */
     --app-font-family: var(--tp-font);
@@ -100,8 +106,8 @@ body.tp-app {
 
 /* shared.css scales every hovered button; the shell's controls keep their
    resting geometry and use colour for hover/press instead. */
-body.tp-app :is(.tp-card, .tp-btn-primary, .tp-nav-item, .tp-lang-btn, .tp-lang-option, .tp-logo):not(:disabled):hover,
-body.tp-app :is(.tp-card, .tp-btn-primary, .tp-nav-item, .tp-lang-btn, .tp-lang-option, .tp-logo):not(:disabled):active {
+body.tp-app :is(.tp-card, .tp-btn-primary, .tp-btn-secondary, .tp-nav-item, .tp-lang-btn, .tp-lang-option, .tp-logo):not(:disabled):hover,
+body.tp-app :is(.tp-card, .tp-btn-primary, .tp-btn-secondary, .tp-nav-item, .tp-lang-btn, .tp-lang-option, .tp-logo):not(:disabled):active {
     transform: none !important;
 }
 
@@ -160,7 +166,7 @@ body.tp-app :is(.tp-card, .tp-btn-primary, .tp-nav-item, .tp-lang-btn, .tp-lang-
     top: 12px;
 }
 
-.tp-app :is(.tp-nav-item, .tp-lang-btn, .tp-lang-option, .tp-logo, .tp-btn-primary, .tp-card, .tp-skip-link):focus-visible {
+.tp-app :is(.tp-nav-item, .tp-lang-btn, .tp-lang-option, .tp-logo, .tp-btn-primary, .tp-btn-secondary, .tp-card, .tp-skip-link):focus-visible {
     outline: 2px solid var(--tp-green);
     outline-offset: 2px;
 }
@@ -235,7 +241,7 @@ body.tp-app :is(.tp-card, .tp-btn-primary, .tp-nav-item, .tp-lang-btn, .tp-lang-
 
 .tp-logo-mark {
     display: block;
-    width: 28px;
+    width: var(--tp-logo);
     height: auto;
     fill: currentColor;
 }
@@ -251,14 +257,14 @@ body.tp-app :is(.tp-card, .tp-btn-primary, .tp-nav-item, .tp-lang-btn, .tp-lang-
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    height: 36px;
-    padding: 0 5px 0 7px;
+    height: var(--tp-lang-h);
+    padding: 0 5px 0 8px;
     border: 1px solid var(--tp-border);
     border-radius: var(--tp-radius-sm);
     background: rgba(255, 255, 255, 0.55);
     color: var(--tp-text);
     font: inherit;
-    font-size: 15px;
+    font-size: var(--tp-lang-font);
     font-weight: 600;
     letter-spacing: 0.01em;
     cursor: pointer;
@@ -282,15 +288,15 @@ body.tp-app :is(.tp-card, .tp-btn-primary, .tp-nav-item, .tp-lang-btn, .tp-lang-
 }
 
 .tp-lang-globe {
-    width: 19px;
-    height: 19px;
+    width: var(--tp-lang-globe);
+    height: var(--tp-lang-globe);
     color: var(--tp-globe);
-    stroke-width: 1.9;
+    stroke-width: 1.8;
 }
 
 .tp-lang-chevron {
-    width: 17px;
-    height: 17px;
+    width: var(--tp-lang-chevron);
+    height: var(--tp-lang-chevron);
     color: var(--tp-muted);
     stroke-width: 2;
     transition: transform var(--tp-dur) var(--tp-ease);
@@ -448,7 +454,7 @@ body.tp-app :is(.tp-card, .tp-btn-primary, .tp-nav-item, .tp-lang-btn, .tp-lang-
     min-width: 0;
     height: var(--tp-control-h);
     margin: 0;
-    padding: 0 20px;
+    padding: 0 18px;
     border: 0;
     border-radius: var(--tp-radius);
     background: var(--tp-green);
@@ -473,7 +479,39 @@ body.tp-app :is(.tp-card, .tp-btn-primary, .tp-nav-item, .tp-lang-btn, .tp-lang-
 .tp-btn-icon {
     width: var(--tp-btn-icon);
     height: var(--tp-btn-icon);
-    stroke-width: 1.9;
+    stroke-width: 2;
+}
+
+/* Secondary action: white with a subtle border (e.g. Плащания → Надграждане) */
+.tp-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tp-btn-gap);
+    width: 100%;
+    height: var(--tp-control-h);
+    margin: 0;
+    padding: 0 18px;
+    border: 1px solid var(--tp-border);
+    border-radius: var(--tp-radius);
+    background: var(--tp-surface);
+    color: var(--tp-text);
+    font: inherit;
+    font-size: var(--tp-control-font-strong, 16px);
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--tp-dur) var(--tp-ease), border-color var(--tp-dur) var(--tp-ease);
+}
+
+.tp-btn-secondary:hover {
+    background: var(--tp-surface-hover);
+    border-color: #CFD8E0;
+}
+
+.tp-btn-secondary:active {
+    background: var(--tp-surface-pressed);
 }
 
 /* ---------- Class cards ---------- */
@@ -647,9 +685,9 @@ body.delete-popup-active #addClassBtn {
 }
 
 .tp-nav-icon {
-    width: 32px;
-    height: 32px;
-    stroke-width: 1.6;
+    width: var(--tp-nav-icon);
+    height: var(--tp-nav-icon);
+    stroke-width: 1.7;
 }
 
 .tp-nav-label {
@@ -671,78 +709,78 @@ body.delete-popup-active #addClassBtn {
 
 @media (min-width: 720px) {
     .tp-app {
-        --tp-gutter: clamp(28px, 4.5vw, 44px);
-        --tp-top-pad: 28px;
-        --tp-title-size: clamp(34px, 4.4vw, 40px);
-        --tp-title-gap-top: 30px;
-        --tp-title-gap-bottom: 22px;
-        --tp-control-h: 56px;
-        --tp-control-font: 17px;
-        --tp-control-font-strong: 18px;
-        --tp-toolbar-gap: 16px;
-        --tp-list-gap-top: 22px;
-        --tp-card-min-h: 74px;
-        --tp-card-gap: 14px;
-        --tp-card-pad-l: 24px;
-        --tp-card-pad-r: 14px;
-        --tp-card-title-size: 19px;
-        --tp-chevron: 30px;
-        --tp-search-icon: 34px;
+        --tp-gutter: clamp(24px, 4vw, 40px);
+        --tp-top-pad: 22px;
+        --tp-title-size: clamp(28px, 3.6vw, 32px);
+        --tp-title-gap-top: 22px;
+        --tp-title-gap-bottom: 18px;
+        --tp-control-h: 48px;
+        --tp-control-font: 16px;
+        --tp-control-font-strong: 15px;
+        --tp-toolbar-gap: 12px;
+        --tp-list-gap-top: 18px;
+        --tp-card-min-h: 60px;
+        --tp-card-gap: 10px;
+        --tp-card-pad-l: 20px;
+        --tp-card-pad-r: 10px;
+        --tp-card-title-size: 16px;
+        --tp-chevron: 24px;
+        --tp-search-icon: 24px;
         --tp-search-icon-left: 13px;
-        --tp-search-text-left: 62px;
-        --tp-btn-icon: 34px;
-        --tp-btn-gap: 12px;
-        --tp-bottomnav-h: 72px;
-        --tp-nav-font: 14px;
+        --tp-search-text-left: 46px;
+        --tp-btn-icon: 22px;
+        --tp-btn-gap: 8px;
+        --tp-bottomnav-h: 62px;
+        --tp-nav-icon: 25px;
+        --tp-nav-font: 12.5px;
+        --tp-logo: 26px;
+        --tp-lang-h: 36px;
+        --tp-lang-globe: 19px;
+        --tp-lang-chevron: 17px;
     }
 
     .tp-toolbar {
-        grid-template-columns: minmax(0, 753fr) minmax(max-content, 365fr);
-    }
-
-    .tp-lang-btn {
-        height: 42px;
-        padding: 0 8px 0 10px;
-        gap: 8px;
-        font-size: 16px;
+        grid-template-columns: minmax(0, 2fr) minmax(max-content, 1fr);
     }
 
     .tp-lang-btn::before {
-        inset: -2px;
+        inset: -4px -2px;
     }
-
-    .tp-lang-globe { width: 24px; height: 24px; }
-    .tp-lang-chevron { width: 22px; height: 22px; }
-    .tp-logo-mark { width: 32px; }
 }
 
 /* ---------- Desktop: sidebar ---------- */
 
 @media (min-width: 1024px) {
     .tp-app {
-        /* 306px sidebar, 80px/64px canvas padding at the 1586px reference */
-        --tp-sidebar-w: clamp(232px, 19.3vw, 306px);
-        --tp-pad-l: clamp(36px, 5.05vw, 80px);
-        --tp-pad-r: clamp(28px, 4.04vw, 64px);
-        --tp-title-size: clamp(38px, 2.84vw, 45px);
-        --tp-title-gap-top: 36px;
-        --tp-title-gap-bottom: 25px;
-        --tp-control-h: clamp(58px, 4.1vw, 65px);
-        --tp-control-font: clamp(17px, 1.27vw, 20px);
-        --tp-control-font-strong: clamp(17px, 1.27vw, 20px);
-        --tp-toolbar-gap: 18px;
-        --tp-list-gap-top: 27px;
-        --tp-card-min-h: clamp(76px, 5.6vw, 89px);
-        --tp-card-gap: 16px;
-        --tp-card-pad-l: clamp(22px, 1.77vw, 28px);
-        --tp-card-pad-r: 15px;
-        --tp-card-title-size: clamp(19px, 1.45vw, 23px);
-        --tp-chevron: 36px;
-        --tp-search-icon: 40px;
-        --tp-search-icon-left: 16px;
-        --tp-search-text-left: clamp(64px, 4.8vw, 76px);
-        --tp-btn-icon: 40px;
-        --tp-btn-gap: 17px;
+        --tp-sidebar-w: clamp(212px, 15vw, 244px);
+        --tp-pad-l: clamp(32px, 3.6vw, 56px);
+        --tp-pad-r: clamp(24px, 2.8vw, 44px);
+        --tp-top-pad: 24px;
+        --tp-title-size: clamp(28px, 2vw, 32px);
+        --tp-title-gap-top: 20px;
+        --tp-title-gap-bottom: 18px;
+        --tp-control-h: 48px;
+        --tp-control-font: 15px;
+        --tp-control-font-strong: 15px;
+        --tp-toolbar-gap: 12px;
+        --tp-list-gap-top: 18px;
+        --tp-card-min-h: 60px;
+        --tp-card-gap: 10px;
+        --tp-card-pad-l: 20px;
+        --tp-card-pad-r: 10px;
+        --tp-card-title-size: 16px;
+        --tp-chevron: 24px;
+        --tp-search-icon: 24px;
+        --tp-search-icon-left: 13px;
+        --tp-search-text-left: 46px;
+        --tp-btn-icon: 22px;
+        --tp-btn-gap: 8px;
+        --tp-nav-icon: 22px;
+        --tp-logo: 28px;
+        --tp-lang-h: 38px;
+        --tp-lang-font: 14px;
+        --tp-lang-globe: 20px;
+        --tp-lang-chevron: 18px;
     }
 
     .tp-shell {
@@ -759,26 +797,22 @@ body.delete-popup-active #addClassBtn {
         display: flex;
         flex-direction: column;
         width: var(--tp-sidebar-w);
-        padding: 32px 17px 24px 18px;
+        padding: 22px 12px 20px;
         overflow-y: auto;
         background: var(--tp-surface);
     }
 
     .tp-brand {
-        padding-left: 21px;
+        padding-left: 6px;
     }
 
     .tp-app .navbar-logo.tp-logo {
         margin: 0;
     }
 
-    .tp-logo-mark {
-        width: 38px;
-    }
-
     .tp-nav {
         position: static;
-        margin-top: 50px;
+        margin-top: 28px;
         padding: 0;
         background: transparent;
         box-shadow: none;
@@ -787,18 +821,18 @@ body.delete-popup-active #addClassBtn {
     .tp-nav-list {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 4px;
         height: auto;
     }
 
     .tp-nav-item {
         flex-direction: row;
         justify-content: flex-start;
-        gap: 20px;
-        min-height: 62px;
-        padding: 0 16px 0 20px;
-        border-radius: var(--tp-radius);
-        font-size: 20px;
+        gap: 12px;
+        min-height: 44px;
+        padding: 0 12px 0 14px;
+        border-radius: 10px;
+        font-size: 15px;
         font-weight: 500;
         line-height: 1.2;
         text-align: left;
@@ -806,12 +840,6 @@ body.delete-popup-active #addClassBtn {
 
     .tp-nav-label {
         text-align: left;
-    }
-
-    .tp-nav-icon {
-        width: 42px;
-        height: 42px;
-        stroke-width: 1.65;
     }
 
     .tp-nav-item:hover {
@@ -830,7 +858,7 @@ body.delete-popup-active #addClassBtn {
         min-height: 100vh;
         min-height: 100dvh;
         margin-left: var(--tp-sidebar-w);
-        padding: 36px var(--tp-pad-r) 64px var(--tp-pad-l);
+        padding: var(--tp-top-pad) var(--tp-pad-r) 56px var(--tp-pad-l);
     }
 
     .tp-topbar,
@@ -839,16 +867,6 @@ body.delete-popup-active #addClassBtn {
         margin-left: auto;
         margin-right: auto;
     }
-
-    .tp-lang-btn {
-        height: 47px;
-        padding: 0 7px 0 10px;
-        gap: 9px;
-        font-size: 17px;
-    }
-
-    .tp-lang-globe { width: 28px; height: 28px; stroke-width: 1.7; }
-    .tp-lang-chevron { width: 24px; height: 24px; }
 }
 
 /* ---------- Motion preferences ---------- */

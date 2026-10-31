@@ -1,52 +1,63 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bg" data-default-lang="bg">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Billing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="css/shared.css">
     <link rel="icon" href="images/new_main_logo.png" type="image/png">
-    <link rel="stylesheet" href="css/billing.css">
+    <link rel="stylesheet" href="css/teacherShell.css?v=1.1.0">
+    <link rel="stylesheet" href="css/supportChat.css?v=1.0.0">
+    <link rel="stylesheet" href="css/billing.css?v=2.0.0">
 </head>
-<body>
-    <header class="teacher-navbar" id="teacherNavbar">
-        <button class="navbar-logo" type="button" aria-label="Home" onclick="handleLogoClick()">
-            <img src="images/new_main_logo.png" alt="Home">
-        </button>
-        <div id="navbarLanguageSlot" class="navbar-language-slot"></div>
-    </header>
+<body class="tp-app">
 
-    <main class="billing-container" id="billingContainer">
-        <section class="billing-card" aria-labelledby="billingTitle">
-            <h1 id="billingTitle">Billing</h1>
+    <!-- Shared teacher frame: javascript/ui/teacherShell.js fills the slots
+         (brand + navigation, language selector) and adds the support chat. -->
+    <div class="tp-shell">
+        <div class="tp-sidebar" id="tpSidebar"></div>
 
-            <div class="billing-row">
-                <span class="billing-label">Current plan</span>
-                <span id="billingPlan" class="billing-value">—</span>
-            </div>
+        <div class="tp-content">
+            <div class="tp-topbar" id="tpTopbar"></div>
 
-            <div class="billing-row">
-                <span class="billing-label">Subscription status</span>
-                <span id="billingStatus" class="billing-value">—</span>
-            </div>
+            <main class="tp-main" id="billingContainer">
+                <section class="tp-page" aria-labelledby="billingTitle">
+                    <h1 class="tp-title" id="billingTitle" tabindex="-1">Плащания</h1>
 
-            <div class="billing-row">
-                <span class="billing-label">Renews on</span>
-                <span id="billingRenewal" class="billing-value">—</span>
-            </div>
+                    <div class="billing-card">
+                        <dl class="billing-list">
+                            <div class="billing-row">
+                                <dt class="billing-label">Текущ план</dt>
+                                <dd id="billingPlan" class="billing-value">—</dd>
+                            </div>
+                            <div class="billing-row">
+                                <dt class="billing-label">Статус на абонамент</dt>
+                                <dd id="billingStatus" class="billing-value">—</dd>
+                            </div>
+                            <div class="billing-row">
+                                <dt class="billing-label">Подновяване на</dt>
+                                <dd id="billingRenewal" class="billing-value">—</dd>
+                            </div>
+                        </dl>
+                    </div>
 
-            <p id="billingError" class="billing-error" role="alert"></p>
+                    <p id="billingError" class="billing-error" role="alert"></p>
 
-            <div class="billing-actions">
-                <button type="button" id="manageBillingBtn" class="billing-btn billing-btn--primary">
-                    Manage billing
-                </button>
-                <button type="button" id="upgradeBillingBtn" class="billing-btn billing-btn--secondary" data-price-id="">
-                    Upgrade
-                </button>
-            </div>
-        </section>
-    </main>
+                    <div class="billing-actions">
+                        <button type="button" id="manageBillingBtn" class="tp-btn-primary billing-btn">
+                            Управление на плащания
+                        </button>
+                        <button type="button" id="upgradeBillingBtn" class="tp-btn-secondary billing-btn" data-price-id="" hidden>
+                            Надграждане
+                        </button>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
 
     <script src="javascript/shared.js"></script>
     <script type="module" src="javascript/billing.js"></script>

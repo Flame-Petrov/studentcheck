@@ -789,22 +789,9 @@
         { selector: '#scannerCloseBtn', key: 'finish_class' },
         { selector: '#attendanceTitle', key: 'attendance' },
         { selector: '#classesTitle', key: 'classes' },
-        { selector: '#openSupportChatBtn', key: 'support_chat_open', html: true },
-        { selector: '#openSupportChatBtn', key: 'support_chat_open_aria', attr: 'aria-label' },
-        { selector: '#supportChatTitle', key: 'support_chat_title' },
-        { selector: '#supportChatLanguageBtn', key: 'language_change_title' },
-        { selector: '#closeSupportChatBtn', key: 'close', attr: 'aria-label' },
-        { selector: '#chatInput', key: 'support_chat_placeholder', attr: 'placeholder' },
-        { selector: '#sendChatBtn', key: 'support_chat_send' },
-        { selector: '#chatHistoryContainer .chat-message.model:first-child', key: 'support_chat_welcome' },
         { selector: '#addClassBtnLabel', key: 'tp_new_class' },
-        { selector: '#tpNavClasses', key: 'classes' },
-        { selector: '#tpNavPayments', key: 'tp_nav_payments' },
-        { selector: '#tpNavChat', key: 'tp_nav_chat' },
-        { selector: '#tpNav', key: 'sp_main_nav', attr: 'aria-label' },
         { selector: '#classSearchLabel', key: 'tp_search_label' },
         { selector: '#classSearchInput', key: 'tp_search_placeholder', attr: 'placeholder' },
-        { selector: '#tpSkipLink', key: 'tp_skip_to_content' },
         { selector: '#createClassSearchInput', key: 'search_students_placeholder', attr: 'placeholder' },
         { selector: '#addStudentsSearchInput', key: 'search_placeholder', attr: 'placeholder' },
         { selector: '#overlaySearchInput', key: 'search_placeholder', attr: 'placeholder' },
@@ -820,7 +807,24 @@
       ]
     };
 
+    // Teacher shell (javascript/ui/teacherShell.js) + support chat: applied on
+    // every page that mounts them, not tied to one file name.
+    const shell = [
+      { selector: '#tpNavClasses', key: 'classes' },
+      { selector: '#tpNavPayments', key: 'tp_nav_payments' },
+      { selector: '#tpNavChat', key: 'tp_nav_chat' },
+      { selector: '#tpNav', key: 'sp_main_nav', attr: 'aria-label' },
+      { selector: '#tpSkipLink', key: 'tp_skip_to_content' },
+      { selector: '#supportChatTitle', key: 'support_chat_title' },
+      { selector: '#supportChatLanguageBtn', key: 'language_change_title' },
+      { selector: '#closeSupportChatBtn', key: 'close', attr: 'aria-label' },
+      { selector: '#chatInput', key: 'support_chat_placeholder', attr: 'placeholder' },
+      { selector: '#sendChatBtn', key: 'support_chat_send' },
+      { selector: '#chatHistoryContainer .chat-message.model:first-child', key: 'support_chat_welcome' }
+    ];
+
     (pages[page] || []).forEach(applyEntry);
+    shell.forEach(applyEntry);
 
     if (page === 'registration.html') {
       const errorEls = document.querySelectorAll('[data-i18n-error-key]');

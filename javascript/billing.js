@@ -1,6 +1,10 @@
 import { SERVER_BASE_URL } from './config/api.js';
 import { authHeaders } from './api/authFetch.js';
 import { bootstrapTeacherAuthState } from './auth/authStore.js';
+import { mountTeacherShell } from './ui/teacherShell.js';
+
+// Same frame (navigation, language, chat) as the other teacher pages
+mountTeacherShell({ active: 'payments', skipTarget: 'billingTitle' });
 
 function t(key, fallback) {
     try {
@@ -61,7 +65,7 @@ function renderBillingState(state) {
 
     const upgradePriceId = upgradeBtn?.dataset?.priceId;
     const shouldShowUpgrade = state?.plan === 'free' && !!upgradePriceId;
-    if (upgradeBtn) upgradeBtn.style.display = shouldShowUpgrade ? 'block' : 'none';
+    if (upgradeBtn) upgradeBtn.hidden = !shouldShowUpgrade;
 }
 
 async function fetchBillingStatus() {

@@ -1,135 +1,86 @@
-body {
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    min-height: 100svh;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    background: #f3f4f6;
-    color: #111827;
-    font-family: inherit;
-}
-
-.teacher-navbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 16px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-
-.teacher-navbar .navbar-language-slot {
-    display: flex;
-    align-items: center;
-}
-
-.teacher-navbar .lang-toggle-btn {
-    position: static;
-    top: auto;
-    right: auto;
-    z-index: 1;
-}
-
-.billing-container {
-    flex: 1 1 auto;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 24px 16px 40px 16px;
-}
+/* Payments page content. The frame (navigation, language, chat) and the
+   tokens come from css/teacherShell.css, shared by every teacher page. */
 
 .billing-card {
-    width: min(92vw, 520px);
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
-    padding: 24px 22px;
+    max-width: 640px;
+    padding: 4px var(--tp-card-pad-l);
+    background: var(--tp-surface);
+    border-radius: var(--tp-radius);
+    box-shadow: 0 1px 2px rgba(8, 15, 31, 0.03);
 }
 
-.billing-card h1 {
-    margin: 0 0 18px 0;
-    font-size: 1.6rem;
-    font-weight: 700;
-    text-align: center;
+.billing-list {
+    margin: 0;
 }
 
 .billing-row {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 10px 0;
-    border-bottom: 1px solid #e5e7eb;
+    gap: 4px 16px;
+    min-height: var(--tp-card-min-h);
+    padding: 12px 0;
+    border-bottom: 1px solid var(--tp-border);
 }
 
-.billing-row:last-of-type {
-    border-bottom: none;
+.billing-row:last-child {
+    border-bottom: 0;
 }
 
 .billing-label {
-    font-weight: 600;
-    color: #374151;
+    margin: 0;
+    color: var(--tp-muted);
+    font-size: var(--tp-control-font);
+    font-weight: 500;
 }
 
 .billing-value {
+    margin: 0;
+    color: var(--tp-text);
+    font-size: var(--tp-card-title-size);
     font-weight: 600;
-    color: #111827;
     text-align: right;
-    word-break: break-word;
+    overflow-wrap: anywhere;
+    text-transform: capitalize;
 }
 
 .billing-error {
-    margin: 12px 0 0 0;
-    color: #b91c1c;
-    font-size: 0.95rem;
-    min-height: 1.2em;
-    text-align: center;
+    min-height: 1.4em;
+    margin: 12px 0 0;
+    color: var(--tp-danger);
+    font-size: 15px;
+}
+
+.billing-error:empty {
+    min-height: 0;
+    margin: 0;
 }
 
 .billing-actions {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-top: 18px;
+    gap: var(--tp-toolbar-gap);
+    margin-top: var(--tp-list-gap-top);
 }
 
-.billing-btn {
-    width: 100%;
-    min-height: 50px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 600;
-    transition: background 0.2s ease, transform var(--app-button-hover-duration) var(--app-button-hover-ease);
+.billing-btn[hidden] {
+    display: none;
 }
 
 .billing-btn:disabled {
+    opacity: 0.6;
     cursor: not-allowed;
-    opacity: 0.75;
 }
 
-.billing-btn--primary {
-    background: #059669;
-    color: #ffffff;
-}
+@media (min-width: 720px) {
+    .billing-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
 
-.billing-btn--primary:hover { background: #047857; }
-
-.billing-btn--secondary {
-    background: #2563eb;
-    color: #ffffff;
-}
-
-.billing-btn--secondary:hover { background: #1d4ed8; }
-
-.billing-btn:active { transform: translateY(2px); }
-
-@media (max-width: 480px) {
-    .billing-card {
-        padding: 20px 18px;
+    .billing-actions .billing-btn {
+        width: auto;
+        min-width: 220px;
     }
 }
