@@ -37,6 +37,13 @@ html.student-app-root body.student-app {
   overscroll-behavior-y: auto;
 }
 
+/* Views differ in height (QR fits the window, Courses scrolls). Without this,
+   a classic scrollbar appears/disappears on switching and the centred header
+   and bottom nav jump sideways by its width. Overlay scrollbars: no effect. */
+html.student-app-root {
+  scrollbar-gutter: stable;
+}
+
 body.student-app {
   background: var(--sp-bg);
   color: var(--sp-text);
