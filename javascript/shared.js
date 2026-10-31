@@ -45,16 +45,18 @@
   });
 })();
 
-// Reusable loading/submitting overlay with long-wait timer
-// Usage: LoadingOverlay.show('Logging in...'); ... LoadingOverlay.hide();
+// Pending feedback on the action itself (no blocking overlay): the form stays
+// visible, the submit button shows a spinner + label, and after 10s a
+// "server is waking up (N sec)" note appears under it.
+// Usage: PendingAction.start(button, 'Logging in...'); ... PendingAction.stop();
+// (LoadingOverlay.show(msg, { button }) / hide() remain as aliases.)
 (function(){
-  let longWaitTimeout = null;
-  let longWaitInterval = null;
-  let startMs = 0;
+  let current = null;
 
   function tOr(key, fallback) {
     const t = window.i18n && typeof window.i18n.t === 'function' ? window.i18n.t : null;
-    return t ? t(key) : fallback;
+    const value = t ? t(key) : '';
+    return value && value !== key ? value : fallback;
   }
 
   function formatWakingText(seconds) {
@@ -62,63 +64,61 @@
     return template.replace('{sec}', String(seconds));
   }
 
-  function ensureOverlay(message){
-    if (document.getElementById('loginOverlay')) {
-      const txt = document.querySelector('#loginOverlay .loading-text');
-      if (txt) txt.textContent = message || 'Loading...';
-      return document.getElementById('loginOverlay');
-    }
-    const overlay = document.createElement('div');
-    overlay.id = 'loginOverlay';
-    overlay.className = 'loading-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.innerHTML = `
-      <div class="loading-box" role="status" aria-live="polite">
-        <div class="spinner" aria-hidden="true"></div>
-        <div class="loading-text"></div>
-      </div>
-      <div class="overlay-long-wait" id="overlayLongWait" aria-live="polite" role="status" style="display:none"></div>
-    `;
-    document.body.appendChild(overlay);
-    const txt = overlay.querySelector('.loading-text');
-    if (txt) txt.textContent = message || 'Loading...';
-    return overlay;
-  }
+  function start(button, message) {
+    stop();
+    if (!button) return;
+    const label = document.createElement('span');
+    label.className = 'btn-pending-label';
+    label.textContent = message || tOr('loading', 'Loading...');
+    const spinner = document.createElement('span');
+    spinner.className = 'btn-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+    const original = Array.from(button.childNodes);
+    const width = button.getBoundingClientRect().width;
+    button.style.minWidth = width ? `${Math.ceil(width)}px` : '';
+    button.replaceChildren(spinner, label);
+    button.disabled = true;
+    button.dataset.pending = 'true';
+    button.setAttribute('aria-busy', 'true');
 
-  function show(message){
-    const overlay = ensureOverlay(message);
-    document.body.setAttribute('aria-busy', 'true');
-    startMs = Date.now();
-    // Clear any previous timers just in case
-    clearTimers();
-    const longWaitEl = overlay.querySelector('#overlayLongWait');
-    // After 10s, show long-wait message and start 1s counter
-    longWaitTimeout = setTimeout(() => {
-      if (longWaitEl) {
-        longWaitEl.style.display = 'block';
-        longWaitEl.textContent = formatWakingText(0);
-      }
-      longWaitInterval = setInterval(() => {
-        const elapsed = Math.max(0, Math.floor((Date.now() - startMs) / 1000) - 10);
-        if (longWaitEl) longWaitEl.textContent = formatWakingText(elapsed);
-      }, 1000);
+    const note = document.createElement('p');
+    note.className = 'pending-note';
+    note.setAttribute('role', 'status');
+    note.setAttribute('aria-live', 'polite');
+    (button.closest('.actions') || button).after(note);
+
+    const startedAt = Date.now();
+    current = { button, original, note, interval: null };
+    current.timeout = setTimeout(() => {
+      const tick = () => {
+        note.textContent = formatWakingText(Math.max(0, Math.floor((Date.now() - startedAt) / 1000) - 10));
+      };
+      tick();
+      current.interval = setInterval(tick, 1000);
     }, 10000);
   }
 
-  function hide(){
-    clearTimers();
-    const overlay = document.getElementById('loginOverlay');
-    if (overlay) overlay.remove();
-    document.body.removeAttribute('aria-busy');
+  function stop({ keepDisabled = false } = {}) {
+    if (!current) return;
+    const { button, original, note, timeout, interval } = current;
+    clearTimeout(timeout);
+    if (interval) clearInterval(interval);
+    note.remove();
+    if (button.dataset.pending) {
+      button.replaceChildren(...original);
+      delete button.dataset.pending;
+      button.removeAttribute('aria-busy');
+      button.style.minWidth = '';
+      if (!keepDisabled) button.disabled = false;
+    }
+    current = null;
   }
 
-  function clearTimers(){
-    if (longWaitTimeout) { clearTimeout(longWaitTimeout); longWaitTimeout = null; }
-    if (longWaitInterval) { clearInterval(longWaitInterval); longWaitInterval = null; }
-  }
-
-  window.LoadingOverlay = { show, hide };
+  window.PendingAction = { start, stop };
+  window.LoadingOverlay = {
+    show: (message, opts = {}) => start(opts.button || document.querySelector('form [type="submit"]'), message),
+    hide: () => stop()
+  };
 })();
 
 // Language switcher + translations
@@ -182,6 +182,16 @@
       tp_action_unavailable: 'This action is not available yet.',
       tp_action_error: 'This action could not be completed. Please try again.',
       tp_scanner_draft: 'unsaved scan in progress',
+      tp_loading: 'Loading…',
+      tp_load_error: 'Could not load this. Please try again.',
+      tp_retry: 'Try again',
+      tp_refresh_failed: 'Could not refresh the data.',
+      tp_classes_loading: 'Loading your classes…',
+      tp_classes_error: 'Could not load your classes.',
+      tp_classes_empty: 'You have no classes yet. Create the first one with “New class”.',
+      tp_students_error: 'Could not load the students.',
+      tp_history_error: 'Could not load the attendance history.',
+      session_expired: 'Session expired. Please log in again.',
       sp_nav_qr: 'QR code',
       sp_nav_courses: 'Courses',
       sp_nav_profile: 'Profile',
@@ -415,6 +425,16 @@
       tp_action_unavailable: 'Тази функция все още не е налична.',
       tp_action_error: 'Действието не може да бъде изпълнено. Опитайте отново.',
       tp_scanner_draft: 'има незапазено сканиране',
+      tp_loading: 'Зареждане…',
+      tp_load_error: 'Неуспешно зареждане. Опитайте отново.',
+      tp_retry: 'Опитай отново',
+      tp_refresh_failed: 'Не успяхме да обновим данните.',
+      tp_classes_loading: 'Зареждане на дисциплините…',
+      tp_classes_error: 'Неуспешно зареждане на дисциплините.',
+      tp_classes_empty: 'Все още нямате дисциплини. Създайте първата с „Нова дисциплина“.',
+      tp_students_error: 'Неуспешно зареждане на студентите.',
+      tp_history_error: 'Неуспешно зареждане на историята на присъствията.',
+      session_expired: 'Сесията изтече. Моля, влезте отново.',
       sp_nav_qr: 'QR код',
       sp_nav_courses: 'Дисциплини',
       sp_nav_profile: 'Профил',
@@ -808,7 +828,16 @@
         { selector: '#createClassSearchInput', key: 'search_students_placeholder', attr: 'placeholder' },
         { selector: '#addStudentsSearchInput', key: 'search_placeholder', attr: 'placeholder' },
         { selector: '#overlaySearchInput', key: 'search_placeholder', attr: 'placeholder' },
-        { selector: '#scannerDiscardBtn', key: 'discard' }
+        { selector: '#scannerDiscardBtn', key: 'discard' },
+        { selector: '#classListNone', key: 'tp_classes_empty' },
+        { selector: '#classListStatus', key: 'tp_classes_loading' },
+        { selector: '#billingTitle', key: 'billing_title' },
+        { selector: '#billingSection .billing-row:nth-of-type(1) .billing-label', key: 'billing_current_plan' },
+        { selector: '#billingSection .billing-row:nth-of-type(2) .billing-label', key: 'billing_subscription_status' },
+        { selector: '#billingSection .billing-row:nth-of-type(3) .billing-label', key: 'billing_renews_on' },
+        { selector: '#manageBillingBtn:not([data-pending])', key: 'billing_manage' },
+        { selector: '#upgradeBillingBtn:not([data-pending])', key: 'billing_upgrade' },
+        { selector: '#billingLoadingStatus', key: 'tp_loading' }
       ],
       'billing.html': [
         { selector: '#billingTitle', key: 'billing_title' },
@@ -1146,14 +1175,15 @@
 
       // Open the billing page (plan, status, Stripe portal)
       btn.addEventListener('click', () => {
-        window.location.href = 'billing.html';
+        window.location.href = 'teacherHomepage.html#payments';
       });
     }
 
     function hasTeacherSession() {
       try { return !!sessionStorage.getItem('teacherData'); } catch (_) { return false; }
     }
-    const isBillingPage = window.location.pathname.toLowerCase().includes('billing.html');
+    const isBillingPage = window.location.pathname.toLowerCase().includes('billing.html')
+      || document.body.classList.contains('tp-app');
     btn.style.display = (hasTeacherSession() && !isBillingPage) ? 'flex' : 'none';
   }
 
@@ -1173,4 +1203,19 @@
 
   window.i18n = { t, setLanguage, getLanguage, applyTranslations, openLanguageMenu };
   window.clearSessionData = clearSessionData;
+
+  // Called by the login page right before storing a new session. Cached
+  // classes/rosters/students are kept per device; never reuse them for a
+  // different account.
+  window.prepareSessionFor = function prepareSessionFor(accountScope) {
+    try {
+      const previous = localStorage.getItem('sc.lastAccount');
+      const legacyTeacher = (localStorage.getItem('teacherEmail') || '').trim().toLowerCase();
+      const switched = previous
+        ? previous !== accountScope
+        : (legacyTeacher && accountScope !== `teacher:${legacyTeacher}`);
+      if (switched) clearSessionData();
+      localStorage.setItem('sc.lastAccount', accountScope);
+    } catch (_) {}
+  };
 })();

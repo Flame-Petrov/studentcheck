@@ -1,4 +1,5 @@
 import { SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
+import { canPrefetch, prefetchUrl } from './data/prefetch.js';
 
 const AUTH_TOKEN_KEY = 'auth.teacher.token';
 const AUTH_EXPIRES_AT_KEY = 'auth.teacher.expiresAt';
@@ -35,21 +36,24 @@ document.getElementById('unifiedLoginForm')?.addEventListener('submit', async fu
     const submitBtn = document.getElementById('loginSubmitBtn');
     submitBtn.disabled = true;
 
+    // Pending state on the button; the form stays visible
     const loginMessage = t('logging_in', 'Logging in...');
-    if (window.LoadingOverlay) window.LoadingOverlay.show(loginMessage);
+    window.PendingAction?.start(submitBtn, loginMessage);
+    let navigating = false;
 
     try {
-        if (isStudent) {
-            await handleStudentLogin(identifierInput, password, errorMessage);
-        } else {
-            await handleTeacherLogin(identifierInput, password, errorMessage);
-        }
+        navigating = isStudent
+            ? await handleStudentLogin(identifierInput, password, errorMessage)
+            : await handleTeacherLogin(identifierInput, password, errorMessage);
     } catch (err) {
         console.error('Login request failed:', err);
         showError(t('err_login_network', 'Login failed: Network error or unavailable server.'));
-        if (window.LoadingOverlay) window.LoadingOverlay.hide();
     } finally {
-        submitBtn.disabled = false;
+        // On success the next page is loading: keep the button pending until then
+        if (!navigating) {
+            window.PendingAction?.stop();
+            submitBtn.disabled = false;
+        }
     }
 });
 
@@ -73,6 +77,7 @@ async function handleStudentLogin(facultyNumber, password, errorMessage) {
     if (response.ok) {
         const data = await response.json();
         if (data.loginSuccess) {
+            window.prepareSessionFor?.(`student:${facultyNumber}`);
             try {
                 sessionStorage.removeItem('teacherData');
                 localStorage.removeItem('teacherEmail');
@@ -83,16 +88,14 @@ async function handleStudentLogin(facultyNumber, password, errorMessage) {
                     sessionStorage.setItem('auth.student.expiresAt', String(Date.now() + Number(data.expiresIn || 0) * 1000));
                 }
             } catch (e) {}
-            if (window.LoadingOverlay) window.LoadingOverlay.hide();
             window.location.href = 'studentHomepage.html';
-        } else {
-            showError(t('err_invalid_credentials', 'Invalid credentials'));
-            if (window.LoadingOverlay) window.LoadingOverlay.hide();
+            return true;
         }
-    } else {
         showError(t('err_invalid_credentials', 'Invalid credentials'));
-        if (window.LoadingOverlay) window.LoadingOverlay.hide();
+        return false;
     }
+    showError(t('err_invalid_credentials', 'Invalid credentials'));
+    return false;
 }
 
 async function handleTeacherLogin(email, password, errorMessage) {
@@ -108,6 +111,7 @@ async function handleTeacherLogin(email, password, errorMessage) {
         const token = normalizeToken(data?.token || data?.accessToken || data?.data?.token || data?.data?.accessToken || '');
         
         if (data.loginSuccess && token) {
+            window.prepareSessionFor?.(`teacher:${normalizedEmail}`);
             try {
                 const now = Date.now();
                 const expiresAt = now + (Number(data.expiresIn || 0) * 1000);
@@ -122,18 +126,35 @@ async function handleTeacherLogin(email, password, errorMessage) {
                 try { localStorage.setItem('teacherEmail', normalizedEmail); } catch(_) {}
             } catch (e) {}
             
-            if (window.LoadingOverlay) window.LoadingOverlay.hide();
             window.location.href = 'teacherHomepage.html';
-        } else {
-            const msg = data.message ? `${t('err_login_failed', 'Login failed')}: ${data.message}` : t('err_invalid_credentials', 'Invalid credentials');
-            showError(msg);
-            if (window.LoadingOverlay) window.LoadingOverlay.hide();
+            return true;
         }
-    } else {
-        showError(t('err_invalid_credentials', 'Invalid credentials'));
-        if (window.LoadingOverlay) window.LoadingOverlay.hide();
+        const msg = data.message ? `${t('err_login_failed', 'Login failed')}: ${data.message}` : t('err_invalid_credentials', 'Invalid credentials');
+        showError(msg);
+        return false;
     }
+    showError(t('err_invalid_credentials', 'Invalid credentials'));
+    return false;
 }
+
+// ===== Warm the likely next page (role is known from the identifier) =====
+// Fetched into the HTTP cache only; nothing runs until the user logs in.
+const HOME_ASSETS = {
+    teacher: ['teacherHomepage.html', 'css/teacherShell.css?v=1.2.0', 'css/teacherHomepage.css?v=2.2.0', 'javascript/teacherHomepage.js'],
+    student: ['studentHomepage.html', 'css/studentHomepage.css?v=2.0.0', 'javascript/studentHomepage.js', 'javascript/vendor/kjua-0.9.0.min.js']
+};
+
+function prefetchHomeFor(identifier) {
+    if (!identifier || !canPrefetch()) return;
+    const role = /^\d{9}$/.test(identifier) ? 'student' : (identifier.includes('@') ? 'teacher' : null);
+    if (!role) return;
+    HOME_ASSETS[role].forEach((href) => prefetchUrl(href));
+}
+
+const identifierEl = document.getElementById('loginIdentifier');
+const passwordEl = document.getElementById('password');
+identifierEl?.addEventListener('blur', () => prefetchHomeFor(identifierEl.value.trim()));
+passwordEl?.addEventListener('focus', () => prefetchHomeFor(identifierEl?.value.trim()));
 
 // Password reveal/hide toggle
 document.querySelectorAll('.password-wrapper').forEach(wrapper => {

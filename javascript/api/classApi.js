@@ -83,7 +83,9 @@ export async function fetchClasses() {
     });
 
     if (!result.ok) {
-        throw new Error(`Failed to fetch classes: ${result.status} ${result.statusText}`);
+        const error = new Error(`Failed to fetch classes: ${result.status} ${result.statusText}`);
+        error.status = result.status;
+        throw error;
     }
 
     // Normalize to { classes: [...] } for all callers

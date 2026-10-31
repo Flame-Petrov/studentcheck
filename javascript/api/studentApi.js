@@ -13,8 +13,19 @@ import { authHeaders } from './authFetch.js';
  * Fetch all students from the database
  * @returns {Promise<Array<Object>>} Array of student objects
  */
+// Shared request + freshness: "forceRefresh" callers within a minute of a
+// successful load reuse it instead of downloading every student again.
+const ALL_STUDENTS_FRESH_MS = 60 * 1000;
+let allStudentsFetchedAt = 0;
+let allStudentsInflight = null;
+
 export async function fetchAllStudents(options = {}) {
     const { forceRefresh = false } = options;
+    if (forceRefresh && Date.now() - allStudentsFetchedAt < ALL_STUDENTS_FRESH_MS) {
+        const fresh = getAllStudents();
+        if (Array.isArray(fresh) && fresh.length > 0) return fresh;
+    }
+    if (allStudentsInflight) return allStudentsInflight;
     if (!forceRefresh) {
         // Check shared state cache first
         const cached = getAllStudents();
@@ -37,6 +48,11 @@ export async function fetchAllStudents(options = {}) {
         }
     }
 
+    allStudentsInflight = requestAllStudents().finally(() => { allStudentsInflight = null; });
+    return allStudentsInflight;
+}
+
+async function requestAllStudents() {
     try {
         const result = await fetch(`${SERVER_BASE_URL + ENDPOINTS.students}`, {
             method: 'GET',
@@ -52,6 +68,7 @@ export async function fetchAllStudents(options = {}) {
             
             // CRITICAL: Store in shared state for use across modules
             setAllStudents(finalStudents);
+            allStudentsFetchedAt = Date.now();
             
             // Also cache in localStorage for persistence across page loads
             try {

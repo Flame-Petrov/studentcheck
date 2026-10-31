@@ -7,6 +7,8 @@
 
 import { removeStudentFromClass as apiRemoveStudentFromClass, addStudentsToClass } from '../api/classApi.js';
 import { fetchAllStudents } from '../api/studentApi.js';
+import { showSkeletonRows, showLoadError, endBusy } from '../ui/skeleton.js';
+import { ensureRoster } from '../data/rosterStore.js';
 import { fetchClassStudents } from '../api/classApi.js';
 import { getStudentAttendanceCountForClass } from './attendance.js';
 import { fetchStudentAttendanceHistory, fetchClassAttendanceTimestamps, fetchClassAttendance } from '../api/attendanceApi.js';
@@ -593,8 +595,11 @@ export async function renderManageStudentsForClass(className) {
         return;
     }
 
-    // Show loading state initially
-    listEl.innerHTML = '<p class="muted" style="text-align:center; padding:20px;">Loading students...</p>';
+    // Skeleton only when nothing usable for this class is on screen yet;
+    // reopening the same class keeps its list visible while it refreshes.
+    if (listEl.dataset.className !== className) {
+        showSkeletonRows(listEl, { count: 5 });
+    }
 
     try {
         // First, try to load from localStorage (fast path)
@@ -610,7 +615,8 @@ export async function renderManageStudentsForClass(className) {
                 try {
                     // fetchClassStudents internally retries once (with 1s delay) when the server
                     // returns empty but localStorage has data (workaround for server insert lag).
-                    const fetched = await fetchClassStudents(classId, className);
+                    // Shared with the menu's prefetch / the scanner (no duplicate request)
+                    const fetched = await ensureRoster(classId, className);
                     students = fetched || [];
 
                     // If still empty after the internal retry, fall back to localStorage.
@@ -642,6 +648,8 @@ export async function renderManageStudentsForClass(className) {
         }
 
         // Clear loading state
+        endBusy(listEl);
+        listEl.dataset.className = className;
         listEl.innerHTML = '';
 
         // Render students if we have any
@@ -848,7 +856,8 @@ export async function renderManageStudentsForClass(className) {
             error: error.message,
             stack: error.stack
         });
-        listEl.innerHTML = '<p class="muted" style="text-align:center; padding:20px; color:red;">Error loading students. Please try again.</p>';
+        delete listEl.dataset.className;
+        showLoadError(listEl, i18nText('tp_students_error', 'Неуспешно зареждане на студентите.'), () => renderManageStudentsForClass(className));
     }
 }
 
@@ -1283,8 +1292,16 @@ async function renderAttendanceHistoryList(className, studentId) {
     const container = document.getElementById('attendanceHistoryList');
     if (!container) return;
 
-    container.innerHTML = '<p class="muted" style="text-align:center;">Loading...</p>';
-    const sessions = await loadAttendanceLog(className, studentId);
+    showSkeletonRows(container, { count: 3 });
+    let sessions;
+    try {
+        sessions = await loadAttendanceLog(className, studentId);
+    } catch (error) {
+        console.error('[renderAttendanceHistoryList] failed', error);
+        showLoadError(container, i18nText('tp_history_error', 'Неуспешно зареждане на историята на присъствията.'), () => renderAttendanceHistoryList(className, studentId));
+        return;
+    }
+    endBusy(container);
     logAttendanceHistoryDebug('renderAttendanceHistoryList:result', {
         className: String(className || '').trim(),
         studentId: String(studentId || '').trim(),
@@ -1645,7 +1662,7 @@ async function requestAddStudentsWithFilters(overrides = {}) {
             await renderAddStudentsList(className, { studentsOverride: fallback });
         } catch (_) {
             if (listEl) {
-                listEl.innerHTML = '<p class="muted" style="text-align:center; padding:20px;">Unable to load students.</p>';
+                showLoadError(listEl, i18nText('tp_students_error', 'Неуспешно зареждане на студентите.'), () => renderAddStudentsList(className));
             }
         }
     }
@@ -1687,7 +1704,7 @@ export async function openAddStudentsToClass(className, options = {}) {
         // Ensure list container shows error state
         const listEl = getAddStudentsListEl();
         if (listEl) {
-            listEl.innerHTML = '<p class="muted" style="text-align:center; padding:20px;">Unable to load students. Please try again.</p>';
+            showLoadError(listEl, i18nText('tp_students_error', 'Неуспешно зареждане на студентите.'), () => renderAddStudentsList(className));
         }
     }
 
@@ -1780,8 +1797,8 @@ async function renderAddStudentsList(className, options = {}) {
         return;
     }
 
-    // Show loading state
-    listEl.innerHTML = '<p class="muted" style="text-align:center;">Loading students...</p>';
+    // Skeleton rows while the students load
+    showSkeletonRows(listEl, { count: 6 });
 
     // Resolve classId with fallbacks
     const classId = await resolveClassId(className);

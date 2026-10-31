@@ -8,6 +8,11 @@
 
 import { createClass, fetchClasses, addStudentsToClass } from '../api/classApi.js';
 import { fetchAllStudents } from '../api/studentApi.js';
+import { upsertCachedClass } from '../data/classesStore.js';
+import { showSkeletonRows, showLoadError, endBusy } from '../ui/skeleton.js';
+
+// Latest wizard student request; older responses are ignored (fast filtering)
+let wizardStudentsRequestId = 0;
 import {
     getWizardSelections,
     clearWizardSelections,
@@ -319,6 +324,8 @@ async function submitNewClassUnguarded() {
             storedMap.set(newClassId, className);
             saveClassesMap(storedMap);
         } catch (_) {}
+        // Keep the cached class list in step (no refetch needed)
+        upsertCachedClass({ id: newClassId, name: className });
         
         // Render class button
         const classList = document.getElementById('classList');
@@ -367,7 +374,7 @@ async function loadStudentsIntoWizard() {
     const container = getCreateClassStudentContainer();
     if (!container) return;
     
-    container.innerHTML = '<p class="loading-hint">Loading...</p>';
+    showSkeletonRows(container, { count: 6 });
     
     try {
         await fetchFilteredStudents();
@@ -375,7 +382,7 @@ async function loadStudentsIntoWizard() {
         ensureCreateClassFiltersInitialized();
     } catch (e) {
         console.error('Wizard student fetch failed', e);
-        container.innerHTML = '<p style="color:#b91c1c;">Network error loading students.</p>';
+        showLoadError(container, i18nText('tp_students_error', 'Неуспешно зареждане на студентите.'), () => loadStudentsIntoWizard());
     }
 }
 
@@ -614,7 +621,9 @@ async function fetchFilteredStudents(filters = {}) {
         search = ''
     } = filters;
 
-    container.innerHTML = '<p class="loading-hint">Loading...</p>';
+    // Keep the current list while a filter refresh runs; skeleton only when empty
+    if (!container.querySelector('li')) showSkeletonRows(container, { count: 6 });
+    const requestId = ++wizardStudentsRequestId;
 
     const params = new URLSearchParams();
     if (level) params.append('level', level);
@@ -631,13 +640,18 @@ async function fetchFilteredStudents(filters = {}) {
         }
         const data = await result.json();
         const students = Array.isArray(data?.students) ? data.students : (Array.isArray(data) ? data : []);
+        if (requestId !== wizardStudentsRequestId) return; // a newer filter won
+        endBusy(container);
         renderStudentsInWizard(students);
     } catch (e) {
+        if (requestId !== wizardStudentsRequestId) return;
         try {
             const fallback = await fetchAllStudents();
+            if (requestId !== wizardStudentsRequestId) return;
+            endBusy(container);
             renderStudentsInWizard(fallback);
         } catch (_) {
-            container.innerHTML = '<p style="color:#b91c1c;">Unable to load students.</p>';
+            showLoadError(container, i18nText('tp_students_error', 'Неуспешно зареждане на студентите.'), () => fetchFilteredStudents(filters));
         }
     }
 }

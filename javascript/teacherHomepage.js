@@ -10,7 +10,12 @@
  */
 
 // ===== IMPORTS =====
-import { mountTeacherShell } from './ui/teacherShell.js';
+import { initTeacherShell } from './ui/teacherShell.js';
+import { initClassesView, loadClasses as loadClassList } from './features/classesView.js';
+import { showBillingView, prefetchBilling, onBillingPageRestored } from './features/billingView.js';
+import { ensureRoster, hasStoredRoster, prefetchRoster } from './data/rosterStore.js';
+import { canPrefetch, whenIdle, prefetchUrl } from './data/prefetch.js';
+import { clearAllCaches } from './data/cache.js';
 import { initClassSearch } from './features/classSearch.js';
 import { getTeacherEmail, SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
 import { bootstrapTeacherAuthState, clearAuthState } from './auth/authStore.js';
@@ -58,11 +63,6 @@ function i18nText(key, fallback) {
     return fallback || key;
 }
 
-// ===== SHARED TEACHER FRAME =====
-// Mounted at module load (before DOMContentLoaded) so shared.js finds the logo
-// when it wires the slide-out menu.
-mountTeacherShell({ active: 'classes', skipTarget: 'classesTitle' });
-
 // ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', async () => {
     if (!bootstrapTeacherAuthState()) {
@@ -71,6 +71,93 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'index.html';
         return;
     }
+
+    // ===== SESSION REJECTED BY THE SERVER =====
+    let authExpiredHandled = false;
+    document.addEventListener('app:authexpired', () => {
+        if (authExpiredHandled) return;
+        authExpiredHandled = true;
+        clearAllCaches();
+        clearAuthState();
+        alert(i18nText('session_expired', 'Session expired. Please log in again.'));
+        window.location.replace('index.html');
+    });
+
+    // ===== SHELL + VIEW ROUTER (Дисциплини / Плащания in one document) =====
+    // The frame stays mounted; views switch in place via the History API, so
+    // direct links (teacherHomepage.html#payments), refresh, Back/Forward and
+    // "open in new tab" all keep working.
+    const VIEWS = {
+        classes: { titleKey: 'classes', fallback: 'Дисциплини', heading: 'classesTitle' },
+        payments: { titleKey: 'billing_title', fallback: 'Плащания', heading: 'billingTitle' }
+    };
+    const viewFromLocation = () => (location.hash === '#payments' ? 'payments' : 'classes');
+    let currentView = null;
+    const scrollByView = {};
+
+    const shell = initTeacherShell({
+        onNavigate: (view) => goToView(view),
+        onIntent: (view) => { if (view === 'payments') prefetchBilling(); }
+    });
+
+    function setDocumentTitle(view) {
+        const v = VIEWS[view];
+        document.title = `${i18nText(v.titleKey, v.fallback)} · StudentCheck`;
+    }
+
+    async function leaveView(view) {
+        if (view !== 'classes') return;
+        // A route change must not leave dialogs of the old view on top
+        if (typeof closeReadyClassPopup === 'function') closeReadyClassPopup();
+        const scanner = getOverlay('scannerOverlay');
+        if (scanner && scanner.style.visibility === 'visible') {
+            // Keep the scan as a draft and release the camera
+            const current = getCurrentClass();
+            saveScannerDraftForClass(current.name);
+            await closeScanner();
+        }
+    }
+
+    function enterView(view) {
+        if (view === 'payments') showBillingView();
+        else loadClassList();
+    }
+
+    function applyView(view, { focus = false, restoreScroll = false } = {}) {
+        const previous = currentView;
+        if (previous && previous !== view) {
+            scrollByView[previous] = window.scrollY;
+            leaveView(previous);
+        }
+        currentView = view;
+        document.documentElement.setAttribute('data-view', view);
+        shell.setActive(view);
+        setDocumentTitle(view);
+        const skip = document.getElementById('tpSkipLink');
+        if (skip) skip.setAttribute('href', `#${VIEWS[view].heading}`);
+        enterView(view);
+        if (previous && previous !== view) {
+            window.scrollTo(0, restoreScroll ? (scrollByView[view] || 0) : 0);
+            if (focus) document.getElementById(VIEWS[view].heading)?.focus({ preventScroll: true });
+        }
+    }
+
+    function goToView(view) {
+        if (!VIEWS[view]) return;
+        if (view === currentView) {
+            document.getElementById(VIEWS[view].heading)?.focus({ preventScroll: true });
+            return;
+        }
+        const url = view === 'payments' ? '#payments' : `${location.pathname}${location.search}`;
+        history.pushState({ tpView: view }, '', url);
+        applyView(view, { focus: true });
+    }
+
+    window.addEventListener('popstate', () => {
+        const view = viewFromLocation();
+        if (view !== currentView) applyView(view, { focus: true, restoreScroll: true });
+    });
+    document.addEventListener('app:languagechange', () => setDocumentTitle(currentView));
 
     const classList = document.getElementById('classList');
     initClassSearch({
@@ -186,6 +273,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectDiscipline(d);
             openScannerOverlay(d.name);
         },
+        // The scanner checks scans against the class roster: make sure it is loaded
+        prepare: {
+            scanner: (d) => ensureRoster(d.id, d.name),
+        },
         onExportAttendance: async (d) => {
             selectDiscipline(d);
             await handleDownloadAttendanceTable(d.name, { classId: d.id });
@@ -208,6 +299,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectDiscipline(discipline);
         disciplineModal.open(discipline, { opener: findCardById(discipline.id) || getCurrentClass().button });
         updateScannerUnsavedDot();
+        // Likely next steps: the roster (manage students / scanner) and the scanner library
+        prefetchRoster(discipline.id, discipline.name);
+        if (canPrefetch()) prefetchUrl('javascript/vendor/html5-qrcode-2.3.8.min.js', 'script');
     }
 
     function closeReadyClassPopup() {
@@ -346,31 +440,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    async function loadClasses() {
-        try {
-            const teacherEmail = getTeacherEmail();
-            if (!teacherEmail) {
-                console.error('Cannot load classes: teacher email not found');
-                return;
-            }
-            
-            const data = await fetchClasses(teacherEmail);
-            const classes = data.classes || [];
-            const classesMap = new Map();
-            
-            classes.forEach(_class => {
-                classesMap.set(_class.id, _class.name);
-                setClassId(_class.name, _class.id);
-                renderClassItem(_class.name, _class.id, classList, handleClassButtonClickWrapper, loadClassStudents);
-            });
-
-            saveClassesMap(classesMap);
-            ensureClassesContainerVisible();
-        } catch (e) {
-            console.error('Failed to load classes:', e);
-        }
-    }
-
     function loadReadyClasses() {
         const storedClassesMap = getStoredClassesMap();
         if (!storedClassesMap) {
@@ -457,9 +526,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.button !== undefined && e.button !== 0) return;
             const className = btn.dataset.className || getRawClassNameFromButton(btn);
             if (!className || isClassReady(className)) return;
-            longPressTimer = window.setTimeout(() => {
+            const classId = btn.dataset.classId;
+            const { clientX, clientY } = e;
+            longPressTimer = window.setTimeout(async () => {
                 btn.dataset.longPressActive = 'true';
-                showDeletePopup(e.clientX, e.clientY, className);
+                // Rosters load on demand now: only offer "delete" once we know
+                // the class really has no students.
+                if (!hasStoredRoster(className)) {
+                    try { await ensureRoster(classId, className); } catch (_) { return; }
+                    if (isClassReady(className)) return;
+                }
+                showDeletePopup(clientX, clientY, className);
             }, 600);
         });
 
@@ -501,13 +578,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     })();
 
     // ===== INITIAL LOAD =====
-    classList?.querySelectorAll('.newClassBtn').forEach(attachNewClassButtonBehavior);
-    classList?.querySelectorAll('.newClassBtn').forEach(attachUnreadyDeleteLongPress);
-    await loadClasses();
-    loadReadyClasses();
-    classList?.querySelectorAll('.newClassBtn').forEach(b => updateClassStatusUI(b));
-    classList?.querySelectorAll('.newClassBtn').forEach(attachUnreadyDeleteLongPress);
-    updateClassDraftBadges();
+    // Cached classes render at once (no waiting for the network); the list is
+    // refreshed in the background and reconciled by id.
+    initClassesView({
+        onOpen: handleClassButtonClickWrapper,
+        onRendered: () => {
+            loadReadyClasses();
+            classList?.querySelectorAll('.newClassBtn').forEach((b) => {
+                updateClassStatusUI(b);
+                attachUnreadyDeleteLongPress(b);
+            });
+            updateClassDraftBadges();
+        }
+    });
+    applyView(viewFromLocation());
+    if (currentView === 'payments') {
+        // Opened on Плащания: warm the class list once the page is idle
+        whenIdle(() => loadClassList());
+    } else if (canPrefetch()) {
+        whenIdle(() => prefetchBilling(), 4000);
+    }
 
     if (classList) {
         const observer = new MutationObserver((mutations) => {
@@ -524,44 +614,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         observer.observe(classList, { childList: true, subtree: true });
     }
 
-    // ===== PAGESHOW HANDLER (bfcache) =====
+    // ===== PAGESHOW (back/forward cache) =====
+    // A restored page keeps its content; refresh quietly instead of rebuilding.
     window.addEventListener('pageshow', (ev) => {
-        try {
-            ensureClassesContainerVisible();
-            const buttons = Array.from(classList?.querySelectorAll('.newClassBtn') || []);
-            buttons.forEach(b => updateClassStatusUI(b));
-
-            const namesInDom = buttons.map(b => {
-                const name = (b.dataset.className || b.dataset.originalLabel || b.textContent || '')
-                    .replace(/✓\s*Ready/g, '')
-                    .trim();
-                return name;
-            }).filter(Boolean);
-
-            const anyMismatch = namesInDom.some((n) => {
-                const btn = buttons.find(b => {
-                    const btnName = (b.dataset.className || b.dataset.originalLabel || b.textContent || '')
-                        .replace(/✓\s*Ready/g, '')
-                        .trim();
-                    return btnName === n;
-                });
-                if (!btn) return true;
-                const shouldBeReady = isClassReady(n);
-                const isReadyClass = btn.classList.contains('class-ready');
-                return shouldBeReady !== isReadyClass;
-            });
-
-            if (ev?.persisted || anyMismatch) {
-                Array.from(classList?.querySelectorAll('li') || []).forEach(li => {
-                    const hasAdd = !!li.querySelector('#addClassBtn');
-                    if (!hasAdd) li.remove();
-                });
-                loadClasses();
-                classList?.querySelectorAll('.newClassBtn')?.forEach(b => updateClassStatusUI(b));
-            }
-        } catch (e) {
-            console.warn('pageshow handler error', e);
+        if (!ev.persisted) return;
+        if (!bootstrapTeacherAuthState()) {
+            document.dispatchEvent(new CustomEvent('app:authexpired'));
+            return;
         }
+        const view = viewFromLocation();
+        if (view !== currentView) applyView(view);
+        else if (view === 'classes') loadClassList();
+        onBillingPageRestored();
+        updateClassDraftBadges();
     });
 
     // ===== HELPER FUNCTIONS =====

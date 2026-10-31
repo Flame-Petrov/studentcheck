@@ -41,13 +41,13 @@ function t(key, fallback) {
 const icon = (id, cls) => `<svg class="tp-icon ${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
 
 /** One full-width action row (reusable for any action list in the shell). */
-export function actionRowHTML({ id, icon: iconId, label, primary = false, chevron = false, async: isAsync = false, key }) {
+export function actionRowHTML({ id, icon: iconId, label, primary = false, chevron = false, key }) {
     return `
         <li class="tp-action-item">
             <button type="button" class="tp-action${primary ? ' tp-action--primary' : ''}" id="${id}" data-action="${key}">
                 <span class="tp-action-icon">
                     ${icon(iconId, 'tp-action-glyph')}
-                    ${isAsync ? icon('tp-i-loader', 'tp-action-spinner') : ''}
+                    ${icon('tp-i-loader', 'tp-action-spinner')}
                 </span>
                 <span class="tp-action-label">${label}</span>
                 ${key === 'scanner' ? `<span class="tp-action-dot" hidden aria-hidden="true"></span><span class="tp-visually-hidden tp-action-dot-text" hidden></span>` : ''}
@@ -56,7 +56,7 @@ export function actionRowHTML({ id, icon: iconId, label, primary = false, chevro
         </li>`;
 }
 
-export function createDisciplineActionsModal({ root, onManageStudents, onStartScanner, onExportAttendance, onOptions } = {}) {
+export function createDisciplineActionsModal({ root, onManageStudents, onStartScanner, onExportAttendance, onOptions, prepare = {} } = {}) {
     if (!root) throw new Error('DisciplineActionsModal: root element is required');
 
     const handlers = { manage: onManageStudents, scanner: onStartScanner, export: onExportAttendance, options: onOptions };
@@ -232,6 +232,24 @@ export function createDisciplineActionsModal({ root, onManageStudents, onStartSc
                 setBusy(key, false);
             }
             return;
+        }
+
+        // Data the destination needs first (e.g. the roster for the scanner):
+        // load it in the row, keep the dialog if it fails.
+        if (typeof prepare[key] === 'function') {
+            pending.add(key);
+            setBusy(key, true);
+            try {
+                await prepare[key](discipline);
+            } catch (error) {
+                console.error(`[DisciplineActions] preparing ${key} failed`, error);
+                setError(t('tp_action_error', 'Действието не може да бъде изпълнено. Опитайте отново.'));
+                return;
+            } finally {
+                pending.delete(key);
+                setBusy(key, false);
+            }
+            if (!state.open || state.discipline?.id !== discipline.id) return; // dismissed meanwhile
         }
 
         // Navigation: close as the destination opens. If it cannot open, come back.

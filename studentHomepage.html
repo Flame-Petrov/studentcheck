@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="css/shared.css">
     <link rel="icon" href="images/new_main_logo.png" type="image/png">
     <link rel="stylesheet" href="css/studentHomepage.css?v=2.0.0">
+    <link rel="stylesheet" href="css/skeleton.css?v=1.0.0">
+    <!-- Fetch the module graph in parallel instead of import-by-import -->
+    <link rel="modulepreload" href="javascript/studentHomepage.js">
+    <link rel="modulepreload" href="javascript/ui/index.js">
+    <link rel="modulepreload" href="javascript/data/cache.js">
+    <link rel="modulepreload" href="javascript/data/prefetch.js">
+    <link rel="modulepreload" href="javascript/ui/skeleton.js">
 </head>
 <body class="student-app">
 
@@ -48,7 +55,13 @@
                 <div class="sp-course-list-col">
                     <h1 class="sp-title" id="coursesTitle" tabindex="-1" data-i18n="sp_courses_title">Courses</h1>
                     <div id="courseListStatus" aria-live="polite"></div>
-                    <ul class="sp-course-list" id="courseList" data-i18n-attr="aria-label:sp_courses_title"></ul>
+                    <!-- Skeleton until the courses (cached or fetched) are rendered -->
+                    <ul class="sp-course-list" id="courseList" data-i18n-attr="aria-label:sp_courses_title" aria-busy="true">
+                        <li aria-hidden="true"><span class="sp-skeleton sp-course-skeleton"></span></li>
+                        <li aria-hidden="true"><span class="sp-skeleton sp-course-skeleton"></span></li>
+                        <li aria-hidden="true"><span class="sp-skeleton sp-course-skeleton"></span></li>
+                    </ul>
+                    <p class="sk-stale" id="courseListStale" hidden></p>
                 </div>
                 <section class="sp-detail" id="courseDetail" aria-labelledby="detailTitle">
                     <button class="sp-back" id="detailBack" type="button">

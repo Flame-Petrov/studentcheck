@@ -752,7 +752,7 @@ import { SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
             finishBtn.disabled = true;
             const originalText = finishBtn.textContent;
             finishBtn.textContent = t('submitting', 'Submitting...');
-            LoadingOverlay.show(t('submitting', 'Submitting...'));
+            window.PendingAction?.start(finishBtn, t('submitting', 'Submitting...'));
 
             const resp = await fetch(SERVER_BASE_URL + ENDPOINTS.registration, {
                 method: 'POST',
@@ -867,9 +867,9 @@ import { SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
             alert(t('err_network_unavailable'));
         } finally {
             submitting = false;
+            window.PendingAction?.stop();
             finishBtn.disabled = false;
             finishBtn.textContent = t('finish', 'Finish');
-            LoadingOverlay.hide();
         }
     }
 

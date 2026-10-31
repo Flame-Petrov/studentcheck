@@ -1,5 +1,12 @@
 import { SERVER_BASE_URL } from './config/api.js';
 import { el, progressBar, stateBox, retryButton, signInLink } from './ui/index.js';
+import { cacheKey, readCache, isFresh, revalidate, clearAllCaches } from './data/cache.js';
+import { canPrefetch, whenIdle, prefetchOnIntent } from './data/prefetch.js';
+import { showStaleNote, hideStaleNote } from './ui/skeleton.js';
+
+// Freshness of cached data shown instantly and refreshed in the background
+const COURSES_MAX_AGE_MS = 60 * 1000;
+const LESSONS_MAX_AGE_MS = 2 * 60 * 1000;
 
 // A course is flagged "low attendance" when the attended share is below this.
 const LOW_ATTENDANCE_THRESHOLD_PERCENT = 50;
@@ -20,6 +27,7 @@ const state = {
 	// What is currently on screen; lets selection changes update in place
 	// instead of rebuilding nodes (which would drop keyboard focus)
 	coursesVersion: 0,
+	coursesSig: '',
 	listRenderKey: '',
 	detailRenderedId: null
 };
@@ -152,49 +160,102 @@ async function studentFetch(path) {
 
 // ===== Data =====
 
+function studentScope() {
+	const s = state.student || {};
+	return `student:${s.faculty_number || s.id || s.email || 'unknown'}`;
+}
+
+function normalizeCourses(data) {
+	const courses = (Array.isArray(data?.courses) ? data.courses : []).map((c) => ({
+		id: Number(c.id),
+		name: String(c.name || ''),
+		attended: Math.max(0, Number(c.attended) || 0),
+		total: Math.max(0, Number(c.total) || 0)
+	}));
+	// Natural order, so "Course 2" comes before "Course 10"
+	const collator = new Intl.Collator(currentLocale(), { numeric: true, sensitivity: 'base' });
+	courses.sort((a, b) => collator.compare(a.name, b.name) || a.id - b.id);
+	return courses;
+}
+
+// Only bump the version (= re-render) when the data actually changed
+function applyCourses(courses) {
+	const sig = JSON.stringify(courses);
+	state.coursesStatus = 'ready';
+	if (sig === state.coursesSig) return;
+	state.courses = courses;
+	state.coursesSig = sig;
+	state.coursesVersion += 1;
+}
+
 function loadCourses(force = false) {
-	if (state.coursesPromise && !force) return state.coursesPromise;
-	state.coursesStatus = 'loading';
-	renderCourses();
-	state.coursesPromise = studentFetch('/student/courses')
-		.then((data) => {
-			state.courses = (Array.isArray(data?.courses) ? data.courses : []).map((c) => ({
-				id: Number(c.id),
-				name: String(c.name || ''),
-				attended: Math.max(0, Number(c.attended) || 0),
-				total: Math.max(0, Number(c.total) || 0)
-			}));
-			// Natural order, so "Course 2" comes before "Course 10"
-			const collator = new Intl.Collator(currentLocale(), { numeric: true, sensitivity: 'base' });
-			state.courses.sort((a, b) => collator.compare(a.name, b.name) || a.id - b.id);
-			state.coursesStatus = 'ready';
-			state.coursesVersion += 1;
+	const key = cacheKey(studentScope(), 'courses');
+	// Cached courses render at once (only with a valid session)
+	if (state.coursesStatus !== 'ready' && getStudentToken()) {
+		const hit = readCache(key);
+		if (hit) applyCourses(hit.data);
+	}
+	if (state.coursesPromise) return state.coursesPromise;
+	if (!force && state.coursesStatus === 'ready' && isFresh(readCache(key), COURSES_MAX_AGE_MS)) return Promise.resolve();
+
+	if (state.coursesStatus !== 'ready') {
+		state.coursesStatus = 'loading';
+		renderCourses();
+	}
+	state.coursesPromise = revalidate(key, () => studentFetch('/student/courses').then(normalizeCourses))
+		.then(({ data, current }) => {
+			if (!current) return;
+			applyCourses(data);
+			hideStaleNote(document.getElementById('courseListStale'));
 		})
 		.catch((err) => {
 			console.error('[StudentHome] courses load failed', err);
-			state.coursesStatus = err.code === 'signin' ? 'signin' : 'error';
-			state.coursesPromise = null;
+			if (err.code === 'signin') {
+				clearAllCaches();
+				state.coursesStatus = 'signin';
+			} else if (state.coursesStatus === 'ready') {
+				// Keep what is shown; offer a quiet retry
+				showStaleNote(document.getElementById('courseListStale'), () => loadCourses(true));
+			} else {
+				state.coursesStatus = 'error';
+			}
 		})
 		.finally(() => {
+			state.coursesPromise = null;
 			if (state.route?.view === 'courses') applyRoute(parseRoute());
 		});
 	return state.coursesPromise;
 }
 
 function loadLessons(courseId, force = false) {
-	const existing = state.lessons.get(courseId);
-	if (existing && !force && existing.status !== 'error') return;
-	state.lessons.set(courseId, { status: 'loading', items: [] });
-	studentFetch(`/student/courses/${encodeURIComponent(courseId)}/lessons`)
-		.then((data) => {
-			const items = Array.isArray(data?.lessons) ? data.lessons : [];
-			state.lessons.set(courseId, { status: 'ready', items });
+	const key = cacheKey(studentScope(), 'lessons', String(courseId));
+	let existing = state.lessons.get(courseId);
+	if (!existing && getStudentToken()) {
+		const hit = readCache(key);
+		if (hit) {
+			existing = { status: 'ready', items: hit.data };
+			state.lessons.set(courseId, existing);
+		}
+	}
+	if (existing && existing.status === 'loading') return;
+	if (!force && existing && existing.status === 'ready' && isFresh(readCache(key), LESSONS_MAX_AGE_MS)) return;
+	if (!existing || existing.status !== 'ready') state.lessons.set(courseId, { status: 'loading', items: [] });
+
+	revalidate(key, () => studentFetch(`/student/courses/${encodeURIComponent(courseId)}/lessons`)
+		.then((data) => (Array.isArray(data?.lessons) ? data.lessons : [])))
+		.then(({ data, current }) => {
+			if (!current) return;
+			const previous = state.lessons.get(courseId);
+			const changed = !previous || previous.status !== 'ready' || JSON.stringify(previous.items) !== JSON.stringify(data);
+			state.lessons.set(courseId, { status: 'ready', items: data });
+			if (changed && state.selectedId === courseId) renderLessonsSection();
 		})
 		.catch((err) => {
 			console.error('[StudentHome] lessons load failed', err);
+			if (err.code === 'signin') clearAllCaches();
+			const previous = state.lessons.get(courseId);
+			if (previous && previous.status === 'ready' && err.code !== 'signin') return; // keep what is shown
 			state.lessons.set(courseId, { status: err.code === 'signin' ? 'signin' : 'error', items: [] });
-		})
-		.finally(() => {
 			if (state.selectedId === courseId) renderLessonsSection();
 		});
 }
@@ -263,7 +324,7 @@ function applyRoute(route, { focus = false } = {}) {
 	});
 
 	if (route.view === 'courses') {
-		if (state.coursesStatus === 'idle') loadCourses();
+		loadCourses();
 		if (route.courseId !== null && state.coursesStatus === 'ready'
 			&& !state.courses.some((c) => c.id === route.courseId)) {
 			// Unknown course (e.g. removed): fall back to the list
@@ -347,6 +408,7 @@ function renderCourses({ force = false } = {}) {
 	}
 	state.listRenderKey = renderKey;
 
+	const focusedCourseId = document.activeElement?.closest?.('.sp-course')?.dataset.courseId || null;
 	list.replaceChildren();
 	status.replaceChildren();
 	const ready = state.coursesStatus === 'ready' && state.courses.length > 0;
@@ -404,10 +466,13 @@ function renderCourses({ force = false } = {}) {
 		btn.appendChild(bar);
 
 		btn.addEventListener('click', () => selectCourse(course.id));
+		// Likely next: warm this course's lessons on hover / focus / touch
+		prefetchOnIntent(btn, () => loadLessons(course.id));
 		li.appendChild(btn);
 		fragment.appendChild(li);
 	});
 	list.appendChild(fragment);
+	if (focusedCourseId) list.querySelector(`.sp-course[data-course-id="${focusedCourseId}"]`)?.focus({ preventScroll: true });
 	if (force || state.detailRenderedId !== state.selectedId) renderDetail();
 }
 
@@ -482,10 +547,7 @@ function renderLessons(course, stats) {
 		return wrap;
 	}
 
-	const entry = state.lessons.get(course.id);
-	if (!entry) {
-		loadLessons(course.id);
-	}
+	loadLessons(course.id); // cached -> instant; refreshes quietly when stale
 	const current = state.lessons.get(course.id);
 
 	if (current.status === 'loading') {
@@ -662,4 +724,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	renderAll();
 	applyRoute(parseRoute());
+
+	// The course list is the likely next view: warm it once the page is idle
+	whenIdle(() => {
+		if (state.route?.view !== 'courses' && canPrefetch()) loadCourses();
+	});
+
+	// Restored from the back/forward cache: keep the content, refresh quietly
+	window.addEventListener('pageshow', (event) => {
+		if (!event.persisted) return;
+		if (!getStudentToken()) { renderCourses({ force: true }); return; }
+		if (state.route?.view === 'courses') loadCourses();
+	});
 });

@@ -883,3 +883,34 @@ body.delete-popup-active #addClassBtn {
         scroll-behavior: auto !important;
     }
 }
+
+/* ---------- Views (one teacher document: Дисциплини / Плащания) ---------- */
+/* <html data-view> is set by an inline script before first paint and then by
+   the router, so the right view shows immediately on direct links/refresh. */
+
+.tp-view {
+    display: none;
+}
+
+html:not([data-view="payments"]) .tp-view--classes,
+html[data-view="payments"] .tp-view--payments {
+    display: block;
+}
+
+/* Skeleton class cards: same box as a real card, so nothing shifts */
+.tp-card--skeleton {
+    cursor: default;
+    pointer-events: none;
+}
+
+.tp-card--skeleton .sk-line {
+    height: 14px;
+}
+
+.tp-skel-chevron {
+    flex: none;
+    width: 10px;
+    height: 16px;
+    margin: 0 7px 0 auto;
+    border-radius: 4px;
+}

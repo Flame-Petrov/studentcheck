@@ -222,6 +222,8 @@
     stroke-width: 2.2;
 }
 
+.tp-action--primary .tp-action-spinner { color: #FFFFFF; }
+
 .tp-action.is-busy .tp-action-glyph { opacity: 0; }
 
 .tp-action.is-busy .tp-action-spinner {

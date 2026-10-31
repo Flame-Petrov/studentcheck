@@ -33,7 +33,8 @@ export function initClassSearch({ input, list, empty, status }) {
 
     function apply({ announce = false } = {}) {
         const query = normalize(input.value);
-        const items = Array.from(list.children);
+        // Only real class cards (not skeletons or a load error)
+        const items = Array.from(list.children).filter((li) => li.querySelector('.newClassBtn'));
         let visible = 0;
 
         items.forEach((li) => {

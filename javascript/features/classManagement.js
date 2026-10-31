@@ -20,6 +20,7 @@ import {
     setClassId
 } from '../state/appState.js';
 import { updateClassStatusUI, setClassButtonLabel } from '../ui/classUI.js';
+import { renameCachedClass, removeCachedClass } from '../data/classesStore.js';
 import { toast as uiToast } from '../ui/toast.js';
 import { openConfirmOverlay, showOverlay, hideOverlay, getOverlay } from '../ui/overlays.js';
 import { getActiveClassName, getRawClassNameFromButton } from '../utils/helpers.js';
@@ -205,6 +206,7 @@ export function renameClass(oldName, newName) {
         setClassButtonLabel(btn, to);
         updateClassStatusUI(btn);
     }
+    renameCachedClass(from, to);
     
     const current = getCurrentClass();
     if (current.name === from) {
@@ -312,6 +314,7 @@ export async function deleteClass(name) {
         const li = btn.closest('li');
         if (li) li.remove();
     }
+    removeCachedClass(n);
     
     // If current class matches, reset and close overlays
     const current = getCurrentClass();
