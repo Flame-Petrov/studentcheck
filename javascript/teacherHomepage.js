@@ -11,6 +11,8 @@
 
 // ===== IMPORTS =====
 import { initSupportChat } from './features/chatSupport.js';
+import { initClassSearch } from './features/classSearch.js';
+import { initLanguageSelect } from './ui/languageSelect.js';
 import { getTeacherEmail, SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
 import { bootstrapTeacherAuthState, clearAuthState } from './auth/authStore.js';
 import { fetchClasses } from './api/classApi.js';
@@ -66,8 +68,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     initSupportChat();
+    initLanguageSelect(document.getElementById('tpLang'));
 
     const classList = document.getElementById('classList');
+    initClassSearch({
+        input: document.getElementById('classSearchInput'),
+        list: classList,
+        empty: document.getElementById('classListEmpty'),
+        status: document.getElementById('classSearchStatus')
+    });
     const addBtn = document.getElementById('addClassBtn');
     const teacherEmail = getTeacherEmail();
     const deletePopup = document.createElement('button');

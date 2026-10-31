@@ -19,7 +19,7 @@ import {
     getClassIdByName,
     setClassId
 } from '../state/appState.js';
-import { updateClassStatusUI } from '../ui/classUI.js';
+import { updateClassStatusUI, setClassButtonLabel } from '../ui/classUI.js';
 import { toast as uiToast } from '../ui/toast.js';
 import { openConfirmOverlay, showOverlay, hideOverlay, getOverlay } from '../ui/overlays.js';
 import { getActiveClassName, getRawClassNameFromButton } from '../utils/helpers.js';
@@ -202,9 +202,7 @@ export function renameClass(oldName, newName) {
     });
     
     if (btn) {
-        btn.dataset.className = to;
-        btn.dataset.originalLabel = to;
-        btn.textContent = to;
+        setClassButtonLabel(btn, to);
         updateClassStatusUI(btn);
     }
     

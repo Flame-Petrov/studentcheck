@@ -124,7 +124,9 @@
 // Language switcher + translations
 (function(){
   const LANGUAGE_KEY = 'language';
-  const DEFAULT_LANG = 'en';
+  // A page can choose its own default with <html data-default-lang="bg">;
+  // a saved choice in localStorage always wins.
+  const DEFAULT_LANG = (document.documentElement.getAttribute('data-default-lang') || 'en').toLowerCase();
   const BRAND_LOGO_SRC = 'images/new_main_logo.png';
   const BRAND_LOGO_ALT = 'Home';
 
@@ -165,6 +167,15 @@
       // Student page
       sp_home: 'Home',
       sp_main_nav: 'Main navigation',
+      // Teacher page shell
+      tp_nav_payments: 'Payments',
+      tp_nav_chat: 'Chat',
+      tp_search_label: 'Search classes',
+      tp_search_placeholder: 'Search classes...',
+      tp_new_class: 'New class',
+      tp_no_results: 'No classes match your search.',
+      tp_results_count: 'Classes found: {n}',
+      tp_skip_to_content: 'Skip to content',
       sp_nav_qr: 'QR code',
       sp_nav_courses: 'Courses',
       sp_nav_profile: 'Profile',
@@ -383,6 +394,15 @@
       // Student page
       sp_home: 'Начало',
       sp_main_nav: 'Основна навигация',
+      // Teacher page shell
+      tp_nav_payments: 'Плащания',
+      tp_nav_chat: 'Чат',
+      tp_search_label: 'Търси дисциплина',
+      tp_search_placeholder: 'Търси дисциплина...',
+      tp_new_class: 'Нова дисциплина',
+      tp_no_results: 'Няма дисциплини, които отговарят на търсенето.',
+      tp_results_count: 'Намерени дисциплини: {n}',
+      tp_skip_to_content: 'Към съдържанието',
       sp_nav_qr: 'QR код',
       sp_nav_courses: 'Дисциплини',
       sp_nav_profile: 'Профил',
@@ -777,7 +797,14 @@
         { selector: '#chatInput', key: 'support_chat_placeholder', attr: 'placeholder' },
         { selector: '#sendChatBtn', key: 'support_chat_send' },
         { selector: '#chatHistoryContainer .chat-message.model:first-child', key: 'support_chat_welcome' },
-        { selector: '#addClassBtn', key: 'new_class' },
+        { selector: '#addClassBtnLabel', key: 'tp_new_class' },
+        { selector: '#tpNavClasses', key: 'classes' },
+        { selector: '#tpNavPayments', key: 'tp_nav_payments' },
+        { selector: '#tpNavChat', key: 'tp_nav_chat' },
+        { selector: '#tpNav', key: 'sp_main_nav', attr: 'aria-label' },
+        { selector: '#classSearchLabel', key: 'tp_search_label' },
+        { selector: '#classSearchInput', key: 'tp_search_placeholder', attr: 'placeholder' },
+        { selector: '#tpSkipLink', key: 'tp_skip_to_content' },
         { selector: '#createClassSearchInput', key: 'search_students_placeholder', attr: 'placeholder' },
         { selector: '#addStudentsSearchInput', key: 'search_placeholder', attr: 'placeholder' },
         { selector: '#overlaySearchInput', key: 'search_placeholder', attr: 'placeholder' },
@@ -836,6 +863,8 @@
 
     logoBtn.type = 'button';
     logoBtn.setAttribute('aria-label', BRAND_LOGO_ALT);
+    // Pages that draw their own logo mark (inline SVG) opt out of the image swap
+    if (logoBtn.dataset.customLogo === 'true') return;
 
     let logoImg = logoBtn.querySelector('img');
     if (!logoImg) {

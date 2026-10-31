@@ -25,7 +25,11 @@ export function initSupportChat() {
     };
 
     // --- Overlay Toggles ---
-    openBtn?.addEventListener('click', () => {
+    // Opened by the legacy floating button and/or any [data-action="open-support-chat"]
+    // control (the teacher page's "Chat" navigation item).
+    let lastOpener = null;
+    const openChat = (event) => {
+        lastOpener = event?.currentTarget || null;
         if (overlay) {
             updateLanguageButtonLabel();
             // Guarantee chat sits strictly above all other dashboard content
@@ -34,9 +38,17 @@ export function initSupportChat() {
             // Delay adding the class slightly to ensure the CSS transition plays
             requestAnimationFrame(() => {
                 overlay.classList.add('chat-slide-in');
+                input?.focus({ preventScroll: true });
             });
         }
+    };
+
+    openBtn?.addEventListener('click', openChat);
+    document.querySelectorAll('[data-action="open-support-chat"]').forEach((trigger) => {
+        trigger.addEventListener('click', openChat);
     });
+
+    const isChatOpen = () => !!overlay && overlay.style.visibility === 'visible';
 
     const closeChat = () => {
         if (overlay) {
@@ -45,10 +57,18 @@ export function initSupportChat() {
             setTimeout(() => {
                 hideOverlay(overlay);
             }, 500);
+            if (lastOpener && typeof lastOpener.focus === 'function') {
+                lastOpener.focus({ preventScroll: true });
+            }
+            lastOpener = null;
         }
     };
 
     closeBtn?.addEventListener('click', closeChat);
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && isChatOpen()) closeChat();
+    });
 
     languageBtn?.addEventListener('click', () => {
         updateLanguageButtonLabel();
