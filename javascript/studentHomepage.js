@@ -314,6 +314,8 @@ function isTwoColumn() {
 function applyRoute(route, { focus = false } = {}) {
 	const previous = state.route;
 	state.route = route;
+	// The inline head script picked the first view; from now on the router does
+	document.documentElement.removeAttribute('data-sp-boot');
 
 	document.querySelectorAll('.sp-view').forEach((view) => {
 		view.hidden = view.dataset.view !== route.view;
@@ -633,27 +635,50 @@ function renderQr(student) {
 	}
 }
 
-function renderProfile(student) {
-	const list = document.getElementById('profileDetails');
-	if (list) {
-		list.replaceChildren();
-		const rows = [
-			['sp_name', 'Name', student.full_name],
-			['sp_faculty_number', 'Faculty number', student.faculty_number],
-			['email', 'Email', student.email],
-			['faculty', 'Faculty', student.faculty],
-			['specialization', 'Specialization', student.specialization],
-			['group', 'Group', student.group],
-			['course', 'Course', student.course]
-		];
-		rows.forEach(([key, fallback, value]) => {
-			if (value === undefined || value === null || String(value).trim() === '') return;
-			const row = el('div', 'sp-profile-row');
-			row.appendChild(el('dt', null, t(key, fallback)));
-			row.appendChild(el('dd', null, String(value)));
-			list.appendChild(row);
-		});
+// Profile values live in the static markup (studentHomepage.html) as skeleton
+// bars; the data comes from the login session, so they are filled at once.
+const PROFILE_FIELDS = [
+	['profileFacultyNumber', 'faculty_number'],
+	['profileEmail', 'email'],
+	['profileFaculty', 'faculty'],
+	['profileSpecialization', 'specialization'],
+	['profileGroup', 'group'],
+	['profileCourse', 'course']
+];
+
+// A value, or a muted "—" (read as "not provided") for a missing optional field
+function setProfileValue(node, value) {
+	if (!node) return;
+	const text = value === undefined || value === null ? '' : String(value).trim();
+	if (text) {
+		node.textContent = text;
+		return;
 	}
+	const dash = el('span', 'sp-missing', '—');
+	dash.setAttribute('aria-hidden', 'true');
+	node.replaceChildren(dash, el('span', 'sp-visually-hidden', t('sp_not_provided', 'Not provided')));
+}
+
+function profileInitials(name) {
+	const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+	if (parts.length === 0) return '?';
+	const first = parts[0].charAt(0);
+	const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : '';
+	return (first + last).toLocaleUpperCase();
+}
+
+function renderProfile(student) {
+	const name = student.displayName && student.displayName !== '—' ? student.displayName : student.full_name;
+	const avatar = document.getElementById('profileAvatar');
+	if (avatar) avatar.textContent = profileInitials(name);
+	setProfileValue(document.getElementById('profileName'), name);
+	PROFILE_FIELDS.forEach(([id, key]) => setProfileValue(document.getElementById(id), student[key]));
+
+	// Loaded: no longer busy, drop the loading status
+	document.getElementById('profileRegion')?.removeAttribute('aria-busy');
+	// Removed (not emptied): re-translation on language change would refill it
+	document.getElementById('profileLoadingStatus')?.remove();
+
 	const langValue = document.getElementById('profileLanguageValue');
 	if (langValue) {
 		const lang = window.i18n?.getLanguage?.() || 'en';

@@ -167,6 +167,10 @@
       // Student page
       sp_home: 'Home',
       sp_main_nav: 'Main navigation',
+      sp_academic_info: 'Academic information',
+      sp_settings: 'Settings',
+      sp_profile_loading: 'Loading your profile…',
+      sp_not_provided: 'Not provided',
       // Teacher page shell
       tp_nav_payments: 'Payments',
       tp_nav_chat: 'Chat',
@@ -410,6 +414,10 @@
       // Student page
       sp_home: 'Начало',
       sp_main_nav: 'Основна навигация',
+      sp_academic_info: 'Академична информация',
+      sp_settings: 'Настройки',
+      sp_profile_loading: 'Зареждане на профила…',
+      sp_not_provided: 'Не е посочено',
       // Teacher page shell
       tp_nav_payments: 'Плащания',
       tp_nav_chat: 'Чат',
@@ -737,9 +745,28 @@
     });
   }
 
+  // Generic markup translations: data-i18n="key" (text) and
+  // data-i18n-attr="attr:key;attr:key". Only replaces text when a translation exists.
+  function applyDataI18n() {
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      const key = el.getAttribute('data-i18n');
+      const value = t(key);
+      if (value && value !== key) el.textContent = value;
+    });
+    document.querySelectorAll('[data-i18n-attr]').forEach((el) => {
+      el.getAttribute('data-i18n-attr').split(';').forEach((pair) => {
+        const [attr, key] = pair.split(':');
+        if (!attr || !key) return;
+        const value = t(key);
+        if (value && value !== key) el.setAttribute(attr, value);
+      });
+    });
+  }
+
   function applyTranslations() {
     const lang = getLanguage();
     document.documentElement.lang = lang;
+    applyDataI18n();
     const page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
 
     const pages = {
@@ -1194,6 +1221,11 @@
     ensureFloatingBillingButton();
     applyTranslations();
   }
+
+  // shared.js is the last classic script in <body>: the markup above it is
+  // parsed, so translate it now (before first paint where possible) instead of
+  // waiting for the module scripts and DOMContentLoaded.
+  try { applyTranslations(); } catch (_) {}
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

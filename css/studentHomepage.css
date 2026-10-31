@@ -648,18 +648,104 @@ body.student-app {
 }
 
 /* ---------- Profile ---------- */
+/* Identity card across the top; academic info (wider) + settings below.
+   Values start as skeleton bars sized like the final text (same line box),
+   so filling them in does not move the layout. */
 
 .sp-view-profile {
-  max-width: 640px;
+  max-width: 960px;
 }
 
-.sp-view-profile .sp-card + .sp-card {
-  margin-top: 16px;
+.sp-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.sp-identity {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+}
+
+.sp-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--sp-blue-tint);
+  color: var(--sp-blue);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sp-avatar-skel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.sp-identity-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sp-identity-name {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.sp-identity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+  margin: 0;
+}
+
+.sp-meta-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+}
+
+.sp-meta-item dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sp-muted);
+  font-size: 0.9rem;
+}
+
+.sp-meta-item dd {
+  margin: 0;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.sp-card-title {
+  margin: 0;
+  padding: 16px 20px 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .sp-profile-list {
   margin: 0;
-  padding: 4px 20px;
+  padding: 4px 20px 8px;
 }
 
 .sp-profile-row {
@@ -676,6 +762,9 @@ body.student-app {
 }
 
 .sp-profile-row dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: var(--sp-muted);
 }
 
@@ -684,6 +773,64 @@ body.student-app {
   font-weight: 600;
   min-width: 0;
   overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.sp-field-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--sp-muted);
+}
+
+/* Placeholder bar inside a value: same line height as the text it stands for */
+.sp-skel-bar {
+  display: inline-block;
+  vertical-align: middle;
+  width: var(--sk-w, 8em);
+  max-width: 100%;
+  height: 0.95em;
+  border-radius: 6px;
+}
+
+/* Optional field without a value */
+.sp-missing {
+  color: var(--sp-muted);
+  font-weight: 500;
+}
+
+.sp-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sp-setting-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#profileError {
+  margin-top: 16px;
+}
+
+/* Requested view before the page script runs (set by an inline head script,
+   removed by the router). Must beat `.student-app [hidden] { display: none !important }`. */
+html[data-sp-boot="profile"] .student-app .sp-view[data-view="profile"][hidden],
+html[data-sp-boot="courses"] .student-app .sp-view[data-view="courses"][hidden] {
+  display: block !important;
+}
+
+html[data-sp-boot="profile"] .student-app .sp-view[data-view="qr"],
+html[data-sp-boot="courses"] .student-app .sp-view[data-view="qr"] {
+  display: none !important;
 }
 
 .sp-settings {
@@ -735,6 +882,37 @@ body.student-app {
 @media (max-width: 719.98px) {
   .sp-header {
     display: none;
+  }
+
+  .sp-profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sp-identity {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .sp-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 1.15rem;
+  }
+
+  .sp-identity-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Label above value: the row height no longer depends on the value's width */
+  .sp-meta-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .sp-identity-name {
+    font-size: 1.1rem;
   }
 
   .sp-main {
