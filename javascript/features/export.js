@@ -136,8 +136,8 @@ function sanitizeSheetName(value, fallback = 'Attendance') {
  * @param {string} className - Class name
  * @returns {Array<Object>} Array of attendance entries
  */
-async function collectAttendanceEntriesForClass(className) {
-    const classId = getClassIdByNameFromStorage(className);
+async function collectAttendanceEntriesForClass(className, knownClassId) {
+    const classId = knownClassId || getClassIdByNameFromStorage(className);
     if (!classId) return [];
 
     try {
@@ -231,8 +231,7 @@ async function generateAndDownloadAttendanceXlsx(className, entries) {
         return null;
     });
     if (!XLSX) {
-        alert('Unable to load XLSX library. Attendance export failed.');
-        return;
+        throw new Error('Unable to load XLSX library. Attendance export failed.');
     }
     const wsData = buildWorksheetData(className, entries);
     const wb = XLSX.utils.book_new();
@@ -254,15 +253,14 @@ async function generateAndDownloadAttendanceXlsx(className, entries) {
  * Handle download attendance table
  * @param {string} className - Class name (optional)
  */
-export async function handleDownloadAttendanceTable(className) {
+export async function handleDownloadAttendanceTable(className, { classId } = {}) {
     const resolvedNow = getActiveClassName();
     const targetClass = (className || resolvedNow || '').trim();
     if (!targetClass) {
-        console.warn('[Attendance Export] No class selected. Aborting export.');
-        alert('Select a class first.');
-        return;
+        // Callers show the error (the discipline menu renders it in Bulgarian)
+        throw new Error('No class selected for attendance export.');
     }
-    const entries = await collectAttendanceEntriesForClass(targetClass);
+    const entries = await collectAttendanceEntriesForClass(targetClass, classId);
     const sorted = sortAttendanceEntries(entries);
     await generateAndDownloadAttendanceXlsx(targetClass, sorted);
 }

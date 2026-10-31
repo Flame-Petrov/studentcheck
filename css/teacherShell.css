@@ -78,6 +78,8 @@
 html:has(> body.tp-app) {
     height: auto;
     overflow-x: visible;
+    /* locking scroll for dialogs must not shift the layout sideways */
+    scrollbar-gutter: stable;
     background: #F1F6F9;
 }
 

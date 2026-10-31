@@ -45,6 +45,7 @@ import {
 import { renderAttendanceForClass } from './ui/attendanceUI.js';
 import { handleDownloadAttendanceTable } from './features/export.js';
 import { showOverlay, hideOverlay, getOverlay, openConfirmOverlay } from './ui/overlays.js';
+import { createDisciplineActionsModal } from './ui/disciplineActionsModal.js';
 import { getActiveClassName, getRawClassNameFromButton } from './utils/helpers.js';
 
 function i18nText(key, fallback) {
@@ -151,121 +152,66 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('No teacher email found in localStorage for session.');
     }
 
-    // ===== READY POPUP OVERLAY SETUP =====
-    const readyPopupOverlay = getOverlay('readyClassPopupOverlay');
-    let readyPopupOverlayInitialized = false;
-
-    function ensureReadyPopupOverlayInitialized() {
-        if (readyPopupOverlayInitialized) return;
-        readyPopupOverlayInitialized = true;
-
-        const manageBtn = readyPopupOverlay?.querySelector('#manageStudentsBtn');
-        const scannerBtn = readyPopupOverlay?.querySelector('#startScannerBtn');
-        const downloadBtn = readyPopupOverlay?.querySelector('#downloadAttendanceTableBtn');
-        const optionsBtn = readyPopupOverlay?.querySelector('#classOptionsBtn');
-        const closeBtn = readyPopupOverlay?.querySelector('#closeReadyPopupBtn');
-
-        if (scannerBtn) {
-            scannerBtn.style.position = 'relative';
-            if (!scannerBtn.querySelector('.scanner-unsaved-dot')) {
-                const dot = document.createElement('span');
-                dot.className = 'scanner-unsaved-dot';
-                dot.setAttribute('aria-hidden', 'true');
-                scannerBtn.appendChild(dot);
-            }
-        }
-
-        const updateScannerUnsavedDot = () => {
-            if (!scannerBtn) return;
-            const dot = scannerBtn.querySelector('.scanner-unsaved-dot');
-            if (!dot) return;
-            const current = getCurrentClass();
-            const className = (current.name || (current.button ? getRawClassNameFromButton(current.button) : '') || '').trim();
-            dot.style.display = hasScannerDraftForClass(className) ? 'block' : 'none';
-        };
-
-        manageBtn?.addEventListener('click', async () => {
-            const current = getCurrentClass();
-            const className = current.name || (current.button ? getRawClassNameFromButton(current.button) : '');
-            closeReadyClassPopup();
-            await openManageStudentsOverlay(className.trim());
-        });
-
-        scannerBtn?.addEventListener('click', () => {
-            const current = getCurrentClass();
-            openScannerOverlay(current.name);
-            updateScannerUnsavedDot();
-        });
-
-        downloadBtn?.addEventListener('click', () => {
-            try {
-                const resolved = getActiveClassName();
-                handleDownloadAttendanceTable(resolved);
-            } catch (e) {
-                console.error('Download Attendance Table failed unexpectedly:', e);
-            }
-        });
-
-        optionsBtn?.addEventListener('click', () => {
-            const name = getActiveClassName();
-            openClassOptionsOverlay(name);
-        });
-
-        closeBtn?.addEventListener('click', () => closeAllClassOverlays());
-        
-        readyPopupOverlay?.addEventListener('click', (e) => {
-            if (e.target === readyPopupOverlay) closeReadyClassPopup();
-        });
-        
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && readyPopupOverlay && isOverlayVisible(readyPopupOverlay)) {
-                closeReadyClassPopup();
-            }
-        });
-
-        document.addEventListener('scannerDraftChanged', () => {
-            updateScannerUnsavedDot();
-        });
-
-        readyPopupOverlay.dataset.updateScannerUnsavedDotBound = 'true';
-        readyPopupOverlay.updateScannerUnsavedDot = updateScannerUnsavedDot;
+    // ===== DISCIPLINE ACTIONS MODAL (primary entry point of a discipline card) =====
+    // ui/disciplineActionsModal.js renders the dialog; the handlers below connect
+    // its rows to the existing flows, always for the selected discipline's id.
+    function findCardById(id) {
+        if (!id) return null;
+        return document.querySelector(`.tp-card[data-class-id="${CSS.escape(String(id))}"]`);
     }
 
+    function resolveDiscipline(nameOptional) {
+        const current = getCurrentClass();
+        const fromButton = current.button ? getRawClassNameFromButton(current.button) : '';
+        const name = (nameOptional || current.name || fromButton || '').trim();
+        const sameAsCurrent = !nameOptional || nameOptional.trim() === (current.name || '').trim();
+        const id = (sameAsCurrent && current.id) || getClassIdByName(name) || getClassIdByNameFromStorage(name) || '';
+        return { id: id ? String(id) : '', name };
+    }
+
+    // The existing flows read the "current class" from app state; point it at d.
+    function selectDiscipline(d) {
+        const current = getCurrentClass();
+        setCurrentClass(d.name, d.id, findCardById(d.id) || current.button);
+    }
+
+    const disciplineModal = createDisciplineActionsModal({
+        root: getOverlay('readyClassPopupOverlay'),
+        onManageStudents: (d) => {
+            selectDiscipline(d);
+            return openManageStudentsOverlay(d.name);
+        },
+        onStartScanner: (d) => {
+            // The scanner asks for the camera only now, after the user chose it
+            selectDiscipline(d);
+            openScannerOverlay(d.name);
+        },
+        onExportAttendance: async (d) => {
+            selectDiscipline(d);
+            await handleDownloadAttendanceTable(d.name, { classId: d.id });
+        },
+        onOptions: (d) => {
+            selectDiscipline(d);
+            openClassOptionsOverlay(d.name);
+        },
+    });
+
+    const updateScannerUnsavedDot = () => {
+        const d = disciplineModal.getDiscipline();
+        disciplineModal.setScannerDraft(!!d && hasScannerDraftForClass(d.name));
+    };
+    document.addEventListener('scannerDraftChanged', updateScannerUnsavedDot);
+
     function openReadyClassPopup(nameOptional) {
-        if (nameOptional) {
-            const current = getCurrentClass();
-            setCurrentClass(nameOptional, current.id, current.button);
-        }
-
-        ensureReadyPopupOverlayInitialized();
-
-        const popup = readyPopupOverlay?.querySelector('.ready-class-popup');
-        if (popup) {
-            popup.classList.add('buttons-only');
-            const actions = popup.querySelector('.ready-class-actions');
-            actions?.classList.add('vertical');
-            const titleEl = popup.querySelector('#readyClassTitle');
-            if (titleEl) {
-                const current = getCurrentClass();
-                const rawFromBtn = current.button ? getRawClassNameFromButton(current.button) : '';
-                const name = (current.name || rawFromBtn || '').trim();
-                titleEl.textContent = name || 'Class';
-                titleEl.dataset.dynamicTitle = name ? 'true' : 'false';
-            }
-        }
-        
-        if (readyPopupOverlay) {
-            showOverlay(readyPopupOverlay);
-            if (typeof readyPopupOverlay.updateScannerUnsavedDot === 'function') {
-                readyPopupOverlay.updateScannerUnsavedDot();
-            }
-        }
+        const discipline = resolveDiscipline(nameOptional);
+        if (!discipline.name) return;
+        selectDiscipline(discipline);
+        disciplineModal.open(discipline, { opener: findCardById(discipline.id) || getCurrentClass().button });
+        updateScannerUnsavedDot();
     }
 
     function closeReadyClassPopup() {
-        if (readyPopupOverlay) {
-            hideOverlay(readyPopupOverlay);
-        }
+        disciplineModal.close({ restoreFocus: false, immediate: true });
     }
 
     // Listen for custom events from student management

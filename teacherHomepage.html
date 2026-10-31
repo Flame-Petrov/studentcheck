@@ -11,9 +11,10 @@
     <link rel="icon" href="images/new_main_logo.png" type="image/png">
     <!-- Reuse registration styles for class creation wizard -->
     <link rel="stylesheet" href="css/registration.css?v=1.0.0">
-    <link rel="stylesheet" href="css/teacherHomepage.css?v=2.1.0">
-    <link rel="stylesheet" href="css/teacherShell.css?v=1.1.0">
+    <link rel="stylesheet" href="css/teacherHomepage.css?v=2.2.0">
+    <link rel="stylesheet" href="css/teacherShell.css?v=1.2.0">
     <link rel="stylesheet" href="css/supportChat.css?v=1.0.0">
+    <link rel="stylesheet" href="css/disciplineActionsModal.css?v=1.0.0">
 </head>
 <body class="tp-app">
 
@@ -327,21 +328,9 @@
 
 
 
-        <!-- Ready Class Overlay -->
-        <div class="overlay" id="readyClassPopupOverlay">
-            <div class="ready-class-popup" role="dialog" aria-modal="true" aria-labelledby="readyClassTitle">
-                <div class="overlay-top-bar">
-                    <h2 id="readyClassTitle">Class Ready</h2>
-                    <button type="button" id="closeReadyPopupBtn" class="close-small" aria-label="Close">×</button>
-                </div>
-                <div class="ready-class-actions">
-                    <button type="button" id="manageStudentsBtn" class="role-button primary">Manage Students</button>
-                    <button type="button" id="startScannerBtn" class="role-button secondary-green">Start Scanner</button>
-                    <button type="button" id="downloadAttendanceTableBtn" class="role-button primary" aria-label="Download Attendance Table">Download Attendance Table</button>
-                    <button type="button" id="classOptionsBtn" class="role-button primary" aria-label="Class Options">Options</button>
-                </div>
-            </div>
-        </div>
+        <!-- Discipline actions menu (opens from a discipline card). Rendered and
+             moved to <body> by javascript/ui/disciplineActionsModal.js -->
+        <div id="readyClassPopupOverlay" style="visibility: hidden;"></div>
 
 
 

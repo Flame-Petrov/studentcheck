@@ -339,17 +339,7 @@
 }
 
 /* Ready class popup */
-#readyClassPopupOverlay .ready-class-popup {
-    background: #ffffff;
-    color: #111827;
-    border-radius: 16px;
-    width: min(92vw, 560px);
-    min-height: 280px;
-    box-shadow: 0 12px 30px rgba(0,0,0,0.25);
-    padding: 32px 30px 34px 30px;
-    position: relative;
-    font-family: inherit;
-}
+/* Discipline actions menu styles: css/disciplineActionsModal.css */
 
 /* Ensure navbar logo sits beneath overlays on this page so it also blurs */
 .navbar-logo {
@@ -360,54 +350,6 @@
 .language-corner-display {
     z-index: 900;
 }
-
-#readyClassPopupOverlay h2 {
-    margin: 0 0 10px 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-.ready-class-desc {
-    margin: 0 0 18px 0;
-    font-size: 0.95rem;
-    color: #4b5563;
-}
-.ready-class-actions {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-}
-/* Buttons-only layout for ready popup */
-#readyClassPopupOverlay .ready-class-popup.buttons-only .ready-class-desc { display: none; }
-#readyClassPopupOverlay .ready-class-popup.buttons-only h2 {
-    display: block;
-    text-align: center;
-}
-#readyClassPopupOverlay .ready-class-popup .ready-class-actions.vertical {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    width: 100%;
-}
-#readyClassPopupOverlay .ready-class-popup .ready-class-actions.vertical .role-button {
-    width: 100%;
-    max-width: 400px;
-    font-size: 1.08rem;
-    padding: 20px 26px; /* increased height */
-    min-height: 64px;
-}
-#readyClassPopupOverlay .role-button.primary {
-    background: #2563eb;
-    color: #fff;
-    border-color: #2563eb;
-}
-#readyClassPopupOverlay .role-button.primary:hover { background: #1d4ed8; }
-#readyClassPopupOverlay .role-button.secondary-green {
-    background: #059669;
-    color: #fff;
-    border-color: #059669;
-}
-#readyClassPopupOverlay .role-button.secondary-green:hover { background: #047857; }
 #scannerOverlay .role-button.secondary-green {
     background: #059669;
     color: #fff;
