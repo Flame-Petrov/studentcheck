@@ -64,8 +64,22 @@ function showScanToast(message, tone) {
     uiToast(message, { tone, size: 'large', duration: 2200, fadeMs: 450, replace: true });
 }
 
-function showInvalidQrToast() {
-    showScanToast(i18nText('err_invalid_qr', 'Invalid QR code.'), 'error');
+// Scan outcomes for the scanner dialog's feedback panel (javascript/features/scanner.js).
+// kind: accepted | duplicate | no-entry | not-in-class | invalid
+function emitScanFeedback(detail) {
+    document.dispatchEvent(new CustomEvent('scanner:feedback', { detail }));
+}
+
+// Saving state for the dialog: pending | failed | saved
+function emitSaveState(state) {
+    document.dispatchEvent(new CustomEvent('scanner:saving', { detail: { state } }));
+}
+
+function studentDetails(className, facultyNumber, payload) {
+    const storedStudents = loadClassStudentsFromStorage(className) || [];
+    const info = getStudentInfoForFacultyNumber(facultyNumber, storedStudents);
+    const name = info?.full_name || info?.fullName || info?.name || payload?.name || payload?.fullName || '';
+    return { name, facultyNumber };
 }
 
 function scannerDraftKey(className) {
@@ -328,7 +342,7 @@ export function handleScannedCode(data, mode, className, updateStudentInfoCountF
         payload = JSON.parse(data);
     } catch (_) {
         console.error('[handleScannedCode] Failed to parse JSON from scanned data');
-        showInvalidQrToast();
+        emitScanFeedback({ kind: 'invalid', mode });
         return;
     }
 
@@ -342,7 +356,8 @@ export function handleScannedCode(data, mode, className, updateStudentInfoCountF
             // Ignoring scan – no active class context
             return;
         } else if (!isStudentInClass(activeClass, studentFacultyNumber)) {
-            // Ignoring scan for unassigned student
+            // Not recorded: the student is not in this class
+            emitScanFeedback({ kind: 'not-in-class', mode, name: payload?.name || payload?.fullName || '', facultyNumber: studentFacultyNumber });
             return;
         } else {
             const scanKey = `${activeClass}|${studentFacultyNumber}|${mode}`;
@@ -353,25 +368,21 @@ export function handleScannedCode(data, mode, className, updateStudentInfoCountF
             }
             recentScanTimestamps.set(scanKey, now);
 
+            const before = getAttendanceState(activeClass)?.get(studentFacultyNumber) || 'none';
             const result = updateAttendanceState(activeClass, studentFacultyNumber, mode, updateStudentInfoCountFn);
             saveScannerDraftForClass(activeClass);
+            const student = studentDetails(activeClass, studentFacultyNumber, payload);
             if (result?.changed) {
-                const storedStudents = loadClassStudentsFromStorage(activeClass) || [];
-                const info = getStudentInfoForFacultyNumber(studentFacultyNumber, storedStudents);
-                const name = info?.full_name || info?.fullName || info?.name || studentFacultyNumber;
-                const tone = mode === 'leaving' ? 'error' : 'success';
-                showScanToast(name, tone);
+                // Recorded in this scanner session (saved to the server on Finish)
+                emitScanFeedback({ kind: 'accepted', mode, ...student });
+            } else if (mode === 'leaving' && before === 'none') {
+                emitScanFeedback({ kind: 'no-entry', mode, ...student });
+            } else {
+                emitScanFeedback({ kind: 'duplicate', mode, state: before, ...student });
             }
         }
     } else {
-        showInvalidQrToast();
-    }
-
-    // For UX feedback, briefly flash camera border
-    const cam = document.getElementById('cameraContainer');
-    if (cam) {
-        cam.style.boxShadow = '0 0 0 4px rgba(37,99,235,0.25) inset';
-        setTimeout(() => { cam.style.boxShadow = 'none'; }, 180);
+        emitScanFeedback({ kind: 'invalid', mode });
     }
 }
 
@@ -470,6 +481,7 @@ export async function openCloseScannerConfirm(className, onClosed) {
         async () => {
             if (attendanceSaveInProgress) return;
             attendanceSaveInProgress = true;
+            emitSaveState('pending');
             try {
                 let saveFailed = false;
                 const classId = getClassIdByName(className);
@@ -500,6 +512,7 @@ export async function openCloseScannerConfirm(className, onClosed) {
                 if (saveFailed) {
                     // Keep draft + in-memory state so the teacher can retry when network/server is stable.
                     saveScannerDraftForClass(className);
+                    emitSaveState('failed');
                     showScanToast(
                         i18nText(
                             'scanner_save_failed_keep_draft',
@@ -511,6 +524,7 @@ export async function openCloseScannerConfirm(className, onClosed) {
                 }
 
                 // Save completed successfully, now clear local state and close scanner.
+                emitSaveState('saved');
                 showScanToast(
                     i18nText('scanner_save_success', 'Attendance saved successfully.'),
                     'success'
@@ -550,6 +564,7 @@ export async function openCloseScannerConfirm(className, onClosed) {
                 }
             } catch (e) {
                 // Catch-all for any unexpected errors
+                emitSaveState('failed');
                 logError('closeScannerConfirm', e, { className, action: 'unexpected error' });
                 // Ensure overlays close and state is restored
                 document.body.style.overflow = '';

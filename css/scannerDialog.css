@@ -1,0 +1,414 @@
+/* QR scanner dialog (markup in teacherHomepage.html, behaviour in
+   javascript/features/scanner.js). The camera viewport has its final size from
+   the start; the dark placeholder, guides and status are replaced in place by
+   the live preview, so nothing moves when the camera starts. */
+
+#scannerOverlay.overlay {
+    padding:
+        max(16px, env(safe-area-inset-top, 0px))
+        max(16px, env(safe-area-inset-right, 0px))
+        max(16px, env(safe-area-inset-bottom, 0px))
+        max(16px, env(safe-area-inset-left, 0px));
+    background: rgba(30, 41, 56, 0.5);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    box-sizing: border-box;
+}
+
+#scannerOverlay .sc-dialog {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 480px;
+    max-height: calc(100dvh - 32px);
+    overflow: hidden;
+    background: var(--tp-surface, #fff);
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(8, 15, 31, 0.18), 0 2px 8px rgba(8, 15, 31, 0.06);
+    color: var(--tp-text, #080F1F);
+    font-family: var(--tp-font, inherit);
+    box-sizing: border-box;
+}
+
+#scannerOverlay .sc-dialog:focus { outline: none; }
+
+/* ---------- Header ---------- */
+
+#scannerOverlay .sc-header {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 20px 24px 0;
+}
+
+#scannerOverlay .sc-heading { flex: 1 1 auto; min-width: 0; }
+
+#scannerOverlay .sc-eyebrow {
+    margin: 0 0 2px;
+    color: var(--tp-muted, #747C89);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#scannerOverlay #scannerTitle.sc-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+#scannerOverlay .sc-close {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -6px -10px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--tp-muted, #747C89);
+    cursor: pointer;
+}
+
+#scannerOverlay .sc-close .tp-icon { width: 24px; height: 24px; stroke-width: 2; }
+#scannerOverlay .sc-close:hover { background: #F1F5F8; color: var(--tp-text, #080F1F); }
+
+/* Scrolls on short screens; header and footer stay */
+#scannerOverlay .sc-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px 24px 4px;
+}
+
+/* ---------- Влизане / Излизане ---------- */
+
+#scannerOverlay .sc-segmented {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    background: #F1F5F8;
+}
+
+#scannerOverlay .sc-segment {
+    position: relative;
+    display: block;
+    margin: 0;
+    cursor: pointer;
+}
+
+#scannerOverlay .sc-segment input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#scannerOverlay .sc-segment .mode-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 9px;
+    color: var(--tp-muted, #747C89);
+    font-size: 15px;
+    font-weight: 600;
+    transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+#scannerOverlay .sc-segment:hover .mode-label { color: var(--tp-text, #080F1F); background: rgba(255, 255, 255, 0.6); }
+
+#scannerOverlay .sc-segment input:checked + .mode-label {
+    background: #fff;
+    color: var(--tp-green-pressed, #008460);
+    box-shadow: 0 1px 3px rgba(8, 15, 31, 0.12);
+}
+
+#scannerOverlay .sc-segment:hover input:checked + .mode-label {
+    box-shadow: 0 2px 8px rgba(8, 15, 31, 0.16);
+}
+
+#scannerOverlay .sc-segment input:focus-visible + .mode-label {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+#scannerOverlay .sc-instruction {
+    margin: 12px 0 10px;
+    color: var(--tp-muted, #747C89);
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+/* ---------- Camera viewport ---------- */
+
+#scannerOverlay .sc-viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-height: min(432px, calc(100dvh - 330px));
+    min-height: 220px;
+    margin: 0 auto;
+    overflow: hidden;
+    border-radius: 16px;
+    background: #101722;
+    isolation: isolate;
+}
+
+#scannerOverlay #qr-reader {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0 !important;
+    opacity: 0;
+    transition: opacity 200ms ease;
+}
+
+/* The live preview appears only once frames arrive (no bright flash: the
+   dark placeholder stays underneath) */
+#scannerOverlay .sc-viewport[data-state="active"] #qr-reader { opacity: 1; }
+
+#scannerOverlay #qr-reader video {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+}
+
+/* Library helpers we do not use */
+#scannerOverlay #qr-reader img,
+#scannerOverlay #qr-reader__dashboard,
+#scannerOverlay #qr-reader__header_message { display: none !important; }
+
+#scannerOverlay .sc-guides {
+    position: absolute;
+    inset: 16%;
+    z-index: 2;
+    pointer-events: none;
+}
+
+#scannerOverlay .sc-corner {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border-color: rgba(255, 255, 255, 0.85);
+    border-style: solid;
+    border-width: 0;
+    transition: border-color 160ms ease;
+}
+
+#scannerOverlay .sc-tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 10px; }
+#scannerOverlay .sc-tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 10px; }
+#scannerOverlay .sc-bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 10px; }
+#scannerOverlay .sc-br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 10px; }
+
+/* Accepted scan: guides flash green briefly */
+#scannerOverlay .sc-viewport.sc-hit .sc-corner { border-color: #3DDC97; }
+
+#scannerOverlay .sc-viewport[data-state="error"] .sc-guides { opacity: 0.25; }
+
+#scannerOverlay .sc-status {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100% - 24px);
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(8, 15, 31, 0.62);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+#scannerOverlay .sc-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #9AA7B5;
+}
+
+/* Green only when the camera is really running */
+#scannerOverlay .sc-viewport[data-state="active"] .sc-dot { background: #3DDC97; }
+#scannerOverlay .sc-viewport[data-state="error"] .sc-dot { background: #F87171; }
+#scannerOverlay .sc-viewport[data-state="loading"] .sc-dot,
+#scannerOverlay .sc-viewport[data-state="permission"] .sc-dot,
+#scannerOverlay .sc-viewport[data-state="starting"] .sc-dot {
+    animation: sc-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes sc-blink { 50% { opacity: 0.35; } }
+
+#scannerOverlay .sc-camera-error {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 24px;
+    color: #fff;
+    text-align: center;
+}
+
+#scannerOverlay .sc-camera-error[hidden] { display: none; }
+
+#scannerOverlay .sc-camera-error-title { margin: 0; font-size: 16px; font-weight: 700; }
+#scannerOverlay .sc-camera-error-text { margin: 0 0 8px; max-width: 30ch; color: rgba(255, 255, 255, 0.8); font-size: 14px; line-height: 1.45; }
+
+#scannerOverlay .sc-retry {
+    min-height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--tp-text, #080F1F);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#scannerOverlay .sc-retry:hover { background: #E6F6EF; }
+
+/* ---------- Feedback (fixed height) ---------- */
+
+#scannerOverlay .sc-feedback {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    /* Fixed height: a result never pushes the footer (long text is clamped;
+       the full text is in the title tooltip and the live announcement) */
+    height: 88px;
+    margin: 12px 0 0;
+    padding: 12px 14px;
+    border: 1px solid #E3E9EE;
+    border-radius: 14px;
+    background: #F7F9FB;
+    box-sizing: border-box;
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+#scannerOverlay .sc-feedback-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #E8EEF3;
+    color: var(--tp-muted, #747C89);
+}
+
+#scannerOverlay .sc-feedback-icon .tp-icon { display: none; width: 20px; height: 20px; stroke-width: 2.2; }
+#scannerOverlay .sc-feedback[data-tone="idle"] .sc-icon-scan,
+#scannerOverlay .sc-feedback[data-tone="pending"] .sc-icon-scan,
+#scannerOverlay .sc-feedback[data-tone="success"] .sc-icon-ok,
+#scannerOverlay .sc-feedback[data-tone="warning"] .sc-icon-warn,
+#scannerOverlay .sc-feedback[data-tone="error"] .sc-icon-warn { display: block; }
+
+#scannerOverlay .sc-feedback-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow: hidden; }
+#scannerOverlay .sc-feedback-title {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+#scannerOverlay .sc-feedback-detail {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--tp-muted, #5B6472);
+    font-size: 13px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+#scannerOverlay .sc-feedback[data-tone="success"] { border-color: #BFE8D5; background: var(--tp-green-tint, #ECF9F4); }
+#scannerOverlay .sc-feedback[data-tone="success"] .sc-feedback-icon { background: var(--tp-green, #00A174); color: #fff; }
+#scannerOverlay .sc-feedback[data-tone="success"] .sc-feedback-title { color: var(--tp-green-pressed, #008460); }
+
+#scannerOverlay .sc-feedback[data-tone="warning"] { border-color: #F5DDB0; background: #FFF8EB; }
+#scannerOverlay .sc-feedback[data-tone="warning"] .sc-feedback-icon { background: #F59E0B; color: #fff; }
+#scannerOverlay .sc-feedback[data-tone="warning"] .sc-feedback-title { color: #92400E; }
+
+#scannerOverlay .sc-feedback[data-tone="error"] { border-color: #F5C2C2; background: #FDF1F1; }
+#scannerOverlay .sc-feedback[data-tone="error"] .sc-feedback-icon { background: #DC2626; color: #fff; }
+#scannerOverlay .sc-feedback[data-tone="error"] .sc-feedback-title { color: #991B1B; }
+
+#scannerOverlay .sc-feedback[data-tone="pending"] .sc-feedback-icon .tp-icon { animation: sc-blink 1.4s ease-in-out infinite; }
+
+/* ---------- Footer ---------- */
+
+#scannerOverlay .sc-footer {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    flex: none;
+    gap: 10px;
+    padding: 14px 24px 20px;
+}
+
+#scannerOverlay .sc-btn {
+    width: auto;
+    height: 44px;
+    padding: 0 16px;
+    font-size: 15px;
+}
+
+#scannerOverlay #scannerCloseBtn.sc-finish {
+    border: 0;
+    background: var(--tp-green, #00A174);
+    color: #fff;
+}
+
+#scannerOverlay #scannerCloseBtn.sc-finish:hover { background: var(--tp-green-hover, #00936A); }
+#scannerOverlay .sc-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+body.tp-app #scannerOverlay :is(.sc-close, .sc-retry):not(:disabled):hover,
+body.tp-app #scannerOverlay :is(.sc-close, .sc-retry):not(:disabled):active { transform: none !important; }
+
+body.tp-app #scannerOverlay :is(.sc-close, .sc-retry):focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 559.98px) {
+    #scannerOverlay.overlay { padding: max(10px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px)); }
+    #scannerOverlay .sc-dialog { max-height: calc(100dvh - 20px); border-radius: 18px; }
+    #scannerOverlay .sc-header { padding: 16px 18px 0; }
+    #scannerOverlay .sc-body { padding: 12px 18px 4px; }
+    #scannerOverlay .sc-viewport { max-height: calc(100dvh - 360px); }
+    #scannerOverlay .sc-footer { grid-template-columns: 1fr 1fr; padding: 12px 18px 16px; gap: 8px; }
+    #scannerOverlay #scannerStopBtn { grid-column: 1 / -1; grid-row: 1; }
+    #scannerOverlay .sc-btn { width: 100%; padding: 0 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #scannerOverlay #qr-reader { transition: none; }
+    #scannerOverlay .sc-dot,
+    #scannerOverlay .sc-feedback-icon .tp-icon { animation: none !important; }
+}

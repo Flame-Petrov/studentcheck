@@ -28,6 +28,7 @@
     <link rel="stylesheet" href="css/billing.css?v=2.1.0">
     <link rel="stylesheet" href="css/skeleton.css?v=1.0.0">
     <link rel="stylesheet" href="css/addStudentsDialog.css?v=1.0.0">
+    <link rel="stylesheet" href="css/scannerDialog.css?v=1.0.0">
     <!-- Fetch the module graph in parallel instead of import-by-import -->
     <link rel="modulepreload" href="javascript/teacherHomepage.js">
     <link rel="modulepreload" href="javascript/ui/teacherShell.js">
@@ -55,6 +56,7 @@
         <symbol id="tp-i-currency" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15.5 8.5H11a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H8.5"/><path d="M12 6.5v11"/></symbol>
         <symbol id="tp-i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8.5 10h7"/><path d="M8.5 14h4.5"/></symbol>
         <symbol id="tp-i-filter" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></symbol>
+        <symbol id="tp-i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
         <symbol id="tp-i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/></symbol>
         <symbol id="tp-i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
         <symbol id="tp-i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
@@ -432,30 +434,70 @@
 
 
 
-        <!-- Scanner Overlay (Start Scanning) -->
+        <!-- QR scanner dialog. Static shell: the camera viewport keeps its final
+             size from the start (dark placeholder + guides + status) and the
+             live preview replaces the placeholder in place. -->
         <div class="overlay" id="scannerOverlay">
-            <div class="ready-class-popup" role="dialog" aria-modal="true" aria-labelledby="scannerTitle">
-                <div class="overlay-top-bar">
-                    <h2 id="scannerTitle">Start Scanning</h2>
-                    <button type="button" id="closeScannerBtn" class="close-small" aria-label="Close">×</button>
+            <div class="sc-dialog" role="dialog" aria-modal="true" aria-labelledby="scannerTitle" tabindex="-1">
+                <div class="sc-header">
+                    <div class="sc-heading">
+                        <p class="sc-eyebrow" id="scannerEyebrow">Сканиране на присъствия</p>
+                        <h2 id="scannerTitle" class="sc-title"></h2>
+                    </div>
+                    <button type="button" id="closeScannerBtn" class="sc-close" aria-label="Затвори">
+                        <svg class="tp-icon" aria-hidden="true"><use href="#tp-i-close"/></svg>
+                    </button>
                 </div>
-                <div id="scannerModeGroup" class="mode-toggle-group" role="radiogroup" aria-label="Scan mode">
-                    <label class="mode-toggle" for="scanJoin">
-                        <input type="radio" name="scanMode" value="joining" id="scanJoin" checked>
-                        <span class="mode-label">Joining</span>
-                    </label>
-                    <label class="mode-toggle" for="scanLeave">
-                        <input type="radio" name="scanMode" value="leaving" id="scanLeave">
-                        <span class="mode-label">Leaving</span>
-                    </label>
+
+                <div class="sc-body">
+                    <div id="scannerModeGroup" class="sc-segmented" role="radiogroup" aria-label="Режим на сканиране">
+                        <label class="sc-segment" for="scanJoin">
+                            <input type="radio" name="scanMode" value="joining" id="scanJoin" checked>
+                            <span class="mode-label">Влизане</span>
+                        </label>
+                        <label class="sc-segment" for="scanLeave">
+                            <input type="radio" name="scanMode" value="leaving" id="scanLeave">
+                            <span class="mode-label">Излизане</span>
+                        </label>
+                    </div>
+
+                    <p class="sc-instruction" id="scannerInstruction">Поставете QR кода на студента в рамката.</p>
+
+                    <div id="cameraContainer" class="sc-viewport" data-state="loading" data-mode="joining">
+                        <div id="qr-reader"></div>
+                        <div class="sc-guides" aria-hidden="true">
+                            <span class="sc-corner sc-tl"></span><span class="sc-corner sc-tr"></span>
+                            <span class="sc-corner sc-bl"></span><span class="sc-corner sc-br"></span>
+                        </div>
+                        <div class="sc-status" role="status" aria-live="polite">
+                            <span class="sc-dot" aria-hidden="true"></span>
+                            <span id="scannerStatusText">Зареждане на скенера…</span>
+                        </div>
+                        <div class="sc-camera-error" id="scannerCameraError" hidden>
+                            <p class="sc-camera-error-title" id="scannerCameraErrorTitle"></p>
+                            <p class="sc-camera-error-text" id="scannerCameraErrorText"></p>
+                            <button type="button" class="sc-retry" id="scannerRetryBtn">Опитай отново</button>
+                        </div>
+                    </div>
+
+                    <!-- Fixed height: results never push the camera or the footer -->
+                    <div class="sc-feedback" id="scannerFeedback" data-tone="idle" role="status" aria-live="polite">
+                        <span class="sc-feedback-icon" aria-hidden="true">
+                            <svg class="tp-icon sc-icon-ok"><use href="#tp-i-check"/></svg>
+                            <svg class="tp-icon sc-icon-warn"><use href="#tp-i-alert"/></svg>
+                            <svg class="tp-icon sc-icon-scan"><use href="#tp-i-scan"/></svg>
+                        </span>
+                        <span class="sc-feedback-text">
+                            <span class="sc-feedback-title" id="scannerFeedbackTitle">Все още няма сканирани студенти.</span>
+                            <span class="sc-feedback-detail" id="scannerFeedbackDetail">Записите остават в текущата сесия, докато не натиснете „Приключи“.</span>
+                        </span>
+                    </div>
                 </div>
-                <div id="cameraContainer" class="camera-container">
-                    <div id="qr-reader"></div>
-                </div>
-                <div class="scanner-footer-actions">
-                    <button type="button" id="scannerStopBtn" class="role-button primary">Show Attendance</button>
-                    <button type="button" id="scannerDiscardBtn" class="role-button danger">Discard</button>
-                    <button type="button" id="scannerCloseBtn" class="role-button secondary-green">Finish Class</button>
+
+                <div class="sc-footer">
+                    <button type="button" id="scannerDiscardBtn" class="tp-btn-secondary sc-btn">Отказ</button>
+                    <button type="button" id="scannerStopBtn" class="tp-btn-secondary sc-btn">Покажи присъствията</button>
+                    <button type="button" id="scannerCloseBtn" class="tp-btn-primary sc-btn sc-finish">Приключи</button>
                 </div>
             </div>
         </div>
