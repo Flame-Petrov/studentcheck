@@ -914,3 +914,16 @@ html[data-view="payments"] .tp-view--payments {
     margin: 0 7px 0 auto;
     border-radius: 4px;
 }
+
+/* ---------- Hover: the current navigation item reacts too ---------- */
+.tp-nav-item[aria-current="page"]:hover {
+  background: var(--tp-green-tint);
+  color: var(--tp-green-pressed);
+}
+
+@media (min-width: 1024px) {
+  .tp-nav-item[aria-current="page"]:hover {
+    background: #DDF3EA;
+    color: var(--tp-green-pressed);
+  }
+}

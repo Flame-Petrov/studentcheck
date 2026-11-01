@@ -993,3 +993,61 @@ html[data-sp-boot="courses"] .student-app .sp-view[data-view="qr"] {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Hover animations (quick, smooth) ---------- */
+
+.sp-logo {
+  transition: transform var(--hover-dur, 160ms) var(--hover-ease, ease), box-shadow var(--hover-dur, 160ms) var(--hover-ease, ease);
+}
+
+.sp-logo:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 27, 51, 0.14);
+}
+
+.sp-topnav .sp-tab:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.sp-topnav .sp-tab[aria-current="page"]:hover {
+  background: var(--sp-surface);
+  box-shadow: 0 2px 8px rgba(15, 27, 51, 0.14);
+}
+
+.sp-bottomnav .sp-tab:hover {
+  color: var(--sp-text);
+  background: #f4f6fa;
+}
+
+.sp-bottomnav .sp-tab[aria-current="page"]:hover {
+  color: var(--sp-blue-strong);
+  background: var(--sp-blue-tint);
+}
+
+/* Course cards lift slightly (the page otherwise keeps buttons from scaling) */
+.sp-course {
+  transition: transform var(--hover-dur, 160ms) var(--hover-ease, ease),
+              box-shadow var(--hover-dur, 160ms) var(--hover-ease, ease),
+              border-color var(--hover-dur, 160ms) var(--hover-ease, ease),
+              background-color var(--hover-dur, 160ms) var(--hover-ease, ease);
+}
+
+.student-app button.sp-course:not(:disabled):not([aria-disabled="true"]):hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 22px rgba(15, 27, 51, 0.10);
+}
+
+.student-app button.sp-course[aria-current="true"]:not(:disabled):hover {
+  box-shadow: 0 0 0 1px var(--sp-blue) inset, 0 8px 22px rgba(15, 27, 51, 0.10);
+}
+
+.student-app .language-corner-display {
+  transition: background-color var(--hover-dur, 160ms) var(--hover-ease, ease), border-color var(--hover-dur, 160ms) var(--hover-ease, ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-logo:hover,
+  .student-app button.sp-course:not(:disabled):not([aria-disabled="true"]):hover {
+    transform: none !important;
+  }
+}

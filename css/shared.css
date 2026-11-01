@@ -734,3 +734,24 @@ input.invalid, select.invalid { border-color: #dc2626 !important; background-col
 @media (prefers-reduced-motion: reduce) {
   .btn-spinner { animation-duration: 2.4s; }
 }
+
+/* ---------- Hover feedback for every clickable element ----------
+   Smooth and quick: one shared timing. :where() keeps this at zero
+   specificity, so components that define their own transition keep it. */
+:root {
+  --hover-dur: 160ms;
+  --hover-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:where(a[href], button, [role="button"], [role="menuitemradio"], [role="tab"], select, summary,
+       label:has(> input[type="checkbox"]), label:has(> input[type="radio"])) {
+  transition-property: transform, background-color, border-color, color, box-shadow, opacity, filter, text-decoration-color;
+  transition-duration: var(--hover-dur);
+  transition-timing-function: var(--hover-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(a[href], button, [role="button"], [role="menuitemradio"], [role="tab"], select, summary) {
+    transition-duration: 1ms;
+  }
+}

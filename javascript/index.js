@@ -140,8 +140,8 @@ async function handleTeacherLogin(email, password, errorMessage) {
 // ===== Warm the likely next page (role is known from the identifier) =====
 // Fetched into the HTTP cache only; nothing runs until the user logs in.
 const HOME_ASSETS = {
-    teacher: ['teacherHomepage.html', 'css/teacherShell.css?v=1.2.0', 'css/teacherHomepage.css?v=2.2.0', 'javascript/teacherHomepage.js'],
-    student: ['studentHomepage.html', 'css/studentHomepage.css?v=2.1.0', 'javascript/studentHomepage.js', 'javascript/vendor/kjua-0.9.0.min.js']
+    teacher: ['teacherHomepage.html', 'css/teacherShell.css?v=1.3.0', 'css/teacherHomepage.css?v=2.2.0', 'javascript/teacherHomepage.js'],
+    student: ['studentHomepage.html', 'css/studentHomepage.css?v=2.2.0', 'javascript/studentHomepage.js', 'javascript/vendor/kjua-0.9.0.min.js']
 };
 
 function prefetchHomeFor(identifier) {

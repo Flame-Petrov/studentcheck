@@ -91,8 +91,16 @@ body {
 .btn-secondary:active { transform: translateY(2px); }
 
 .muted { text-align: center; color: #6b7280; padding: 0 22px 18px 22px; font-size: 0.95rem; font-weight: 500; }
-.muted a { color: #2563eb; text-decoration: none; }
-.muted a:hover { text-decoration: underline; }
+.muted a {
+  color: #2563eb;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+.muted a:hover {
+  color: #1d4ed8;
+  text-decoration-color: currentColor;
+}
 
 @media (max-width: 520px) {
   body {
