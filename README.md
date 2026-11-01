@@ -26,8 +26,9 @@ visible and the button shows its progress.
 ![Teacher disciplines list](docs/screenshots/teacher-disciplines.png)
 
 The teacher's home: every discipline as a card, with search and a
-"Нова дисциплина" button that opens the creation wizard. Navigation (sidebar on
-desktop) and the language selector stay in place while moving between sections.
+"Нова дисциплина" button that opens the creation wizard. The sidebar (Дисциплини,
+Статистика, Плащания, Чат) and the language selector stay in place while moving
+between sections.
 
 ### Teacher – Discipline menu
 
@@ -36,6 +37,15 @@ desktop) and the language selector stay in place while moving between sections.
 Clicking a discipline opens its menu: manage the enrolled students, start the
 QR scanner, download the attendance table (.xlsx) or open the discipline's
 options (rename / delete).
+
+### Teacher – Statistics (Статистика)
+
+![Statistics view](docs/screenshots/teacher-statistics.png)
+
+An overview across all disciplines: how many disciplines, students and lessons
+there are and the average attendance. Below, each discipline with its number of
+students and lessons, its average attendance, and how many students are under
+50% attendance.
 
 ### Teacher – Payments (Плащания)
 
