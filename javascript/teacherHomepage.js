@@ -13,6 +13,7 @@
 import { initTeacherShell } from './ui/teacherShell.js';
 import { initClassesView, loadClasses as loadClassList } from './features/classesView.js';
 import { showBillingView, prefetchBilling, onBillingPageRestored } from './features/billingView.js';
+import { showStatisticsView, prefetchStatistics } from './features/statisticsView.js';
 import { ensureRoster, hasStoredRoster, prefetchRoster } from './data/rosterStore.js';
 import { canPrefetch, whenIdle, prefetchUrl } from './data/prefetch.js';
 import { clearAllCaches } from './data/cache.js';
@@ -89,15 +90,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     // "open in new tab" all keep working.
     const VIEWS = {
         classes: { titleKey: 'classes', fallback: 'Дисциплини', heading: 'classesTitle' },
+        statistics: { titleKey: 'tp_nav_statistics', fallback: 'Статистика', heading: 'statisticsTitle' },
         payments: { titleKey: 'billing_title', fallback: 'Плащания', heading: 'billingTitle' }
     };
-    const viewFromLocation = () => (location.hash === '#payments' ? 'payments' : 'classes');
+    const viewFromLocation = () => {
+        if (location.hash === '#payments') return 'payments';
+        if (location.hash === '#statistics') return 'statistics';
+        return 'classes';
+    };
     let currentView = null;
     const scrollByView = {};
 
     const shell = initTeacherShell({
         onNavigate: (view) => goToView(view),
-        onIntent: (view) => { if (view === 'payments') prefetchBilling(); }
+        onIntent: (view) => {
+            if (view === 'payments') prefetchBilling();
+            if (view === 'statistics') prefetchStatistics();
+        }
     });
 
     function setDocumentTitle(view) {
@@ -120,6 +129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function enterView(view) {
         if (view === 'payments') showBillingView();
+        else if (view === 'statistics') showStatisticsView();
         else loadClassList();
     }
 
@@ -148,7 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById(VIEWS[view].heading)?.focus({ preventScroll: true });
             return;
         }
-        const url = view === 'payments' ? '#payments' : `${location.pathname}${location.search}`;
+        const url = view === 'classes' ? `${location.pathname}${location.search}` : `#${view}`;
         history.pushState({ tpView: view }, '', url);
         applyView(view, { focus: true });
     }
@@ -592,7 +602,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     applyView(viewFromLocation());
-    if (currentView === 'payments') {
+    if (currentView !== 'classes') {
         // Opened on Плащания: warm the class list once the page is idle
         whenIdle(() => loadClassList());
     } else if (canPrefetch()) {

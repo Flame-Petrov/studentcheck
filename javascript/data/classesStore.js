@@ -6,7 +6,7 @@
  * and any response already in flight cannot bring the old list back.
  */
 
-import { cacheKey, teacherScope, readCache, writeCache, updateCache } from './cache.js';
+import { cacheKey, teacherScope, readCache, writeCache, updateCache, invalidateCache } from './cache.js';
 import { getStoredClassesMap } from '../storage/classStorage.js';
 
 export const CLASSES_MAX_AGE_MS = 30 * 1000;
@@ -41,7 +41,13 @@ export function readCachedClasses() {
     }
 }
 
+/** Statistics depend on classes, rosters and attendance: drop them after a change. */
+export function invalidateStatistics() {
+    invalidateCache(cacheKey(teacherScope(), 'statistics'));
+}
+
 export function upsertCachedClass({ id, name }) {
+    invalidateStatistics();
     if (id === undefined || id === null) return;
     const entry = { id: String(id), name: String(name || '') };
     const updated = updateCache(classesKey(), (list) => {
@@ -53,9 +59,11 @@ export function upsertCachedClass({ id, name }) {
 }
 
 export function renameCachedClass(oldName, newName) {
+    invalidateStatistics();
     updateCache(classesKey(), (list) => list.map((c) => (c.name === oldName ? { ...c, name: newName } : c)));
 }
 
 export function removeCachedClass(name) {
+    invalidateStatistics();
     updateCache(classesKey(), (list) => list.filter((c) => c.name !== name));
 }

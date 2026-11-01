@@ -7,6 +7,7 @@
 
 import { SERVER_BASE_URL, ENDPOINTS, getTeacherEmail } from '../config/api.js';
 import { saveClassStudents, loadClassStudentsFromStorage } from '../storage/studentStorage.js';
+import { invalidateStatistics } from '../data/classesStore.js';
 import { authJsonFetch, authHeaders } from './authFetch.js';
 import { clearAuthState, hasAuthHeaderToken } from '../auth/authStore.js';
 
@@ -220,10 +221,12 @@ export async function addStudentsToClass(classId, students) {
     let lastErr = null;
     for (const payload of payloads) {
         try {
-            return await authJsonFetch(baseUrl, {
+            const result = await authJsonFetch(baseUrl, {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
+            invalidateStatistics(); // enrolment changed
+            return result;
         } catch (err) {
             lastErr = err;
         }
@@ -255,10 +258,12 @@ export async function removeStudentFromClass(classId, facultyNumber, teacherEmai
     let lastErr = null;
     for (const requestBody of payloads) {
         try {
-            return await authJsonFetch(`${SERVER_BASE_URL + ENDPOINTS.removeStudentFromClass}`, {
+            const result = await authJsonFetch(`${SERVER_BASE_URL + ENDPOINTS.removeStudentFromClass}`, {
                 method: 'POST',
                 body: JSON.stringify(requestBody)
             });
+            invalidateStatistics(); // enrolment changed
+            return result;
         } catch (err) {
             lastErr = err;
         }

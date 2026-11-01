@@ -6,6 +6,7 @@
  */
 
 import { SERVER_BASE_URL, ENDPOINTS } from '../config/api.js';
+import { invalidateStatistics } from '../data/classesStore.js';
 import { serializeTimestamp } from '../utils/helpers.js';
 import { authHeaders } from './authFetch.js';
 
@@ -91,6 +92,8 @@ export async function saveAttendanceSession(classId, records, { className, sessi
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
     });
+    // Saved attendance changes the statistics
+    if (response.ok) invalidateStatistics();
 
     let bodyText = '';
     let data = null;

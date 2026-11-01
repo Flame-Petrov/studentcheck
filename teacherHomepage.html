@@ -7,9 +7,11 @@
     <!-- Pick the view before first paint (no flash of the wrong view) -->
     <script>
         (function () {
-            var view = location.hash === '#payments' ? 'payments' : 'classes';
+            var h = location.hash;
+            var view = h === '#payments' ? 'payments' : (h === '#statistics' ? 'statistics' : 'classes');
             document.documentElement.setAttribute('data-view', view);
             if (view === 'payments') document.title = 'Плащания · StudentCheck';
+            if (view === 'statistics') document.title = 'Статистика · StudentCheck';
         })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,6 +32,7 @@
     <link rel="modulepreload" href="javascript/ui/teacherShell.js">
     <link rel="modulepreload" href="javascript/ui/disciplineActionsModal.js">
     <link rel="modulepreload" href="javascript/features/billingView.js">
+    <link rel="modulepreload" href="javascript/features/statisticsView.js">
     <link rel="modulepreload" href="javascript/features/classesView.js">
     <link rel="modulepreload" href="javascript/features/studentManagement.js">
     <link rel="modulepreload" href="javascript/features/attendance.js">
@@ -47,6 +50,7 @@
          javascript/ui/teacherShell.js only wires it up. -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
         <symbol id="tp-i-cap" viewBox="0 0 24 24"><path d="M21.42 10.92a1 1 0 0 0-.02-1.84L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
+        <symbol id="tp-i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
         <symbol id="tp-i-currency" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15.5 8.5H11a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H8.5"/><path d="M12 6.5v11"/></symbol>
         <symbol id="tp-i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8.5 10h7"/><path d="M8.5 14h4.5"/></symbol>
         <symbol id="tp-i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/></symbol>
@@ -80,6 +84,10 @@
                         <svg class="tp-icon tp-nav-icon" aria-hidden="true"><use href="#tp-i-cap"/></svg>
                         <span class="tp-nav-label" id="tpNavClasses">Дисциплини</span>
                     </a></li>
+                    <li><a class="tp-nav-item" href="teacherHomepage.html#statistics" data-view="statistics">
+                        <svg class="tp-icon tp-nav-icon" aria-hidden="true"><use href="#tp-i-chart"/></svg>
+                        <span class="tp-nav-label" id="tpNavStatistics">Статистика</span>
+                    </a></li>
                     <li><a class="tp-nav-item" href="teacherHomepage.html#payments" data-view="payments">
                         <svg class="tp-icon tp-nav-icon" aria-hidden="true"><use href="#tp-i-currency"/></svg>
                         <span class="tp-nav-label" id="tpNavPayments">Плащания</span>
@@ -91,11 +99,13 @@
                 </ul>
             </nav>
             <script>
-                // Correct the active item before first paint when opened on #payments
-                if (document.documentElement.getAttribute('data-view') === 'payments') {
+                // Correct the active item before first paint when opened on another view
+                (function () {
+                    var view = document.documentElement.getAttribute('data-view');
+                    if (!view || view === 'classes') return;
                     document.querySelector('.tp-nav-item[data-view="classes"]').removeAttribute('aria-current');
-                    document.querySelector('.tp-nav-item[data-view="payments"]').setAttribute('aria-current', 'page');
-                }
+                    document.querySelector('.tp-nav-item[data-view="' + view + '"]').setAttribute('aria-current', 'page');
+                })();
             </script>
         </div>
 
@@ -513,6 +523,49 @@
             <p class="sk-stale" id="classListStale" hidden></p>
             <p class="tp-empty" id="classListEmpty" hidden></p>
             <p class="tp-visually-hidden" id="classSearchStatus" role="status" aria-live="polite"></p>
+        </section>
+
+        <!-- Статистика: totals + per discipline (javascript/features/statisticsView.js) -->
+        <section class="tp-page tp-view tp-view--statistics" id="statisticsSection" aria-labelledby="statisticsTitle">
+            <h1 class="tp-title" id="statisticsTitle" tabindex="-1">Статистика</h1>
+            <p class="sk-status-text" id="statsLoadingStatus" role="status">Зареждане на статистиката…</p>
+            <div class="tp-stats" id="statsRegion" aria-busy="true">
+                <div class="tp-stat-tiles">
+                    <div class="tp-stat-tile">
+                        <span class="tp-stat-label" id="statClassesLabel">Дисциплини</span>
+                        <span class="tp-stat-value" id="statClasses"><span class="sk sk-inline" style="--sk-w:1.6em" aria-hidden="true"></span></span>
+                    </div>
+                    <div class="tp-stat-tile">
+                        <span class="tp-stat-label" id="statStudentsLabel">Студенти</span>
+                        <span class="tp-stat-value" id="statStudents"><span class="sk sk-inline" style="--sk-w:2em" aria-hidden="true"></span></span>
+                    </div>
+                    <div class="tp-stat-tile">
+                        <span class="tp-stat-label" id="statLessonsLabel">Проведени занятия</span>
+                        <span class="tp-stat-value" id="statLessons"><span class="sk sk-inline" style="--sk-w:2em" aria-hidden="true"></span></span>
+                    </div>
+                    <div class="tp-stat-tile">
+                        <span class="tp-stat-label" id="statAverageLabel">Средна посещаемост</span>
+                        <span class="tp-stat-value" id="statAverage"><span class="sk sk-inline" style="--sk-w:2.8em" aria-hidden="true"></span></span>
+                    </div>
+                </div>
+                <h2 class="tp-stats-heading" id="statsPerClassTitle">По дисциплини</h2>
+                <ul class="tp-stats-list" id="statsList" aria-labelledby="statsPerClassTitle" aria-busy="true">
+                    <li class="tp-stats-row tp-stats-row--skeleton" aria-hidden="true">
+                        <div class="tp-stats-main"><span class="sk sk-line" style="--sk-w:44%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:30%"></span></div>
+                        <div class="tp-stats-figure"><span class="sk sk-inline" style="--sk-w:2.6em"></span><span class="sk tp-stats-bar-skel"></span></div>
+                    </li>
+                    <li class="tp-stats-row tp-stats-row--skeleton" aria-hidden="true">
+                        <div class="tp-stats-main"><span class="sk sk-line" style="--sk-w:32%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:30%"></span></div>
+                        <div class="tp-stats-figure"><span class="sk sk-inline" style="--sk-w:2.6em"></span><span class="sk tp-stats-bar-skel"></span></div>
+                    </li>
+                    <li class="tp-stats-row tp-stats-row--skeleton" aria-hidden="true">
+                        <div class="tp-stats-main"><span class="sk sk-line" style="--sk-w:38%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:30%"></span></div>
+                        <div class="tp-stats-figure"><span class="sk sk-inline" style="--sk-w:2.6em"></span><span class="sk tp-stats-bar-skel"></span></div>
+                    </li>
+                </ul>
+                <p class="tp-empty" id="statsNone" hidden>Все още нямате дисциплини.</p>
+                <p class="sk-stale" id="statsStale" hidden></p>
+            </div>
         </section>
 
         <!-- Плащания (was billing.html; that URL now redirects here) -->
