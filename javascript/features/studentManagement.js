@@ -7,7 +7,7 @@
 
 import { removeStudentFromClass as apiRemoveStudentFromClass, addStudentsToClass } from '../api/classApi.js';
 import { fetchAllStudents } from '../api/studentApi.js';
-import { showSkeletonRows, showLoadError, endBusy } from '../ui/skeleton.js';
+import { showSkeletonRows, showLoadError, endBusy, showStaleNote, hideStaleNote } from '../ui/skeleton.js';
 import { ensureRoster } from '../data/rosterStore.js';
 import { fetchClassStudents } from '../api/classApi.js';
 import { getStudentAttendanceCountForClass } from './attendance.js';
@@ -1501,11 +1501,10 @@ function resetAddStudentsFiltersState() {
  * Update add students counter
  */
 function updateAddStudentsCounter() {
-    const overlay = getAddStudentsClassOverlay();
-    const confirmBtn = overlay?.querySelector('#classAddStudentsOverlayBtn');
-    if (confirmBtn) {
-        const label = i18nText('add_btn', 'Add');
-        confirmBtn.textContent = `${label} (${addStudentsSelections.size})`;
+    // Counts every selection, including students hidden by the current search/filters
+    const countEl = document.getElementById('addStudentsCount');
+    if (countEl) {
+        countEl.textContent = i18nText('tp_selected_count', 'Избрани: {n}').replace('{n}', String(addStudentsSelections.size));
     }
 }
 
@@ -1533,6 +1532,20 @@ function ensureAddStudentsOverlayInitialized() {
         e.stopPropagation();
         e.stopImmediatePropagation();
         closeAddStudentsToClass();
+    });
+
+    // Counter text is rendered by script: follow language changes
+    document.addEventListener('app:languagechange', updateAddStudentsCounter);
+
+    // Back: same destination as before (manage students when opened from there)
+    overlay.querySelector('#addStudentsBackBtn')?.addEventListener('click', () => closeAddStudentsToClass());
+
+    const filterToggle = overlay.querySelector('#addStudentsFilterToggle');
+    const filterPanel = overlay.querySelector('#addStudentsFilters');
+    filterToggle?.addEventListener('click', () => {
+        const open = filterPanel.hidden;
+        filterPanel.hidden = !open;
+        filterToggle.setAttribute('aria-expanded', String(open));
     });
 
     if (confirmBtn) {
@@ -1624,20 +1637,52 @@ function collectAddStudentsFilters(overrides = {}) {
     };
 }
 
+function addStudentsFiltersActive(filters = collectAddStudentsFilters()) {
+    return Boolean(filters.level || filters.faculty || filters.specialization || filters.group || String(filters.search || '').trim());
+}
+
+function updateAddStudentsFilterToggle() {
+    const f = collectAddStudentsFilters();
+    const toggle = document.getElementById('addStudentsFilterToggle');
+    toggle?.classList.toggle('has-filters', Boolean(f.level || f.faculty || f.specialization || f.group));
+}
+
+/**
+ * Search / filter request. Rows already on screen stay visible (muted) while
+ * it runs; only the newest response is rendered (shared request counter).
+ */
 async function requestAddStudentsWithFilters(overrides = {}) {
     const current = getCurrentClass();
     const className = current?.name || '';
     if (!className) return;
 
     const listEl = getAddStudentsListEl();
-    if (listEl) {
-        listEl.innerHTML = '<p class="muted" style="text-align:center;">Loading students...</p>';
-    }
+    if (!listEl) return;
+    updateAddStudentsFilterToggle();
+    hideStaleNote(document.getElementById('addStudentsStale'));
 
     const requestId = ++addStudentsRequestId;
     const filters = collectAddStudentsFilters(overrides);
-    const params = new URLSearchParams();
 
+    if (!addStudentsFiltersActive(filters)) {
+        // Back to the full list: cached students render at once
+        const cached = cachedAllStudents();
+        if (cached) {
+            renderAddStudentsRows(listEl, cached, addStudentsExistingKeys(className), { filtered: false });
+            return;
+        }
+        await loadAddStudents(className);
+        return;
+    }
+
+    if (addStudentsShownList) {
+        listEl.classList.add('is-refreshing');
+        listEl.setAttribute('aria-busy', 'true');
+    } else {
+        showAddStudentsSkeleton(listEl);
+    }
+
+    const params = new URLSearchParams();
     if (filters.level) params.append('level', filters.level);
     if (filters.faculty) params.append('faculty', filters.faculty);
     if (filters.specialization) params.append('specialization', filters.specialization);
@@ -1645,7 +1690,7 @@ async function requestAddStudentsWithFilters(overrides = {}) {
     if (filters.search) params.append('search', filters.search);
 
     try {
-        const url = `${SERVER_BASE_URL + ENDPOINTS.students}${params.toString() ? `?${params.toString()}` : ''}`;
+        const url = `${SERVER_BASE_URL + ENDPOINTS.students}?${params.toString()}`;
         const result = await fetch(url, { method: 'GET', headers: authHeaders({ 'Accept': 'application/json' }) });
         if (!result.ok) {
             throw new Error(`HTTP ${result.status}`);
@@ -1653,17 +1698,18 @@ async function requestAddStudentsWithFilters(overrides = {}) {
         const data = await result.json();
         const students = Array.isArray(data?.students) ? data.students : (Array.isArray(data) ? data : []);
 
-        if (requestId !== addStudentsRequestId) return;
-        await renderAddStudentsList(className, { studentsOverride: students });
+        if (requestId !== addStudentsRequestId) return; // a newer search/filter won
+        renderAddStudentsRows(listEl, students, addStudentsExistingKeys(className), { filtered: true });
     } catch (e) {
         if (requestId !== addStudentsRequestId) return;
-        try {
-            const fallback = await fetchAllStudents({ forceRefresh: true });
-            await renderAddStudentsList(className, { studentsOverride: fallback });
-        } catch (_) {
-            if (listEl) {
-                showLoadError(listEl, i18nText('tp_students_error', 'Неуспешно зареждане на студентите.'), () => renderAddStudentsList(className));
-            }
+        console.error('[Add Students] Filter request failed:', e);
+        listEl.classList.remove('is-refreshing');
+        endBusy(listEl);
+        const retry = () => requestAddStudentsWithFilters();
+        if (addStudentsShownList) {
+            showStaleNote(document.getElementById('addStudentsStale'), retry);
+        } else {
+            showLoadError(listEl, i18nText('tp_students_error', 'Неуспешно зареждане на студентите.'), retry);
         }
     }
 }
@@ -1681,35 +1727,28 @@ export async function openAddStudentsToClass(className, options = {}) {
     addStudentsReturnToManage = Boolean(options.returnToManage);
 
     const overlay = getAddStudentsClassOverlay();
-    const confirmBtn = overlay?.querySelector('#classAddStudentsOverlayBtn');
-    const searchInput = overlay?.querySelector('#addStudentsSearchInput');
 
     addStudentsSelections.clear();
+    addStudentsIndex = new Map();
+    addStudentsShownList = false;
+    resetAddStudentsFiltersState();
+    const filterPanel = overlay?.querySelector('#addStudentsFilters');
+    if (filterPanel) filterPanel.hidden = true;
+    overlay?.querySelector('#addStudentsFilterToggle')?.setAttribute('aria-expanded', 'false');
+    updateAddStudentsFilterToggle();
+    setAddStudentsError('');
+    setAddStudentsSubmitting(false);
+    hideStaleNote(document.getElementById('addStudentsStale'));
+    updateAddStudentsCounter();
 
-    if (confirmBtn) {
-        const label = i18nText('add_btn', 'Add');
-        confirmBtn.textContent = `${label} (0)`;
-    }
-
-    // Show overlay immediately with loading state
+    // The dialog shell (title, search, footer) shows at once; the list fills in
     if (overlay) {
         showOverlay(overlay, false);
+        // Focus the dialog itself (no keyboard popping up on phones)
+        overlay.querySelector('.asd-dialog')?.focus({ preventScroll: true });
     }
 
-    // Render students list (async, with error handling)
-    try {
-        await renderAddStudentsList(className);
-    } catch (e) {
-        console.error('[openAddStudentsToClass] Failed to render students list:', className, e);
-        // Ensure list container shows error state
-        const listEl = getAddStudentsListEl();
-        if (listEl) {
-            showLoadError(listEl, i18nText('tp_students_error', 'Неуспешно зареждане на студентите.'), () => renderAddStudentsList(className));
-        }
-    }
-
-    updateAddStudentsCounter();
-    // Avoid auto-focus to prevent mobile keyboard opening unexpectedly
+    await loadAddStudents(className);
 }
 
 /**
@@ -1717,6 +1756,8 @@ export async function openAddStudentsToClass(className, options = {}) {
  */
 function closeAddStudentsToClass() {
     const overlay = getAddStudentsClassOverlay();
+    // Responses still in flight are for a dialog that is gone: ignore them
+    addStudentsRequestId += 1;
     resetAddStudentsFiltersState();
     if (overlay) hideOverlay(overlay, false);
     if (addStudentsReturnToManage) {
@@ -1790,174 +1831,106 @@ async function resolveClassId(className) {
  * Render add students list
  * @param {string} className - Class name
  */
-async function renderAddStudentsList(className, options = {}) {
-    const listEl = getAddStudentsListEl();
-    if (!listEl) {
-        console.error('[Render Add Students] List element not found');
-        return;
-    }
+async function renderAddStudentsList(className) {
+    // Kept for existing callers (Retry): reload the list for this class
+    return loadAddStudents(className);
+}
 
-    // Skeleton rows while the students load
-    showSkeletonRows(listEl, { count: 6 });
+// A list (or an empty/no-results message) for the current opening is on screen
+let addStudentsShownList = false;
+let addStudentsSubmitting = false;
 
-    // Resolve classId with fallbacks
-    const classId = await resolveClassId(className);
-    if (!classId) {
-        console.error('[Render Add Students] No class ID found for class:', className);
-        // Still try to show all students even without classId
-    }
+/** All students from memory or the per-device cache (null when none). */
+function cachedAllStudents() {
+    const memory = getAllStudents();
+    if (Array.isArray(memory) && memory.length > 0) return memory;
+    try {
+        const stored = JSON.parse(localStorage.getItem('allStudents') || 'null');
+        if (Array.isArray(stored) && stored.length > 0) {
+            setAllStudents(stored);
+            return stored;
+        }
+    } catch (_) {}
+    return null;
+}
 
-    // Build existing set from assignments map and local storage (source of truth after removals)
+/** Faculty numbers already in the class (assignments + stored roster). */
+function addStudentsExistingKeys(className) {
     const assignments = getClassStudentAssignments(className);
-    const existingSet = new Set(
-        Array.from(assignments || new Set()).map(normalizeStudentKey).filter(Boolean)
-    );
-    const storedStudents = loadClassStudentsFromStorage(className) || [];
-    const storedSet = new Set(
-        storedStudents
-            .map(student => normalizeStudentKey(getStudentFacultyNumber(student)))
-            .filter(Boolean)
-    );
-    storedSet.forEach(key => existingSet.add(key));
+    const keys = new Set(Array.from(assignments || new Set()).map(normalizeStudentKey).filter(Boolean));
+    (loadClassStudentsFromStorage(className) || []).forEach((student) => {
+        const key = normalizeStudentKey(getStudentFacultyNumber(student));
+        if (key) keys.add(key);
+    });
+    return keys;
+}
 
-    let classStudents = [];
-    let allStudents = [];
-    let fetchError = false;
+function showAddStudentsSkeleton(listEl) {
+    listEl.classList.remove('is-refreshing');
+    listEl.setAttribute('aria-busy', 'true');
+    const widths = [['46%', '24%'], ['58%', '22%'], ['38%', '26%'], ['52%', '24%'], ['42%', '22%'], ['55%', '25%']];
+    listEl.innerHTML = `<p class="sk-status-text" role="status">${i18nText('tp_students_loading', 'Зареждане на студентите…')}</p>`
+        + widths.map(([w, f]) => `<div class="asd-skel-row" aria-hidden="true"><span class="sk asd-skel-box"></span><span class="asd-skel-text"><span class="sk sk-line" style="--sk-w:${w}"></span><span class="sk sk-line sk-line--sub" style="--sk-w:${f}"></span></span></div>`).join('');
+    addStudentsShownList = false;
+}
 
-    // Fetch class roster if classId is available
-    if (classId) {
-        try {
-            const fetched = await fetchClassStudents(classId, className);
-            classStudents = fetched || [];
-            
-            // Add to existing set
-            if (classStudents && classStudents.length > 0) {
-                // If we have local storage, trust it over server (server may be stale after removals)
-                if (storedSet.size === 0) {
-                    classStudents.forEach(student => {
-                        const id = normalizeStudentKey(getStudentFacultyNumber(student));
-                        if (id) {
-                            existingSet.add(id);
-                        }
-                    });
-                }
-            }
-        } catch (e) {
-            console.error('[Render Add Students] Failed to fetch class students:', className, e);
-            fetchError = true;
-            // Try loading from storage as fallback
-            if (storedStudents.length > 0) {
-                classStudents = storedStudents;
-            }
-        }
-    } else {
-        // No classId, try storage only
-        if (storedStudents.length > 0) {
-            classStudents = storedStudents;
-        }
-    }
+function addStudentsTextBlock(student) {
+    const parts = (window.Students?.splitNames || (() => ({ fullName: '' })))(student);
+    const wrap = document.createElement('div');
+    wrap.className = 'student-card-text';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'student-name';
+    nameEl.textContent = parts.fullName || getStudentFullName(student) || '';
+    const facEl = document.createElement('span');
+    facEl.className = 'student-fac';
+    facEl.textContent = getStudentFacultyNumber(student) || '';
+    wrap.append(nameEl, facEl);
+    return wrap;
+}
 
-    const { studentsOverride = null } = options;
-    if (Array.isArray(studentsOverride)) {
-        allStudents = studentsOverride;
-    } else {
-        // Always refresh from API when opening Add Students
-        allStudents = getAllStudents();
-        
-        try {
-            allStudents = await fetchAllStudents({ forceRefresh: true });
-        } catch (e) {
-            console.error('[Render Add Students] Failed to fetch all students:', e);
-            fetchError = true;
-            // Fallback to cached data if available
-            allStudents = getAllStudents() || [];
-        }
-    }
-    
-    // Ensure allStudents is an array
-    if (!Array.isArray(allStudents)) {
-        allStudents = [];
-    }
+/**
+ * Render the students. Selections (by student key) survive every re-render;
+ * scroll position and keyboard focus are kept.
+ */
+function renderAddStudentsRows(listEl, students, existingSet, { filtered = false } = {}) {
+    const focusedKey = listEl.contains(document.activeElement) ? document.activeElement?.dataset?.studentKey : null;
+    const scrollTop = listEl.scrollTop;
+    listEl.classList.remove('is-refreshing');
+    endBusy(listEl);
 
-    // Clear loading state
-    listEl.innerHTML = '';
-
-    // If no students available at all, show empty state
-    if (!allStudents || allStudents.length === 0) {
-        const emptyMsg = document.createElement('p');
-        emptyMsg.className = 'muted';
-        emptyMsg.style.textAlign = 'center';
-        emptyMsg.style.padding = '20px';
-        if (fetchError) {
-            emptyMsg.textContent = i18nText('err_load_students', 'Unable to load students. Please check your connection and try again.');
-        } else {
-            emptyMsg.textContent = i18nText('err_no_students_db', 'No students available in the database.');
-        }
-        listEl.appendChild(emptyMsg);
+    if (!Array.isArray(students) || students.length === 0) {
+        const message = filtered
+            ? i18nText('tp_no_student_results', 'Няма студенти, отговарящи на търсенето.')
+            : i18nText('tp_no_students_yet', 'Все още няма регистрирани студенти.');
+        listEl.innerHTML = '';
+        const p = document.createElement('p');
+        p.className = 'asd-state';
+        p.textContent = message;
+        listEl.appendChild(p);
+        addStudentsShownList = true;
+        updateAddStudentsCounter();
         return;
     }
 
-    // Render the list of all students
-    addStudentsIndex = new Map();
     const ul = document.createElement('ul');
-    ul.style.listStyle = 'none';
-    ul.style.margin = '0';
-    ul.style.padding = '0';
-
-    allStudents.forEach((student, idx) => {
+    students.forEach((student, idx) => {
         const li = document.createElement('li');
         li.className = 'list-item';
-        const parts = (window.Students?.splitNames || (() => ({ fullName: '' })))(student);
-        const facultyNumber = getStudentFacultyNumber(student);
-        const facultyKey = normalizeStudentKey(facultyNumber);
+        const facultyKey = normalizeStudentKey(getStudentFacultyNumber(student));
         const studentKey = getStudentPrimaryKey(student);
 
-        if (!studentKey) {
+        if (!studentKey || (facultyKey && existingSet.has(facultyKey))) {
+            // Already in the class (or not selectable): no checkbox, "Added" badge
             li.classList.add('already-in');
-            const textWrap = document.createElement('div');
-            textWrap.className = 'student-card-text';
-            const nameEl = document.createElement('span');
-            nameEl.className = 'student-name';
-            nameEl.textContent = parts.fullName;
-            const facEl = document.createElement('span');
-            facEl.className = 'student-fac';
-            facEl.textContent = facultyNumber || '';
-            textWrap.appendChild(nameEl);
-            textWrap.appendChild(facEl);
             const badge = document.createElement('span');
             badge.className = 'already-in-badge';
             badge.textContent = i18nText('already_in_badge', 'Already in');
-            li.appendChild(textWrap);
-            li.appendChild(badge);
+            li.append(addStudentsTextBlock(student), badge);
             ul.appendChild(li);
             return;
         }
 
-        if (!addStudentsIndex.has(studentKey)) {
-            addStudentsIndex.set(studentKey, student);
-        }
-
-        if (facultyKey && existingSet.has(facultyKey)) {
-            // Render without checkbox, with 'Already in' badge
-            li.classList.add('already-in');
-            const textWrap = document.createElement('div');
-            textWrap.className = 'student-card-text';
-            const nameEl = document.createElement('span');
-            nameEl.className = 'student-name';
-            nameEl.textContent = parts.fullName;
-            const facEl = document.createElement('span');
-            facEl.className = 'student-fac';
-            facEl.textContent = facultyNumber || '';
-            textWrap.appendChild(nameEl);
-            textWrap.appendChild(facEl);
-            const badge = document.createElement('span');
-            badge.className = 'already-in-badge';
-            badge.textContent = i18nText('already_in_badge', 'Already in');
-            li.appendChild(textWrap);
-            li.appendChild(badge);
-            ul.appendChild(li);
-            return;
-        }
+        if (!addStudentsIndex.has(studentKey)) addStudentsIndex.set(studentKey, student);
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -1966,34 +1939,23 @@ async function renderAddStudentsList(className, options = {}) {
         if (facultyKey) checkbox.dataset.facultyNumber = facultyKey;
         const label = document.createElement('label');
         label.htmlFor = checkbox.id;
-        const wrap = document.createElement('div');
-        wrap.className = 'student-card-text';
-        const nameEl = document.createElement('span');
-        nameEl.className = 'student-name';
-        nameEl.textContent = parts.fullName;
-        const facEl = document.createElement('span');
-        facEl.className = 'student-fac';
-        facEl.textContent = facultyNumber || '';
-        wrap.appendChild(nameEl);
-        wrap.appendChild(facEl);
-        label.appendChild(wrap);
-
-        checkbox.addEventListener('change', () => {
-            const key = checkbox.dataset.studentKey;
-            if (checkbox.checked) {
-                if (key) addStudentsSelections.add(key);
-                li.classList.add('selected');
-            } else {
-                if (key) addStudentsSelections.delete(key);
-                li.classList.remove('selected');
-            }
-            updateAddStudentsCounter();
-        });
+        label.appendChild(addStudentsTextBlock(student));
 
         if (addStudentsSelections.has(studentKey)) {
             checkbox.checked = true;
             li.classList.add('selected');
         }
+
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+                addStudentsSelections.add(studentKey);
+                li.classList.add('selected');
+            } else {
+                addStudentsSelections.delete(studentKey);
+                li.classList.remove('selected');
+            }
+            updateAddStudentsCounter();
+        });
 
         li.addEventListener('click', (e) => {
             if (e.target === checkbox || e.target.tagName === 'LABEL' || (e.target && e.target.closest('label'))) return;
@@ -2001,13 +1963,81 @@ async function renderAddStudentsList(className, options = {}) {
             checkbox.dispatchEvent(new Event('change'));
         });
 
-        li.appendChild(checkbox);
-        li.appendChild(label);
+        li.append(checkbox, label);
         ul.appendChild(li);
     });
 
+    listEl.replaceChildren(ul);
+    listEl.scrollTop = scrollTop;
+    if (focusedKey) {
+        listEl.querySelector(`input[data-student-key="${CSS.escape(focusedKey)}"]`)?.focus({ preventScroll: true });
+    }
+    addStudentsShownList = true;
     updateAddStudentsCounter();
-    listEl.appendChild(ul);
+}
+
+/**
+ * Open / refresh: cached students render immediately; the roster and the
+ * latest student list load in the background. Skeleton only without a cache.
+ */
+async function loadAddStudents(className) {
+    const listEl = getAddStudentsListEl();
+    if (!listEl) return;
+    const staleEl = document.getElementById('addStudentsStale');
+    hideStaleNote(staleEl);
+    const requestId = ++addStudentsRequestId;
+
+    const cached = cachedAllStudents();
+    if (cached && !addStudentsFiltersActive()) {
+        renderAddStudentsRows(listEl, cached, addStudentsExistingKeys(className), { filtered: false });
+    } else if (!addStudentsShownList) {
+        showAddStudentsSkeleton(listEl);
+    }
+
+    try {
+        const classId = await resolveClassId(className);
+        const [students] = await Promise.all([
+            fetchAllStudents({ forceRefresh: true }),
+            classId ? ensureRoster(classId, className).catch(() => null) : null
+        ]);
+        if (requestId !== addStudentsRequestId) return; // closed, reopened or filtered meanwhile
+        if (addStudentsFiltersActive()) return;
+        renderAddStudentsRows(listEl, Array.isArray(students) ? students : [], addStudentsExistingKeys(className), { filtered: false });
+    } catch (e) {
+        if (requestId !== addStudentsRequestId) return;
+        console.error('[Add Students] Failed to load students:', e);
+        const retry = () => loadAddStudents(className);
+        if (addStudentsShownList) {
+            showStaleNote(staleEl, retry);
+        } else {
+            showLoadError(listEl, i18nText('tp_students_error', 'Неуспешно зареждане на студентите.'), () => {
+                showAddStudentsSkeleton(listEl);
+                retry();
+            });
+        }
+    }
+}
+
+function setAddStudentsError(message) {
+    const el = document.getElementById('addStudentsError');
+    if (!el) return;
+    el.textContent = message || '';
+    el.hidden = !message;
+}
+
+function setAddStudentsSubmitting(pending) {
+    addStudentsSubmitting = pending;
+    const btn = document.getElementById('classAddStudentsOverlayBtn');
+    if (!btn) return;
+    btn.disabled = pending;
+    btn.setAttribute('aria-busy', String(pending));
+    if (pending) {
+        btn.dataset.pending = 'true';
+        btn.textContent = i18nText('tp_adding', 'Добавяне…');
+    } else {
+        delete btn.dataset.pending;
+        btn.textContent = i18nText('add', 'Добави');
+    }
 }
 
 /**
@@ -2015,10 +2045,22 @@ async function renderAddStudentsList(className, options = {}) {
  * @param {string} className - Class name
  */
 export async function finalizeAddStudentsToClass(className) {
+    if (addStudentsSubmitting) return; // no duplicate submissions
     if (!className || addStudentsSelections.size === 0) {
         closeAddStudentsToClass();
         return;
     }
+    // Dialog and selections stay visible; only the button shows progress
+    setAddStudentsError('');
+    setAddStudentsSubmitting(true);
+    try {
+        await submitAddStudents(className);
+    } finally {
+        setAddStudentsSubmitting(false);
+    }
+}
+
+async function submitAddStudents(className) {
 
     const assignSet = ensureClassStudentAssignments(className);
     const normalizedAssignSet = new Set();
@@ -2078,7 +2120,7 @@ export async function finalizeAddStudentsToClass(className) {
 
     const classId = await resolveClassId(className);
     if (!classId) {
-        alert('Failed to add students to class: Missing class id');
+        setAddStudentsError(i18nText('tp_add_students_error', 'Неуспешно добавяне на студентите. Опитайте отново.'));
         return;
     }
 
@@ -2132,7 +2174,7 @@ export async function finalizeAddStudentsToClass(className) {
             error: error.message,
             status: error.status
         });
-        alert(`Failed to add students to class: ${error.message}`);
+        setAddStudentsError(i18nText('tp_add_students_error', 'Неуспешно добавяне на студентите. Опитайте отново.'));
         return;
     }
 

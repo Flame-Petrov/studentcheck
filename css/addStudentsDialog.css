@@ -1,0 +1,530 @@
+/* "Добави студенти" dialog (markup in teacherHomepage.html, logic in
+   javascript/features/studentManagement.js). Loaded after teacherHomepage.css;
+   selectors are scoped to the overlay id so the older rules do not apply.
+   Skeleton rows and real rows share the same box (min-height, padding,
+   separator), so swapping them does not move anything. */
+
+#addStudentsClassOverlay.overlay {
+    padding:
+        max(16px, env(safe-area-inset-top, 0px))
+        max(16px, env(safe-area-inset-right, 0px))
+        max(16px, env(safe-area-inset-bottom, 0px))
+        max(16px, env(safe-area-inset-left, 0px));
+    background: rgba(30, 41, 56, 0.5);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    box-sizing: border-box;
+}
+
+#addStudentsClassOverlay .asd-dialog {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 560px;
+    max-height: min(720px, calc(100dvh - 32px));
+    overflow: hidden;
+    background: var(--tp-surface, #fff);
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(8, 15, 31, 0.18), 0 2px 8px rgba(8, 15, 31, 0.06);
+    color: var(--tp-text, #080F1F);
+    font-family: var(--tp-font, inherit);
+    box-sizing: border-box;
+}
+
+#addStudentsClassOverlay .asd-dialog:focus {
+    outline: none;
+}
+
+/* ---------- Header ---------- */
+
+#addStudentsClassOverlay .asd-header {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 24px 24px 0;
+}
+
+#addStudentsClassOverlay .asd-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#addStudentsClassOverlay .asd-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: left;
+}
+
+#addStudentsClassOverlay .asd-desc {
+    margin: 4px 0 0;
+    color: var(--tp-muted, #747C89);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+#addStudentsClassOverlay .asd-close {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -8px -10px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--tp-muted, #747C89);
+    cursor: pointer;
+}
+
+#addStudentsClassOverlay .asd-close .tp-icon {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2;
+}
+
+#addStudentsClassOverlay .asd-close:hover {
+    background: #F1F5F8;
+    color: var(--tp-text, #080F1F);
+}
+
+/* ---------- Search + filters ---------- */
+
+#addStudentsClassOverlay .asd-tools {
+    display: flex;
+    flex: none;
+    gap: 10px;
+    padding: 18px 24px 12px;
+}
+
+#addStudentsClassOverlay .asd-search {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#addStudentsClassOverlay .asd-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    width: 20px;
+    height: 20px;
+    transform: translateY(-50%);
+    color: var(--tp-muted, #747C89);
+    stroke-width: 1.8;
+    pointer-events: none;
+}
+
+#addStudentsClassOverlay #addStudentsSearchInput.asd-search-input {
+    display: block;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    padding: 0 12px 0 40px;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 12px;
+    background: #F7F9FB;
+    color: var(--tp-text, #080F1F);
+    font: inherit;
+    font-size: 16px; /* no iOS zoom */
+    box-shadow: none;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+#addStudentsClassOverlay #addStudentsSearchInput.asd-search-input:hover {
+    border-color: #C9D3DC;
+}
+
+#addStudentsClassOverlay #addStudentsSearchInput.asd-search-input:focus {
+    border-color: var(--tp-green, #00A174);
+    background: #fff;
+    box-shadow: var(--tp-focus-ring, 0 0 0 3px rgba(0, 161, 116, 0.32));
+}
+
+#addStudentsClassOverlay .asd-filter-toggle {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--tp-text, #080F1F);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#addStudentsClassOverlay .asd-filter-toggle .tp-icon {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+}
+
+#addStudentsClassOverlay .asd-filter-toggle:hover {
+    background: #F7F9FB;
+    border-color: #C9D3DC;
+}
+
+#addStudentsClassOverlay .asd-filter-toggle[aria-expanded="true"],
+#addStudentsClassOverlay .asd-filter-toggle.has-filters {
+    border-color: var(--tp-green, #00A174);
+    background: var(--tp-green-tint, #ECF9F4);
+    color: var(--tp-green-pressed, #008460);
+}
+
+#addStudentsClassOverlay .asd-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    flex: none;
+    padding: 0 24px 12px;
+}
+
+#addStudentsClassOverlay .asd-filters[hidden] {
+    display: none;
+}
+
+#addStudentsClassOverlay .asd-filter-toggle[aria-expanded="true"]:hover,
+#addStudentsClassOverlay .asd-filter-toggle.has-filters:hover {
+    background: #DDF3EA;
+}
+
+#addStudentsClassOverlay .asd-filters .filter-select {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    margin: 0;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 10px;
+    background-color: #fff;
+    font: inherit;
+    font-size: 14px;
+}
+
+#addStudentsClassOverlay .asd-filters .filter-select:hover {
+    border-color: #9AA9B6;
+}
+
+#addStudentsClassOverlay #addStudentsResetFiltersBtn.asd-reset {
+    grid-column: 1 / -1;
+    justify-self: end;
+    height: 36px;
+    margin: 0;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--tp-green-pressed, #008460);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#addStudentsClassOverlay #addStudentsResetFiltersBtn.asd-reset:hover {
+    background: var(--tp-green-tint, #ECF9F4);
+}
+
+/* ---------- List (the only scrolling region) ---------- */
+
+#addStudentsClassOverlay .asd-list {
+    flex: 1 1 auto;
+    min-height: 180px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    border-top: 1px solid var(--tp-border, #DFE6EC);
+    border-bottom: 1px solid var(--tp-border, #DFE6EC);
+}
+
+#addStudentsClassOverlay .asd-list ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    transition: opacity 160ms ease;
+}
+
+/* Background refresh (filter/search request): rows stay, slightly muted */
+#addStudentsClassOverlay .asd-list.is-refreshing ul {
+    opacity: 0.6;
+}
+
+#addStudentsClassOverlay .asd-list .list-item,
+#addStudentsClassOverlay .asd-skel-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 60px;
+    margin: 0;
+    padding: 10px 24px;
+    border: 0;
+    border-bottom: 1px solid #EDF1F4;
+    border-radius: 0;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+#addStudentsClassOverlay .asd-list .list-item {
+    cursor: pointer;
+    transition: background-color 160ms ease;
+}
+
+#addStudentsClassOverlay .asd-list .list-item:hover {
+    background: #F6FAF8;
+}
+
+#addStudentsClassOverlay .asd-list .list-item.selected {
+    background: var(--tp-green-tint, #ECF9F4);
+}
+
+#addStudentsClassOverlay .asd-list .list-item input[type="checkbox"] {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    border: 1.5px solid #C3CDD6;
+    border-radius: 6px;
+    background: #fff center / 14px 14px no-repeat;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+#addStudentsClassOverlay .asd-list .list-item input[type="checkbox"]:hover {
+    border-color: var(--tp-green, #00A174);
+}
+
+#addStudentsClassOverlay .asd-list .list-item input[type="checkbox"]:checked {
+    border-color: var(--tp-green, #00A174);
+    background-color: var(--tp-green, #00A174);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+
+#addStudentsClassOverlay .asd-list .list-item input[type="checkbox"]:focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+#addStudentsClassOverlay .asd-list label {
+    flex: 1 1 auto;
+    min-width: 0;
+    cursor: pointer;
+}
+
+#addStudentsClassOverlay .asd-list .student-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+#addStudentsClassOverlay .asd-list .student-name {
+    color: var(--tp-text, #080F1F);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+#addStudentsClassOverlay .asd-list .student-fac {
+    color: var(--tp-muted, #747C89);
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+/* Already enrolled: no checkbox; text aligned with the selectable rows */
+#addStudentsClassOverlay .asd-list .list-item.already-in {
+    padding-left: calc(24px + 20px + 14px);
+    background: #fff;
+    cursor: default;
+    opacity: 0.75;
+}
+
+#addStudentsClassOverlay .asd-list .list-item.already-in .student-card-text {
+    flex: 1 1 auto;
+}
+
+#addStudentsClassOverlay .asd-list .already-in-badge {
+    flex: none;
+    padding: 3px 10px;
+    border: 0;
+    border-radius: 999px;
+    background: #EEF2F5;
+    color: var(--tp-muted, #747C89);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Skeleton rows: decorative, same box as real rows, never "selected" */
+#addStudentsClassOverlay .asd-skel-row {
+    pointer-events: none;
+}
+
+#addStudentsClassOverlay .asd-skel-box {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+}
+
+#addStudentsClassOverlay .asd-skel-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+}
+
+#addStudentsClassOverlay .asd-skel-text .sk-line {
+    height: 13px;
+}
+
+#addStudentsClassOverlay .asd-skel-text .sk-line--sub {
+    height: 11px;
+    margin-top: 8px;
+}
+
+/* Empty list / no search results */
+#addStudentsClassOverlay .asd-state {
+    margin: 0;
+    padding: 36px 24px;
+    color: var(--tp-muted, #747C89);
+    font-size: 15px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+#addStudentsClassOverlay .asd-list .sk-error {
+    margin: 16px 24px;
+}
+
+#addStudentsClassOverlay .asd-stale {
+    margin: 8px 24px 0;
+}
+
+/* ---------- Footer ---------- */
+
+#addStudentsClassOverlay .asd-footer {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px 20px;
+}
+
+#addStudentsClassOverlay .asd-count {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    color: var(--tp-muted, #747C89);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+}
+
+#addStudentsClassOverlay .asd-back,
+#addStudentsClassOverlay .asd-submit {
+    width: auto;
+    min-width: 0;
+    height: 44px;
+    padding: 0 18px;
+    font-size: 15px;
+}
+
+#addStudentsClassOverlay .asd-submit {
+    min-width: 120px;
+}
+
+/* Green primary action (an older id rule in teacherHomepage.css made it blue) */
+#addStudentsClassOverlay #classAddStudentsOverlayBtn.asd-submit {
+    border: 0;
+    background: var(--tp-green, #00A174);
+    color: #fff;
+}
+
+#addStudentsClassOverlay #classAddStudentsOverlayBtn.asd-submit:hover {
+    background: var(--tp-green-hover, #00936A);
+}
+
+#addStudentsClassOverlay #classAddStudentsOverlayBtn.asd-submit:active {
+    background: var(--tp-green-pressed, #008460);
+    transform: none;
+}
+
+#addStudentsClassOverlay #classAddStudentsOverlayBtn.asd-submit:disabled {
+    opacity: 0.75;
+}
+
+#addStudentsClassOverlay .asd-submit[aria-busy="true"] {
+    cursor: progress;
+}
+
+#addStudentsClassOverlay .asd-error {
+    flex: none;
+    margin: -6px 24px 18px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #FDECEC;
+    color: #B42318;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+#addStudentsClassOverlay .asd-error[hidden] {
+    display: none;
+}
+
+/* Shared hover scaling off: these controls animate colour instead */
+body.tp-app #addStudentsClassOverlay :is(.asd-close, .asd-filter-toggle, .asd-reset):not(:disabled):hover,
+body.tp-app #addStudentsClassOverlay :is(.asd-close, .asd-filter-toggle, .asd-reset):not(:disabled):active {
+    transform: none !important;
+}
+
+body.tp-app #addStudentsClassOverlay :is(.asd-close, .asd-filter-toggle, .asd-reset):focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 639.98px) {
+    #addStudentsClassOverlay.overlay {
+        padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    }
+
+    #addStudentsClassOverlay .asd-dialog {
+        max-height: calc(100dvh - 24px);
+        border-radius: 18px;
+    }
+
+    #addStudentsClassOverlay .asd-header { padding: 20px 20px 0; }
+    #addStudentsClassOverlay .asd-title { font-size: 20px; }
+    #addStudentsClassOverlay .asd-tools { padding: 14px 20px 10px; }
+    #addStudentsClassOverlay .asd-filters { padding: 0 20px 10px; grid-template-columns: minmax(0, 1fr); }
+    #addStudentsClassOverlay .asd-filter-toggle span { display: none; }
+    #addStudentsClassOverlay .asd-filter-toggle { width: 44px; justify-content: center; padding: 0; }
+
+    #addStudentsClassOverlay .asd-list .list-item,
+    #addStudentsClassOverlay .asd-skel-row {
+        padding: 10px 20px;
+    }
+
+    #addStudentsClassOverlay .asd-list .list-item.already-in {
+        padding-left: calc(20px + 20px + 14px);
+    }
+
+    #addStudentsClassOverlay .asd-footer { gap: 8px; padding: 14px 20px 16px; }
+    #addStudentsClassOverlay .asd-back,
+    #addStudentsClassOverlay .asd-submit { padding: 0 14px; }
+    #addStudentsClassOverlay .asd-submit { min-width: 0; }
+    #addStudentsClassOverlay .asd-count { font-size: 13px; }
+}

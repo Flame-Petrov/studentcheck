@@ -22,11 +22,12 @@
     <!-- Reuse registration styles for class creation wizard -->
     <link rel="stylesheet" href="css/registration.css?v=1.0.0">
     <link rel="stylesheet" href="css/teacherHomepage.css?v=2.2.0">
-    <link rel="stylesheet" href="css/teacherShell.css?v=1.3.0">
+    <link rel="stylesheet" href="css/teacherShell.css?v=1.4.0">
     <link rel="stylesheet" href="css/supportChat.css?v=1.0.0">
     <link rel="stylesheet" href="css/disciplineActionsModal.css?v=1.0.0">
     <link rel="stylesheet" href="css/billing.css?v=2.1.0">
     <link rel="stylesheet" href="css/skeleton.css?v=1.0.0">
+    <link rel="stylesheet" href="css/addStudentsDialog.css?v=1.0.0">
     <!-- Fetch the module graph in parallel instead of import-by-import -->
     <link rel="modulepreload" href="javascript/teacherHomepage.js">
     <link rel="modulepreload" href="javascript/ui/teacherShell.js">
@@ -53,6 +54,7 @@
         <symbol id="tp-i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
         <symbol id="tp-i-currency" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15.5 8.5H11a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H8.5"/><path d="M12 6.5v11"/></symbol>
         <symbol id="tp-i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/><path d="M8.5 10h7"/><path d="M8.5 14h4.5"/></symbol>
+        <symbol id="tp-i-filter" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></symbol>
         <symbol id="tp-i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/></symbol>
         <symbol id="tp-i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
         <symbol id="tp-i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
@@ -369,68 +371,56 @@
 
 
 
-        <!-- Add Students Overlay -->
+        <!-- Add students dialog. The shell and skeleton rows are static so they
+             show at once; javascript/features/studentManagement.js fills the list. -->
         <div class="overlay" id="addStudentsClassOverlay">
-            <div class="ready-class-popup add-students-popup" role="dialog" aria-modal="true" aria-labelledby="addStudentsTitle">
-                <div class="overlay-top-bar">
-                    <h2 id="addStudentsTitle">Add Students</h2>
-                    <button type="button" id="closeAddStudentsClassBtn" class="close-small" aria-label="Close">×</button>
-                </div>
-                <div class="add-students-body">
-
-                    <div class="top-section-search-filters">
-                        <!-- Filter by level -->
-                        <select class="filter-select" id="addStudentsFilterLevel" name="filterLevel" aria-label="Level" required aria-required="true">
-                            <option value="" selected>Level</option>
-                            <option value="bachelor">Bachelor</option>
-                            <option value="master">Master</option>
-                            <option value="phd">PhD</option>
-                        </select>
-
-                        <!-- Filter by faculty -->
-                        <select class="filter-select" id="addStudentsFilterFaculty" name="filterFaculty" aria-label="Faculty" required aria-required="true">
-                            <option value="" selected>Faculty</option>
-                            <option value="Economics">Economics</option>
-                        </select>
-
-                        <!-- Filter by specialization -->
-                        <select class="filter-select" id="addStudentsFilterSpecialization" name="filterSpecialization" aria-label="Specialization" required aria-required="true">
-                            <option value="" selected>Specialization</option>
-                            <option value="Business Management">Business Management</option>
-                            <option value="Business Management 1">Business Management 1</option>
-                            <option value="Business Management 2">Business Management 2</option>
-                            <option value="Business Management in English">Business Management in English</option>
-                            <option value="Electricity Management">Electricity Management</option>
-                            <option value="Industrial Management">Industrial Management</option>
-                            <option value="Industrial Management in English">Industrial Management in English</option>
-                            <option value="Intellectual Property and Innovation">Intellectual Property and Innovation</option>
-                            <option value="Management and Business Information Systems">Management and Business Information Systems</option>
-                            <option value="Senior Management">Senior Management</option>
-                        </select>
-
-                        <!-- Filter by group -->
-                        <select class="filter-select" id="addStudentsFilterGroup" name="filterGroup" aria-label="Group" required aria-required="true">
-                            <option value="" selected>Group</option>
-                            <option value="37" >37</option>
-                            <option value="38" >38</option>
-                            <option value="39" >39</option>
-                            <option value="40" >40</option>
-                            <option value="41" >41</option>
-                            <option value="42" >42</option>
-                        </select>
+            <div class="asd-dialog" role="dialog" aria-modal="true" aria-labelledby="addStudentsTitle" aria-describedby="addStudentsDesc" tabindex="-1">
+                <div class="asd-header">
+                    <div class="asd-heading">
+                        <h2 id="addStudentsTitle" class="asd-title">Добави студенти</h2>
+                        <p id="addStudentsDesc" class="asd-desc">Избери студентите за дисциплината.</p>
                     </div>
+                    <button type="button" id="closeAddStudentsClassBtn" class="asd-close" aria-label="Затвори">
+                        <svg class="tp-icon" aria-hidden="true"><use href="#tp-i-close"/></svg>
+                    </button>
+                </div>
 
-                    <div class="top-section-search-bar-reset-filters">
-                        <input type="text" id="addStudentsSearchInput" placeholder="Search..." />
-                        <button id="addStudentsResetFiltersBtn" class="reset-filters-button" type="button">Reset</button>
+                <div class="asd-tools">
+                    <div class="asd-search">
+                        <svg class="tp-icon asd-search-icon" aria-hidden="true"><use href="#tp-i-search"/></svg>
+                        <input type="search" id="addStudentsSearchInput" class="asd-search-input" placeholder="Търси..." aria-label="Търси студент" autocomplete="off" spellcheck="false" aria-controls="classAddStudentsList">
                     </div>
-
-                    <div id="classAddStudentsList" class="add-students-list"></div>
-
+                    <button type="button" id="addStudentsFilterToggle" class="asd-filter-toggle" aria-expanded="false" aria-controls="addStudentsFilters" aria-label="Филтри">
+                        <svg class="tp-icon" aria-hidden="true"><use href="#tp-i-filter"/></svg>
+                        <span id="addStudentsFilterToggleLabel">Филтри</span>
+                    </button>
                 </div>
-                <div class="add-students-footer">
-                    <button type="button" id="classAddStudentsOverlayBtn" class="role-button primary" aria-label="Add Selected">Add</button>
+                <div class="asd-filters" id="addStudentsFilters" hidden>
+                        <select class="filter-select" id="addStudentsFilterLevel" name="filterLevel" aria-label="Level" required aria-required="true"><option value="" selected>Level</option><option value="bachelor">Bachelor</option><option value="master">Master</option><option value="phd">PhD</option></select>
+                        <select class="filter-select" id="addStudentsFilterFaculty" name="filterFaculty" aria-label="Faculty" required aria-required="true"><option value="" selected>Faculty</option><option value="Economics">Economics</option></select>
+                        <select class="filter-select" id="addStudentsFilterSpecialization" name="filterSpecialization" aria-label="Specialization" required aria-required="true"><option value="" selected>Specialization</option><option value="Business Management">Business Management</option><option value="Business Management 1">Business Management 1</option><option value="Business Management 2">Business Management 2</option><option value="Business Management in English">Business Management in English</option><option value="Electricity Management">Electricity Management</option><option value="Industrial Management">Industrial Management</option><option value="Industrial Management in English">Industrial Management in English</option><option value="Intellectual Property and Innovation">Intellectual Property and Innovation</option><option value="Management and Business Information Systems">Management and Business Information Systems</option><option value="Senior Management">Senior Management</option></select>
+                        <select class="filter-select" id="addStudentsFilterGroup" name="filterGroup" aria-label="Group" required aria-required="true"><option value="" selected>Group</option><option value="37" >37</option><option value="38" >38</option><option value="39" >39</option><option value="40" >40</option><option value="41" >41</option><option value="42" >42</option></select>
+                    <button id="addStudentsResetFiltersBtn" class="asd-reset" type="button">Нулирай</button>
                 </div>
+
+                <!-- Only this region scrolls; header and footer stay visible -->
+                <div id="classAddStudentsList" class="asd-list" aria-busy="true" aria-label="Студенти">
+                    <p class="sk-status-text" role="status">Зареждане на студентите…</p>
+                    <div class="asd-skel-row" aria-hidden="true"><span class="sk asd-skel-box"></span><span class="asd-skel-text"><span class="sk sk-line" style="--sk-w:46%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:24%"></span></span></div>
+                    <div class="asd-skel-row" aria-hidden="true"><span class="sk asd-skel-box"></span><span class="asd-skel-text"><span class="sk sk-line" style="--sk-w:58%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:22%"></span></span></div>
+                    <div class="asd-skel-row" aria-hidden="true"><span class="sk asd-skel-box"></span><span class="asd-skel-text"><span class="sk sk-line" style="--sk-w:38%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:26%"></span></span></div>
+                    <div class="asd-skel-row" aria-hidden="true"><span class="sk asd-skel-box"></span><span class="asd-skel-text"><span class="sk sk-line" style="--sk-w:52%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:24%"></span></span></div>
+                    <div class="asd-skel-row" aria-hidden="true"><span class="sk asd-skel-box"></span><span class="asd-skel-text"><span class="sk sk-line" style="--sk-w:42%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:22%"></span></span></div>
+                    <div class="asd-skel-row" aria-hidden="true"><span class="sk asd-skel-box"></span><span class="asd-skel-text"><span class="sk sk-line" style="--sk-w:55%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:25%"></span></span></div>
+                </div>
+                <p class="sk-stale asd-stale" id="addStudentsStale" hidden></p>
+
+                <div class="asd-footer">
+                    <button type="button" id="addStudentsBackBtn" class="tp-btn-secondary asd-back">Назад</button>
+                    <span class="asd-count" id="addStudentsCount" aria-live="polite">Избрани: 0</span>
+                    <button type="button" id="classAddStudentsOverlayBtn" class="tp-btn-primary asd-submit">Добави</button>
+                </div>
+                <p class="asd-error" id="addStudentsError" role="alert" hidden></p>
             </div>
         </div>
 

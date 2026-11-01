@@ -1087,3 +1087,12 @@ html[data-view="payments"] .tp-view--payments {
         text-align: left;
     }
 }
+
+/* Filter selects in the student dialogs: hover feedback like other controls */
+.tp-app .filter-select {
+    transition: border-color var(--hover-dur, 160ms) var(--hover-ease, ease), box-shadow var(--hover-dur, 160ms) var(--hover-ease, ease);
+}
+
+.tp-app .filter-select:hover {
+    border-color: #9AA9B6;
+}
