@@ -8,10 +8,11 @@
     <script>
         (function () {
             var h = location.hash;
-            var view = h === '#payments' ? 'payments' : (h === '#statistics' ? 'statistics' : 'classes');
+            var view = h === '#payments' ? 'payments' : (h === '#statistics' ? 'statistics' : (h === '#chat' ? 'chat' : 'classes'));
             document.documentElement.setAttribute('data-view', view);
             if (view === 'payments') document.title = 'Плащания · StudentCheck';
             if (view === 'statistics') document.title = 'Статистика · StudentCheck';
+            if (view === 'chat') document.title = 'Чат · StudentCheck';
         })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,8 +23,8 @@
     <!-- Reuse registration styles for class creation wizard -->
     <link rel="stylesheet" href="css/registration.css?v=1.0.0">
     <link rel="stylesheet" href="css/teacherHomepage.css?v=2.2.0">
-    <link rel="stylesheet" href="css/teacherShell.css?v=1.4.0">
-    <link rel="stylesheet" href="css/supportChat.css?v=1.0.0">
+    <link rel="stylesheet" href="css/teacherShell.css?v=1.5.0">
+    <link rel="stylesheet" href="css/supportChat.css?v=2.0.0">
     <link rel="stylesheet" href="css/disciplineActionsModal.css?v=1.0.0">
     <link rel="stylesheet" href="css/billing.css?v=2.1.0">
     <link rel="stylesheet" href="css/skeleton.css?v=1.0.0">
@@ -96,10 +97,10 @@
                         <svg class="tp-icon tp-nav-icon" aria-hidden="true"><use href="#tp-i-currency"/></svg>
                         <span class="tp-nav-label" id="tpNavPayments">Плащания</span>
                     </a></li>
-                    <li><button class="tp-nav-item" type="button" data-action="open-support-chat" aria-haspopup="dialog">
+                    <li><a class="tp-nav-item" href="teacherHomepage.html#chat" data-view="chat">
                         <svg class="tp-icon tp-nav-icon" aria-hidden="true"><use href="#tp-i-chat"/></svg>
                         <span class="tp-nav-label" id="tpNavChat">Чат</span>
-                    </button></li>
+                    </a></li>
                 </ul>
             </nav>
             <script>
@@ -636,30 +637,26 @@
             </div>
         </section>
 
+        <!-- Чат: support assistant (javascript/features/chatSupport.js).
+             The input is never focused by script, so phones only open the
+             keyboard when the user taps it. -->
+        <section class="tp-page tp-view tp-view--chat" id="chatSection" aria-labelledby="chatTitle">
+            <h1 class="tp-title" id="chatTitle" tabindex="-1">Чат</h1>
+            <div class="tp-chat" id="supportChat">
+                <div id="chatHistoryContainer" class="chat-history" role="log" aria-live="polite" aria-labelledby="chatTitle">
+                    <div class="chat-message model">Здравей! Аз съм асистентът за поддръжка на StudentCheck. С какво мога да помогна днес?</div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" placeholder="Задайте въпрос..." aria-label="Задайте въпрос..." autocomplete="off" enterkeyhint="send" />
+                    <button id="sendChatBtn" type="button">Изпрати</button>
+                </div>
+            </div>
+        </section>
+
     </main>
         </div><!-- /.tp-content -->
     </div><!-- /.tp-shell -->
 
-
-
-    <div id="supportChatOverlay" class="overlay tp-chat-overlay">
-        <div class="chat-popup" role="dialog" aria-modal="true" aria-labelledby="supportChatTitle">
-            <div class="chat-header">
-                <h2 id="supportChatTitle">Support Chat</h2>
-                <button id="supportChatLanguageBtn" class="chat-language-btn" type="button">Change Language</button>
-                <button id="closeSupportChatBtn" class="tp-chat-close" type="button" aria-label="Close">
-                    <svg class="tp-icon" aria-hidden="true"><use href="#tp-i-close"/></svg>
-                </button>
-            </div>
-            <div id="chatHistoryContainer" class="chat-history" aria-live="polite">
-                <div class="chat-message model">Hello! I am the StudentCheck support assistant. How can I help you today?</div>
-            </div>
-            <div class="chat-input-area">
-                <input type="text" id="chatInput" placeholder="Ask a question..." autocomplete="off" aria-labelledby="supportChatTitle" />
-                <button id="sendChatBtn" type="button">Send</button>
-            </div>
-        </div>
-    </div>
 
     <script src="javascript/shared.js"></script>
     <script src="javascript/students.js"></script>

@@ -14,6 +14,7 @@ import { initTeacherShell } from './ui/teacherShell.js';
 import { initClassesView, loadClasses as loadClassList } from './features/classesView.js';
 import { showBillingView, prefetchBilling, onBillingPageRestored } from './features/billingView.js';
 import { showStatisticsView, prefetchStatistics } from './features/statisticsView.js';
+import { showSupportChat } from './features/chatSupport.js';
 import { ensureRoster, hasStoredRoster, prefetchRoster } from './data/rosterStore.js';
 import { canPrefetch, whenIdle, prefetchUrl } from './data/prefetch.js';
 import { clearAllCaches } from './data/cache.js';
@@ -84,18 +85,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.replace('index.html');
     });
 
-    // ===== SHELL + VIEW ROUTER (Дисциплини / Плащания in one document) =====
+    // ===== SHELL + VIEW ROUTER (Дисциплини / Статистика / Плащания / Чат in one document) =====
     // The frame stays mounted; views switch in place via the History API, so
     // direct links (teacherHomepage.html#payments), refresh, Back/Forward and
     // "open in new tab" all keep working.
     const VIEWS = {
         classes: { titleKey: 'classes', fallback: 'Дисциплини', heading: 'classesTitle' },
         statistics: { titleKey: 'tp_nav_statistics', fallback: 'Статистика', heading: 'statisticsTitle' },
-        payments: { titleKey: 'billing_title', fallback: 'Плащания', heading: 'billingTitle' }
+        payments: { titleKey: 'billing_title', fallback: 'Плащания', heading: 'billingTitle' },
+        chat: { titleKey: 'tp_nav_chat', fallback: 'Чат', heading: 'chatTitle' }
     };
     const viewFromLocation = () => {
         if (location.hash === '#payments') return 'payments';
         if (location.hash === '#statistics') return 'statistics';
+        if (location.hash === '#chat') return 'chat';
         return 'classes';
     };
     let currentView = null;
@@ -130,6 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function enterView(view) {
         if (view === 'payments') showBillingView();
         else if (view === 'statistics') showStatisticsView();
+        else if (view === 'chat') showSupportChat();
         else loadClassList();
     }
 

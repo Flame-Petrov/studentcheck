@@ -1025,10 +1025,9 @@
       { selector: '#statsNone', key: 'tp_stats_empty' },
       { selector: '#tpNav', key: 'sp_main_nav', attr: 'aria-label' },
       { selector: '#tpSkipLink', key: 'tp_skip_to_content' },
-      { selector: '#supportChatTitle', key: 'support_chat_title' },
-      { selector: '#supportChatLanguageBtn', key: 'language_change_title' },
-      { selector: '#closeSupportChatBtn', key: 'close', attr: 'aria-label' },
+      { selector: '#chatTitle', key: 'tp_nav_chat' },
       { selector: '#chatInput', key: 'support_chat_placeholder', attr: 'placeholder' },
+      { selector: '#chatInput', key: 'support_chat_placeholder', attr: 'aria-label' },
       { selector: '#sendChatBtn', key: 'support_chat_send' },
       { selector: '#chatHistoryContainer .chat-message.model:first-child', key: 'support_chat_welcome' }
     ];

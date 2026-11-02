@@ -1,87 +1,31 @@
-import { showOverlay, hideOverlay, getOverlay } from '../ui/overlays.js';
 import { authHeaders } from '../api/authFetch.js';
-import { SERVER_BASE_URL } from '../config/api.js'; // Fallback if you use full URLs
+import { SERVER_BASE_URL } from '../config/api.js';
+
+/**
+ * Support chat — the "Чат" view of the teacher page (#chat). The markup is the
+ * static #chatSection in teacherHomepage.html; this only binds behaviour.
+ *
+ * The input is never focused from script: on phones that would open the
+ * on-screen keyboard as soon as the view is shown. It gets focus only when the
+ * user taps it, and while a reply is pending it is made read-only (not
+ * disabled), so a keyboard the user opened stays open instead of closing.
+ */
+
+/** Called by the view router when the chat view is shown. */
+export function showSupportChat() {
+    const historyContainer = document.getElementById('chatHistoryContainer');
+    if (historyContainer) historyContainer.scrollTop = historyContainer.scrollHeight;
+}
 
 export function initSupportChat() {
-    const openBtn = document.getElementById('openSupportChatBtn');
-    const closeBtn = document.getElementById('closeSupportChatBtn');
-    const languageBtn = document.getElementById('supportChatLanguageBtn');
-    const overlay = getOverlay('supportChatOverlay'); 
     const sendBtn = document.getElementById('sendChatBtn');
     const input = document.getElementById('chatInput');
     const historyContainer = document.getElementById('chatHistoryContainer');
+    if (!sendBtn || !input || !historyContainer) return;
 
     // We keep track of the history exactly as your backend expects it
     let chatHistory = [];
     let isSending = false; // To prevent multiple simultaneous sends
-
-    const updateLanguageButtonLabel = () => {
-        if (!languageBtn) return;
-        const label = window.i18n && typeof window.i18n.t === 'function'
-            ? window.i18n.t('language_change_title')
-            : 'Change Language';
-        languageBtn.textContent = label;
-        languageBtn.setAttribute('aria-label', label);
-    };
-
-    // --- Overlay Toggles ---
-    // Opened by the legacy floating button and/or any [data-action="open-support-chat"]
-    // control (the teacher page's "Chat" navigation item).
-    let lastOpener = null;
-    const openChat = (event) => {
-        lastOpener = event?.currentTarget || null;
-        if (overlay) {
-            updateLanguageButtonLabel();
-            // Guarantee chat sits strictly above all other dashboard content
-            overlay.style.zIndex = '9999';
-            showOverlay(overlay);
-            // Delay adding the class slightly to ensure the CSS transition plays
-            requestAnimationFrame(() => {
-                overlay.classList.add('chat-slide-in');
-                input?.focus({ preventScroll: true });
-            });
-        }
-    };
-
-    openBtn?.addEventListener('click', openChat);
-    document.querySelectorAll('[data-action="open-support-chat"]').forEach((trigger) => {
-        trigger.addEventListener('click', openChat);
-    });
-
-    const isChatOpen = () => !!overlay && overlay.style.visibility === 'visible';
-
-    const closeChat = () => {
-        if (overlay) {
-            overlay.classList.remove('chat-slide-in');
-            // Wait for the slide-out animation to finish before hiding the overlay
-            setTimeout(() => {
-                hideOverlay(overlay);
-            }, 500);
-            if (lastOpener && typeof lastOpener.focus === 'function') {
-                lastOpener.focus({ preventScroll: true });
-            }
-            lastOpener = null;
-        }
-    };
-
-    closeBtn?.addEventListener('click', closeChat);
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && isChatOpen()) closeChat();
-    });
-
-    languageBtn?.addEventListener('click', () => {
-        updateLanguageButtonLabel();
-        if (window.i18n && typeof window.i18n.openLanguageMenu === 'function') {
-            window.i18n.openLanguageMenu();
-        }
-    });
-
-    overlay?.addEventListener('click', (event) => {
-        if (event.target === overlay) {
-            closeChat();
-        }
-    });
 
     // --- Chat Logic ---
     const splitModelMessage = (text) => {
@@ -167,9 +111,11 @@ export function initSupportChat() {
         
         isSending = true;
 
-        // Render user message instantly and lock inputs
-        input.disabled = true;
+        // Render user message instantly and lock inputs (read-only keeps focus,
+        // so a phone keyboard the user opened is not closed and reopened)
+        input.readOnly = true;
         sendBtn.disabled = true;
+        historyContainer.setAttribute('aria-busy', 'true');
         const originalPlaceholder = input.placeholder;
         input.value = '';
 
@@ -263,6 +209,9 @@ export function initSupportChat() {
 
             if (isRateLimit) {
                 // Implement a 20-second cooldown
+                historyContainer.removeAttribute('aria-busy');
+                input.readOnly = false;
+                input.disabled = true;
                 let timeLeft = 20;
                 input.placeholder = t('support_chat_cooldown', `Please wait ${timeLeft}s...`).replace('{sec}', timeLeft);
                 
@@ -274,7 +223,6 @@ export function initSupportChat() {
                         input.disabled = false;
                         sendBtn.disabled = false;
                         input.placeholder = originalPlaceholder;
-                        input.focus();
                     } else {
                         input.placeholder = t('support_chat_cooldown', `Please wait ${timeLeft}s...`).replace('{sec}', timeLeft);
                     }
@@ -285,20 +233,18 @@ export function initSupportChat() {
         }
 
         isSending = false;
-        input.disabled = false;
+        input.readOnly = false;
         sendBtn.disabled = false;
-        input.focus();
+        historyContainer.removeAttribute('aria-busy');
     };
 
     // --- Event Listeners for sending ---
-    sendBtn?.addEventListener('click', sendMessage);
-    
-    input?.addEventListener('keypress', (e) => {
+    sendBtn.addEventListener('click', sendMessage);
+
+    input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             sendMessage();
         }
     });
-
-    updateLanguageButtonLabel();
 }

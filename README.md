@@ -58,8 +58,8 @@ Stripe billing portal.
 
 ![Support chat](docs/screenshots/teacher-chat.png)
 
-An assistant that answers questions about using StudentCheck, opened from
-"Чат" in the navigation.
+An assistant that answers questions about using StudentCheck, shown as the
+"Чат" view of the teacher page (`teacherHomepage.html#chat`).
 
 ### Teacher – Loading state
 

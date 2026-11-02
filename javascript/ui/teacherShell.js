@@ -1,9 +1,9 @@
 /**
  * Teacher shell — wires up the frame shared by the teacher views.
  *
- * The markup (icon sprite, logo, navigation, language selector, support chat)
- * is static in teacherHomepage.html so it paints before any JavaScript runs;
- * the views (Дисциплини, Плащания) switch inside the same document, so this
+ * The markup (icon sprite, logo, navigation, language selector) is static in
+ * teacherHomepage.html so it paints before any JavaScript runs; the views
+ * (Дисциплини, Статистика, Плащания, Чат) switch inside the same document, so this
  * frame stays mounted while navigating. This module only binds behaviour:
  *
  *   const shell = initTeacherShell({ onNavigate: (view) => router.go(view) });

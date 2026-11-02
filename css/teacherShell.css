@@ -884,7 +884,7 @@ body.delete-popup-active #addClassBtn {
     }
 }
 
-/* ---------- Views (one teacher document: Дисциплини / Плащания) ---------- */
+/* ---------- Views (one teacher document: Дисциплини / Статистика / Плащания / Чат) ---------- */
 /* <html data-view> is set by an inline script before first paint and then by
    the router, so the right view shows immediately on direct links/refresh. */
 
@@ -892,11 +892,12 @@ body.delete-popup-active #addClassBtn {
     display: none;
 }
 
-html:not([data-view="payments"]):not([data-view="statistics"]) .tp-view--classes,
+html:not([data-view="payments"]):not([data-view="statistics"]):not([data-view="chat"]) .tp-view--classes,
 html[data-view="statistics"] .tp-view--statistics,
 html[data-view="payments"] .tp-view--payments {
     display: block;
 }
+/* Чат is a flex column; its layout lives in css/supportChat.css */
 
 /* Skeleton class cards: same box as a real card, so nothing shifts */
 .tp-card--skeleton {
