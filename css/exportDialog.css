@@ -1,0 +1,371 @@
+/* Attendance export dialog + background notice (markup: #exportOverlay in
+   teacherHomepage.html; logic: javascript/features/export.js).
+   One dialog, states switched by [data-state] on .exd-dialog:
+   preparing | done | failed | ready. The visual area and the dialog's
+   minimum height are the same in every state, so switching does not jump. */
+
+#exportOverlay.overlay {
+    z-index: 1002;
+    padding:
+        max(16px, env(safe-area-inset-top, 0px))
+        max(16px, env(safe-area-inset-right, 0px))
+        max(16px, env(safe-area-inset-bottom, 0px))
+        max(16px, env(safe-area-inset-left, 0px));
+    background: rgba(30, 41, 56, 0.5);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    box-sizing: border-box;
+}
+
+#exportOverlay .exd-dialog {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 460px;
+    min-height: 360px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    padding: 32px 32px 28px;
+    background: var(--tp-surface, #fff);
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(8, 15, 31, 0.18), 0 2px 8px rgba(8, 15, 31, 0.06);
+    color: var(--tp-text, #080F1F);
+    font-family: var(--tp-font, inherit);
+    text-align: center;
+    box-sizing: border-box;
+}
+
+#exportOverlay .exd-dialog:focus {
+    outline: none;
+}
+
+#exportOverlay .exd-dialog *,
+#exportOverlay .exd-dialog *::before,
+#exportOverlay .exd-dialog *::after {
+    box-sizing: border-box;
+}
+
+#exportOverlay .exd-class {
+    max-width: 100%;
+    margin: 0;
+    color: #3A4250;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Visual: skeleton table / icons (same box in every state) ---------- */
+
+#exportOverlay .exd-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 84px;
+    margin: 22px 0 18px;
+}
+
+#exportOverlay .exd-skel,
+#exportOverlay .exd-icon {
+    display: none;
+}
+
+#exportOverlay [data-state="preparing"] .exd-skel { display: grid; }
+#exportOverlay [data-state="done"] .exd-icon--done,
+#exportOverlay [data-state="failed"] .exd-icon--failed,
+#exportOverlay [data-state="ready"] .exd-icon--ready { display: block; }
+
+#exportOverlay .exd-skel {
+    gap: 6px;
+    width: min(220px, 100%);
+    padding: 10px 12px;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 10px;
+}
+
+#exportOverlay .exd-skel-row {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 0.7fr;
+    gap: 8px;
+}
+
+#exportOverlay .exd-skel-row .sk {
+    height: 8px;
+    border-radius: 999px;
+}
+
+#exportOverlay .exd-skel-row--head .sk {
+    height: 10px;
+    background: #D7E0E7;
+}
+
+#exportOverlay .exd-icon {
+    width: 56px;
+    height: 56px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#exportOverlay .exd-icon--done {
+    color: var(--tp-green, #00A174);
+    stroke-width: 2.4;
+}
+
+#exportOverlay .exd-icon--failed {
+    color: #D92D20;
+    stroke-width: 1.8;
+}
+
+#exportOverlay .exd-icon--ready {
+    color: var(--tp-green, #00A174);
+    stroke-width: 2;
+}
+
+/* ---------- Text ---------- */
+
+#exportOverlay .exd-title {
+    max-width: 100%;
+    margin: 0;
+    color: var(--tp-text, #080F1F);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+#exportOverlay .exd-text {
+    max-width: 100%;
+    margin: 8px 0 0;
+    color: var(--tp-muted, #5B6472);
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+/* ---------- Actions (one group per state) ---------- */
+
+#exportOverlay .exd-actions {
+    display: none;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 24px;
+}
+
+#exportOverlay [data-state="preparing"] .exd-actions--preparing,
+#exportOverlay [data-state="done"] .exd-actions--done,
+#exportOverlay [data-state="failed"] .exd-actions--failed,
+#exportOverlay [data-state="ready"] .exd-actions--ready {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#exportOverlay [data-state="failed"] .exd-actions--split,
+#exportOverlay [data-state="ready"] .exd-actions--split {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#exportOverlay .exd-divider {
+    width: 100%;
+    height: 1px;
+    margin: 0 0 8px;
+    border: 0;
+    background: var(--tp-border, #DFE6EC);
+}
+
+#exportOverlay .exd-btn-text {
+    min-height: 44px;
+    margin: 0;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #4B5563;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#exportOverlay .exd-btn-text:hover {
+    background: #F1F5F8;
+    color: var(--tp-text, #080F1F);
+}
+
+#exportOverlay .exd-btn-primary {
+    min-width: 140px;
+    min-height: 48px;
+    margin: 0;
+    padding: 0 26px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--tp-green, #00A174);
+    color: #fff;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#exportOverlay .exd-btn-primary:hover {
+    background: var(--tp-green-hover, #00936A);
+}
+
+#exportOverlay .exd-btn-primary:active {
+    background: var(--tp-green-pressed, #008460);
+}
+
+#exportOverlay .exd-btn-primary:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+#exportOverlay .exd-note {
+    margin: 8px 0 0;
+    color: var(--tp-muted, #5B6472);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+body.tp-app #exportOverlay button:not(:disabled):hover,
+body.tp-app #exportOverlay button:not(:disabled):active {
+    transform: none !important;
+}
+
+body.tp-app #exportOverlay button:focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 479.98px) {
+    #exportOverlay.overlay {
+        padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    }
+
+    #exportOverlay .exd-dialog {
+        min-height: 340px;
+        padding: 26px 20px 20px;
+        border-radius: 18px;
+    }
+
+    #exportOverlay .exd-title { font-size: 21px; }
+    #exportOverlay .exd-text { font-size: 15px; }
+
+    /* Close + Try again stack: the main action full width on top */
+    #exportOverlay [data-state="failed"] .exd-actions--split,
+    #exportOverlay [data-state="ready"] .exd-actions--split {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    #exportOverlay .exd-actions--done .exd-btn-primary { width: 100%; }
+}
+
+/* ---------- Background notice (a job finished while its dialog was closed) ---------- */
+
+.exd-notice {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: min(460px, calc(100vw - 32px));
+    padding: 12px 10px 12px 16px;
+    border-radius: 14px;
+    border-left: 4px solid var(--tp-green, #00A174);
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(8, 15, 31, 0.18);
+    color: var(--tp-text, #080F1F);
+    font-family: var(--tp-font, inherit);
+    opacity: 0;
+    transform: translate(-50%, 8px);
+    transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.exd-notice.is-shown {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.exd-notice--error { border-left-color: #D92D20; }
+
+.exd-notice-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.exd-notice-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+}
+
+.exd-notice-action {
+    min-height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--tp-green-tint, #ECF9F4);
+    color: var(--tp-green-pressed, #008460);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.exd-notice-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--tp-muted, #747C89);
+    cursor: pointer;
+}
+
+.exd-notice-close .tp-icon {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+}
+
+.exd-notice :is(.exd-notice-action, .exd-notice-close):focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+body.tp-app .exd-notice button:not(:disabled):hover,
+body.tp-app .exd-notice button:not(:disabled):active {
+    transform: none !important;
+}
+
+/* Phones/tablets: above the bottom navigation */
+@media (max-width: 1023.98px) {
+    .exd-notice {
+        bottom: calc(var(--tp-bottomnav-h, 60px) + env(safe-area-inset-bottom, 0px) + 12px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .exd-notice { transition: none; }
+}

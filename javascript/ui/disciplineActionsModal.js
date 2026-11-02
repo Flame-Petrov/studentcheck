@@ -5,7 +5,7 @@
  *       root,                       // overlay element (moved to <body>, the portal)
  *       onManageStudents(d),        // d = { id, name }
  *       onStartScanner(d),
- *       onExportAttendance(d),      // async; resolves on success, throws on failure
+ *       onExportAttendance(d),      // opens the export dialog (the menu closes, like the other actions)
  *       onOptions(d),
  *   });
  *   modal.open({ id, name }, { opener });   modal.close();   modal.isOpen();
@@ -29,7 +29,8 @@ const TRANSITION_MS = 180;
 const ACTIONS = [
     { key: 'manage', id: 'manageStudentsBtn', icon: 'tp-i-users', i18n: 'manage_students', label: 'Управление на студенти', chevron: true },
     { key: 'scanner', id: 'startScannerBtn', icon: 'tp-i-scan', i18n: 'start_scanner', label: 'Стартирай скенер', primary: true },
-    { key: 'export', id: 'downloadAttendanceTableBtn', icon: 'tp-i-download', i18n: 'download_attendance_table', label: 'Изтегли таблица с присъствия', async: true },
+    // Opens the export dialog (javascript/features/export.js), which shows progress and the result
+    { key: 'export', id: 'downloadAttendanceTableBtn', icon: 'tp-i-download', i18n: 'download_attendance_table', label: 'Изтегли таблица с присъствия' },
     { key: 'options', id: 'classOptionsBtn', icon: 'tp-i-settings', i18n: 'options', label: 'Опции', chevron: true },
 ];
 

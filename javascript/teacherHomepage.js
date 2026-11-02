@@ -301,9 +301,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         prepare: {
             scanner: (d) => ensureRoster(d.id, d.name),
         },
-        onExportAttendance: async (d) => {
+        onExportAttendance: (d) => {
             selectDiscipline(d);
-            await handleDownloadAttendanceTable(d.name, { classId: d.id });
+            // Opens the export dialog; the export itself runs as a background job
+            return handleDownloadAttendanceTable(d.name, { classId: d.id, opener: findCardById(d.id) });
         },
         onOptions: (d) => {
             selectDiscipline(d);

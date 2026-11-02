@@ -32,6 +32,7 @@
     <link rel="stylesheet" href="css/addStudentsDialog.css?v=1.0.0">
     <link rel="stylesheet" href="css/manageStudentsDialog.css?v=1.0.0">
     <link rel="stylesheet" href="css/classOptionsDialog.css?v=1.0.0">
+    <link rel="stylesheet" href="css/exportDialog.css?v=1.0.0">
     <link rel="stylesheet" href="css/scannerDialog.css?v=1.0.0">
     <!-- Fetch the module graph in parallel instead of import-by-import -->
     <link rel="modulepreload" href="javascript/teacherHomepage.js">
@@ -457,6 +458,52 @@
                     </button>
                     <p class="cod-error" id="classOptionsDeleteError" role="alert" hidden></p>
                 </section>
+            </div>
+        </div>
+
+
+
+        <!-- Attendance export dialog: one dialog, three states (preparing /
+             download started / failed) switched by data-state; the export
+             itself is a background job (javascript/features/export.js). -->
+        <div class="overlay" id="exportOverlay">
+            <div class="exd-dialog" role="dialog" aria-modal="true" aria-labelledby="exportStateTitle" aria-describedby="exportClassName exportStateText" tabindex="-1" data-state="preparing">
+                <p class="exd-class" id="exportClassName"></p>
+
+                <!-- Decorative: table skeleton while preparing, check / error / download icon after -->
+                <div class="exd-visual" aria-hidden="true">
+                    <div class="exd-skel">
+                        <div class="exd-skel-row exd-skel-row--head"><span class="sk"></span><span class="sk"></span><span class="sk"></span></div>
+                        <div class="exd-skel-row"><span class="sk"></span><span class="sk"></span><span class="sk"></span></div>
+                        <div class="exd-skel-row"><span class="sk"></span><span class="sk"></span><span class="sk"></span></div>
+                        <div class="exd-skel-row"><span class="sk"></span><span class="sk"></span><span class="sk"></span></div>
+                    </div>
+                    <svg class="tp-icon exd-icon exd-icon--done" viewBox="0 0 24 24" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
+                    <svg class="tp-icon exd-icon exd-icon--failed" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 7v6"/><path d="M12 16.5h.01"/></svg>
+                    <svg class="tp-icon exd-icon exd-icon--ready" viewBox="0 0 24 24" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+                </div>
+
+                <h2 class="exd-title" id="exportStateTitle">Подготвяме таблицата</h2>
+                <p class="exd-text" id="exportStateText">Това може да отнеме няколко секунди.</p>
+
+                <div class="exd-actions exd-actions--preparing">
+                    <hr class="exd-divider">
+                    <button type="button" id="exportCloseBtn" class="exd-btn-text">Затвори</button>
+                    <p class="exd-note" id="exportBackgroundNote">Подготовката ще продължи във фонов режим.</p>
+                </div>
+                <div class="exd-actions exd-actions--done">
+                    <button type="button" id="exportDoneBtn" class="exd-btn-primary">Готово</button>
+                </div>
+                <div class="exd-actions exd-actions--failed exd-actions--split">
+                    <button type="button" id="exportFailCloseBtn" class="exd-btn-text">Затвори</button>
+                    <button type="button" id="exportRetryBtn" class="exd-btn-primary">Опитай отново</button>
+                </div>
+                <div class="exd-actions exd-actions--ready exd-actions--split">
+                    <button type="button" id="exportReadyCloseBtn" class="exd-btn-text">Затвори</button>
+                    <button type="button" id="exportDownloadBtn" class="exd-btn-primary">Изтегли</button>
+                </div>
+
+                <p class="tp-visually-hidden" id="exportLive" role="status" aria-live="polite"></p>
             </div>
         </div>
 
