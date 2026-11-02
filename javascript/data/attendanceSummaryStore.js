@@ -51,9 +51,31 @@ export function loadAttendanceSummary(classId) {
     return revalidate(attendanceSummaryKey(classId), async () => normalizeSummary(await fetchClassAttendance(classId)));
 }
 
+/**
+ * Per-class attendance version, bumped whenever its attendance or roster
+ * changes. Caches derived from attendance (e.g. a student's history) put it
+ * in their key, so they can never serve data from before the change — also
+ * after a reload (kept in sessionStorage, scoped to the account).
+ */
+function versionKey(classId) {
+    return cacheKey(teacherScope(), 'attendance-version', String(classId));
+}
+
+export function attendanceVersion(classId) {
+    if (!classId) return 0;
+    try {
+        return Number(sessionStorage.getItem(versionKey(classId))) || 0;
+    } catch (_) {
+        return 0;
+    }
+}
+
 export function invalidateAttendanceSummary(classId) {
     if (!classId) return;
     invalidateCache(attendanceSummaryKey(classId));
+    try {
+        sessionStorage.setItem(versionKey(classId), String(attendanceVersion(classId) + 1));
+    } catch (_) {}
 }
 
 /** Confirmed total for a student, or null when the summary has none. */

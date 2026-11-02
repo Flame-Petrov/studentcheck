@@ -11,6 +11,7 @@ import { showSkeletonRows, showLoadError, endBusy, showStaleNote, hideStaleNote 
 import { ensureRoster, markRosterChanged } from '../data/rosterStore.js';
 import { invalidateAttendanceSummary, readAttendanceSummary, isAttendanceSummaryFresh, loadAttendanceSummary, attendanceCountFor } from '../data/attendanceSummaryStore.js';
 import { initManageStudentsDialog, openManageStudentsDialog, refreshManageStudentsDialog, onManageStudentsHidden } from './manageStudentsDialog.js';
+import { initStudentDetailsDialog, openStudentDetails, onStudentDetailsHidden } from './studentDetailsDialog.js';
 import { fetchClassStudents } from '../api/classApi.js';
 import { getStudentAttendanceCountForClass } from './attendance.js';
 import { fetchStudentAttendanceHistory, fetchClassAttendanceTimestamps, fetchClassAttendance } from '../api/attendanceApi.js';
@@ -38,9 +39,6 @@ import { authHeaders } from '../api/authFetch.js';
 
 // Module state
 let studentIndex = new Map(); // id -> full student object
-let studentInfoOverlay = null;
-let manageStudentsScrollPos = 0;
-let attendanceHistoryOverlayInitialized = false;
 let addStudentsOverlayInitialized = false;
 let addStudentsReturnToManage = false;
 
@@ -314,73 +312,6 @@ function parseTimestamp(value) {
 function logAttendanceHistoryDebug(stage, payload = {}) {
 }
 
-async function fetchAttendedClassesCount(className, studentId, updateEl) {
-    const classId = await resolveClassId(className);
-    if (!classId || !studentId) {
-        logAttendanceHistoryDebug('fetchAttendedClassesCount:skip', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim()
-        });
-        return;
-    }
-    try {
-        const normalizedInput = normalizeStudentKey(studentId);
-        const info = studentIndex.get(normalizedInput) || {};
-        const infoId = normalizeStudentKey(info?.id || info?.student_id);
-        const infoFaculty = normalizeStudentKey(getStudentFacultyNumber(info));
-        const studentKey = infoId || normalizedInput;
-        const facultyKey = infoFaculty || (!infoId ? normalizedInput : '');
-        logAttendanceHistoryDebug('fetchAttendedClassesCount:start', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim(),
-            normalizedInput,
-            infoId,
-            infoFaculty,
-            studentKey,
-            facultyKey
-        });
-
-        // The course-level summary shared with "Управление на студенти"
-        // (cached per account + course; no extra request per student).
-        let summary = isAttendanceSummaryFresh(classId) ? readAttendanceSummary(classId)?.data : null;
-        if (!summary) summary = (await loadAttendanceSummary(classId)).data;
-        const confirmed = attendanceCountFor(summary, { id: studentKey, facultyNumber: facultyKey || infoFaculty });
-        // The summary is authoritative: migrated attendance has no scan times,
-        // so it must not be reset to 0 for lacking history records.
-        const count = confirmed === null ? null : confirmed;
-        const list = null;
-        const matchedByStudentId = summary?.byId?.[studentKey] !== undefined;
-        const matchedByFaculty = !matchedByStudentId && confirmed !== null;
-        const matchedRow = confirmed === null ? null : { student_id: studentKey || null, faculty_number: facultyKey || null, count: confirmed };
-
-        logAttendanceHistoryDebug('fetchAttendedClassesCount:summary', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim(),
-            listLength: Array.isArray(list) ? list.length : null,
-            matchedByStudentId,
-            matchedByFaculty,
-            matchedRow,
-            resolvedCount: Number.isFinite(count) ? count : 0
-        });
-
-        if (updateEl && updateEl.isConnected) {
-            // Only a confirmed total is shown; unknown stays "—" (never a made-up 0)
-            updateEl.textContent = `${i18nText('attended_classes_label', 'Attended Classes')}: ${Number.isFinite(count) ? count : '—'}`;
-        }
-    } catch (error) {
-        logAttendanceHistoryDebug('fetchAttendedClassesCount:error', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim(),
-            message: error?.message || String(error)
-        });
-        // Keep default count
-    }
-}
-
 function showToast(message, tone = 'success') {
     uiToast(message, { tone, size: 'wide', duration: 1400, fadeMs: 300, replace: false });
 }
@@ -396,151 +327,6 @@ function getAddStudentsListEl() {
     const overlay = getAddStudentsClassOverlay();
     const scoped = overlay?.querySelector('#classAddStudentsList');
     return scoped || document.getElementById('classAddStudentsList');
-}
-function getAttendanceHistoryOverlay() { return getOverlay('attendanceHistoryOverlay'); }
-
-/**
- * Load attendance log for a student
- * @param {string} className - Class name
- * @param {string} studentId - Student ID
- * @returns {Promise<Array<{joinAt:number|null, leaveAt:number|null}>>}
- */
-async function loadAttendanceLog(className, studentId) {
-    const classId = await resolveClassId(className);
-    if (!classId) {
-        logAttendanceHistoryDebug('loadAttendanceLog:skip-no-class-id', {
-            className: String(className || '').trim(),
-            studentId: String(studentId || '').trim()
-        });
-        return [];
-    }
-
-    const info = studentIndex.get(String(studentId)) || {};
-    const facultyNumber = info.faculty_number || studentId;
-    const studentKey = String(studentId || '').trim();
-    const facultyKey = String(facultyNumber || '').trim();
-    logAttendanceHistoryDebug('loadAttendanceLog:start', {
-        className: String(className || '').trim(),
-        classId,
-        studentId: String(studentId || '').trim(),
-        studentKey,
-        facultyKey,
-        hasStudentIndexEntry: studentIndex.has(String(studentId)),
-        resolvedInfo: {
-            id: String(info?.id || info?.student_id || '').trim() || null,
-            faculty_number: String(info?.faculty_number || info?.facultyNumber || '').trim() || null
-        }
-    });
-
-    const normalize = (row) => {
-        const joinedAt = parseTimestamp(
-            row.joined_at ?? row.joinedAt ?? row.join_time ?? row.joinTime ?? row.in_time ?? row.inTime
-        );
-        const leftAt = parseTimestamp(
-            row.left_at ?? row.leftAt ?? row.leave_time ?? row.leaveTime ?? row.out_time ?? row.outTime
-        );
-        return { joinAt: joinedAt, leaveAt: leftAt };
-    };
-
-    try {
-        const numericStudentId = /^\d+$/.test(String(studentId || '')) ? String(studentId) : '';
-        const useStudentId = numericStudentId && numericStudentId !== facultyKey;
-        logAttendanceHistoryDebug('loadAttendanceLog:request-history', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim(),
-            queryStudentId: useStudentId ? numericStudentId : null,
-            queryFacultyNumber: facultyKey || null,
-            useStudentId
-        });
-        const data = await fetchStudentAttendanceHistory(classId, {
-            studentId: useStudentId ? numericStudentId : null,
-            facultyNumber: facultyKey
-        });
-        const raw = data?.records || data?.sessions || data?.history || data?.attendance || data?.items || [];
-        const normalizedSessions = Array.isArray(raw) ? raw.map(normalize).filter(r => r.joinAt || r.leaveAt) : [];
-        logAttendanceHistoryDebug('loadAttendanceLog:response-history', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim(),
-            rawLength: Array.isArray(raw) ? raw.length : null,
-            normalizedSessionsLength: normalizedSessions.length,
-            rawSample: Array.isArray(raw)
-                ? raw.slice(0, 3).map((row) => ({
-                    student_id: row?.student_id ?? row?.studentId ?? null,
-                    faculty_number: row?.faculty_number ?? row?.facultyNumber ?? null,
-                    joined_at: row?.joined_at ?? row?.joinedAt ?? row?.join_time ?? row?.joinTime ?? null,
-                    left_at: row?.left_at ?? row?.leftAt ?? row?.leave_time ?? row?.leaveTime ?? null
-                }))
-                : []
-        });
-        if (Array.isArray(raw) && raw.length > 0) {
-            return normalizedSessions;
-        }
-    } catch (e) {
-        logAttendanceHistoryDebug('loadAttendanceLog:history-error', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim(),
-            studentKey,
-            facultyKey,
-            message: e?.message || String(e)
-        });
-        console.warn('[loadAttendanceLog] Attendance history endpoint failed, falling back', e);
-    }
-
-    try {
-        logAttendanceHistoryDebug('loadAttendanceLog:request-fallback', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim(),
-            studentKey,
-            facultyKey
-        });
-        const data = await fetchClassAttendanceTimestamps(classId);
-        const raw = data?.timestamps || data?.items || data?.records || data?.rows || [];
-        if (!Array.isArray(raw)) return [];
-        const filtered = raw.filter((row) => {
-            const rowStudentId = String(row.student_id ?? row.studentId ?? '').trim();
-            const rowFaculty = String(row.faculty_number ?? row.facultyNumber ?? '').trim();
-            return (studentKey && rowStudentId && rowStudentId === studentKey)
-                || (facultyKey && rowFaculty && rowFaculty === facultyKey);
-        });
-        const normalizedSessions = filtered.map(normalize).filter(r => r.joinAt || r.leaveAt);
-        logAttendanceHistoryDebug('loadAttendanceLog:response-fallback', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim(),
-            rawLength: raw.length,
-            filteredLength: filtered.length,
-            normalizedSessionsLength: normalizedSessions.length,
-            rawSample: raw.slice(0, 3).map((row) => ({
-                student_id: row?.student_id ?? row?.studentId ?? null,
-                faculty_number: row?.faculty_number ?? row?.facultyNumber ?? null,
-                joined_at: row?.joined_at ?? row?.joinedAt ?? row?.join_time ?? row?.joinTime ?? null,
-                left_at: row?.left_at ?? row?.leftAt ?? row?.leave_time ?? row?.leaveTime ?? null
-            })),
-            filteredSample: filtered.slice(0, 3).map((row) => ({
-                student_id: row?.student_id ?? row?.studentId ?? null,
-                faculty_number: row?.faculty_number ?? row?.facultyNumber ?? null,
-                joined_at: row?.joined_at ?? row?.joinedAt ?? row?.join_time ?? row?.joinTime ?? null,
-                left_at: row?.left_at ?? row?.leftAt ?? row?.leave_time ?? row?.leaveTime ?? null
-            }))
-        });
-        if (filtered.length === 0) return [];
-        return normalizedSessions;
-    } catch (e) {
-        logAttendanceHistoryDebug('loadAttendanceLog:fallback-error', {
-            className: String(className || '').trim(),
-            classId,
-            studentId: String(studentId || '').trim(),
-            studentKey,
-            facultyKey,
-            message: e?.message || String(e)
-        });
-        console.error('[loadAttendanceLog] Failed to load attendance history fallback', e);
-        return [];
-    }
 }
 
 /**
@@ -574,6 +360,7 @@ function indexManageRows(rows) {
     rows.forEach((row) => {
         if (!row.openKey) return;
         studentIndex.set(String(row.openKey), {
+            id: row.id,
             fullName: row.name,
             faculty_number: row.facultyNumber,
             email: row.email,
@@ -619,7 +406,7 @@ function ensureManageStudentsDialog() {
         normalizeStudent: normalizeManageStudent,
         onRows: indexManageRows,
         enrich: enrichManageRows,
-        openStudent: (openKey, className) => openStudentInfoOverlay(openKey, className),
+        openStudent: (openKey, className, row, opener) => openStudentInfoOverlay(openKey, className, { row, opener }),
         openAddStudents: (className) => openAddStudentsToClass(className, { returnToManage: true }),
         back: (className) => returnToReadyClassPopup(className || getCurrentClass().name),
         close: () => closeAllClassOverlays()
@@ -693,419 +480,104 @@ function returnToReadyClassPopup(className) {
  * Ensure student info overlay exists
  * @returns {HTMLElement} Overlay element
  */
-function ensureStudentInfoOverlay() {
-    if (studentInfoOverlay) return studentInfoOverlay;
-    studentInfoOverlay = document.createElement('div');
-    studentInfoOverlay.id = 'studentInfoOverlay';
-    studentInfoOverlay.className = 'overlay';
-    studentInfoOverlay.style.visibility = 'hidden';
-    document.body.appendChild(studentInfoOverlay);
-    
-    studentInfoOverlay.addEventListener('click', (e) => {
-        if (e.target === studentInfoOverlay) {
-            closeStudentInfoOverlay();
-        }
+/*
+ * "Данни за студента" (details + attendance history in one dialog):
+ * rendering, loading and states live in ./studentDetailsDialog.js; this module
+ * supplies the roster identity, the removal and the way back to the roster.
+ */
+
+function ensureStudentDetailsDialog() {
+    initStudentDetailsDialog({
+        normalizeStudent: normalizeManageStudent,
+        removeStudent: removeStudentEnrollment,
+        returnToParent: returnToManageFromDetails,
+        toast: (message, tone) => showToast(message, tone)
     });
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isOverlayVisible(studentInfoOverlay)) {
-            closeStudentInfoOverlay();
-        }
-    });
-    
-    return studentInfoOverlay;
 }
 
 /**
- * Build student info content HTML
- * @param {Object} studentObj - Student object
- * @param {string} studentId - Student ID
+ * Open the details of a student of the current class.
+ * @param {string} studentKey - faculty number (or id) of the roster entry
  * @param {string} className - Class name
- * @returns {HTMLElement} Content wrapper element
+ * @param {object} [options]
+ * @param {object} [options.row] - the roster row (identity shown at once)
+ * @param {HTMLElement} [options.opener] - focus returns here on close
  */
-function buildStudentInfoContent(studentObj, studentId, className) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'ready-class-popup student-info-popup';
-    wrapper.setAttribute('role', 'dialog');
-    wrapper.setAttribute('aria-modal', 'true');
-    wrapper.innerHTML = '';
-
-    const h2 = document.createElement('h2');
-    h2.textContent = i18nText('student_info_title', 'Student Info');
-    wrapper.appendChild(h2);
-
-    // Get student data from storage/state if available
-    const classStudents = loadClassStudentsFromStorage(className);
-    const storageInfo = getStudentInfoForFacultyNumber(studentId, classStudents);
-    const allStudents = getAllStudents();
-    const allInfo = getStudentInfoForFacultyNumber(studentId, allStudents);
-
-    const studentData = { ...(studentObj || {}) };
-    fillMissing(studentData, storageInfo);
-    fillMissing(studentData, allInfo);
-    const resolvedEmail = getStudentEmail(studentData);
-
-    if (!resolvedEmail) {
-        logMissingEmailDiagnostics({
-            studentId,
-            className,
-            studentObj,
-            storageInfo,
-            allInfo,
-            mergedInfo: studentData
-        });
-    }
-
-    const nameP = document.createElement('p');
-    nameP.textContent = `${i18nText('full_name_label', 'Full Name')}: ${getStudentFullName(studentData) || '—'}`;
-    nameP.style.margin = '0 0 8px 0';
-    wrapper.appendChild(nameP);
-
-    const facultyP = document.createElement('p');
-    facultyP.textContent = `${i18nText('faculty_number_label', 'Faculty number')}: ${getStudentFacultyNumber(studentData) || '—'}`;
-    facultyP.style.margin = '0 0 12px 0';
-    wrapper.appendChild(facultyP);
-
-    const emailP = document.createElement('p');
-    emailP.textContent = `${i18nText('email', 'Email')}: ${getStudentEmail(studentData) || '—'}`;
-    emailP.style.margin = '0 0 8px 0';
-    wrapper.appendChild(emailP);
-
-    const groupP = document.createElement('p');
-    groupP.textContent = `${i18nText('group', 'Group')}: ${getStudentGroup(studentData) || '—'}`;
-    groupP.style.margin = '0 0 10px 0';
-    wrapper.appendChild(groupP);
-
-    // Attended classes counter (per-class, live)
+export function openStudentInfoOverlay(studentKey, className, { row = null, opener = null } = {}) {
+    ensureStudentDetailsDialog();
+    const key = String(studentKey || '').trim();
+    const indexed = studentIndex.get(key);
+    const student = row
+        ? { ...row }
+        : {
+            id: indexed?.id || '',
+            openKey: key,
+            facultyNumber: indexed?.faculty_number || (/^\d+$/.test(key) && key.length < 9 ? '' : key),
+            name: indexed?.fullName || '',
+            email: indexed?.email || '',
+            group: indexed?.group || ''
+        };
     const current = getCurrentClass();
-    // A cached confirmed total when there is one; "—" until the summary arrives (never a placeholder 0)
-    const cachedSummary = current.id ? readAttendanceSummary(current.id)?.data : null;
-    const cachedCount = attendanceCountFor(cachedSummary, {
-        id: studentData?.id ?? studentData?.student_id ?? null,
-        facultyNumber: getStudentFacultyNumber(studentData) || studentId
-    });
-    const attended = cachedCount === null ? '—' : cachedCount;
-    const attendedP = document.createElement('p');
-    attendedP.setAttribute('data-attendance-counter', '');
-    attendedP.textContent = `${i18nText('attended_classes_label', 'Attended Classes')}: ${attended}`;
-    attendedP.style.margin = '10px 0 0 0';
-    attendedP.style.fontWeight = '700';
-    attendedP.style.fontSize = '1.15rem';
-    attendedP.style.letterSpacing = '.5px';
-    wrapper.appendChild(attendedP);
-    fetchAttendedClassesCount(className || current.name, studentId, attendedP);
+    const classId = Number(current.id) > 0 ? Number(current.id) : getClassIdByName(className);
 
-    // Attendance History button
-    const historyBtn = document.createElement('button');
-    historyBtn.type = 'button';
-    historyBtn.className = 'role-button attendance-history-btn';
-    historyBtn.textContent = i18nText('attendance_history', 'Attendance History');
-    historyBtn.style.marginTop = '16px';
-    historyBtn.style.width = '100%';
-    historyBtn.addEventListener('click', () => {
-        openAttendanceHistoryOverlay(className || current.name, studentId);
-    });
-    wrapper.appendChild(historyBtn);
-
-    // Remove from class button
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'role-button danger';
-    removeBtn.textContent = i18nText('remove_from_class', 'Remove from Class');
-    removeBtn.style.marginTop = '12px';
-    removeBtn.style.width = '100%';
-    removeBtn.style.backgroundColor = '#dc2626';
-    removeBtn.style.color = 'white';
-    removeBtn.style.border = 'none';
-    removeBtn.style.cursor = 'pointer';
-    removeBtn.addEventListener('mouseover', () => {
-        removeBtn.style.backgroundColor = '#991b1b';
-    });
-    removeBtn.addEventListener('mouseout', () => {
-        removeBtn.style.backgroundColor = '#dc2626';
-    });
-    removeBtn.addEventListener('click', () => {
-        openConfirmOverlay(
-            `${i18nText('confirm_remove_student_prefix', 'Are you sure you want to remove')} ${getStudentFullName(studentData) || i18nText('this_student', 'this student')} ${i18nText('confirm_remove_student_suffix', 'from the class?')}`,
-            () => removeStudentFromClass(studentId, className || current.name),
-            () => { /* cancelled */ }
-        );
-    });
-    wrapper.appendChild(removeBtn);
-
-    return wrapper;
-}
-
-/**
- * Open student info overlay
- * @param {string} studentId - Student ID
- * @param {string} className - Class name
- */
-export function openStudentInfoOverlay(studentId, className) {
-    ensureStudentInfoOverlay();
-    applyI18n();
-
-    // Preserve scroll of manage overlay
-    const listEl = getManageStudentsListEl();
-    if (listEl) manageStudentsScrollPos = listEl.scrollTop;
-
-    // Hide manage overlay without destroying it
+    // The roster stays mounted (search, filters, scroll kept); only hidden
     const manageOverlay = getManageStudentsOverlay();
     if (manageOverlay) hideOverlay(manageOverlay, false);
 
-    const info = studentIndex.get(studentId) || { fullName: studentId };
-    studentInfoOverlay.innerHTML = '';
-    const content = buildStudentInfoContent(info, studentId, className);
-    studentInfoOverlay.appendChild(content);
-    studentInfoOverlay.dataset.studentId = String(studentId);
-    studentInfoOverlay.dataset.className = String(className || getCurrentClass().name || '');
-    showOverlay(studentInfoOverlay, false);
+    openStudentDetails({ student, classId, className: className || current.name, opener });
 }
 
-/**
- * Close student info overlay
- */
-function closeStudentInfoOverlay() {
-    if (!studentInfoOverlay) return;
-    hideOverlay(studentInfoOverlay, false);
-    
-    // Restore manage overlay
+/** Back from the details dialog to the roster (after Close or a removal). */
+function returnToManageFromDetails({ opener, removedKey, className } = {}) {
     const manageOverlay = getManageStudentsOverlay();
-    if (manageOverlay) {
-        showOverlay(manageOverlay, false);
-        const listEl = getManageStudentsListEl();
-        if (listEl) listEl.scrollTop = manageStudentsScrollPos;
+    if (!manageOverlay) {
+        document.body.style.overflow = '';
+        return;
     }
+    showOverlay(manageOverlay, false);
+    document.body.style.overflow = 'hidden';
+    if (removedKey) {
+        // The removed row goes away in place; focus stays inside the roster dialog
+        renderManageStudentsForClass(className || getCurrentClass().name);
+        manageOverlay.querySelector('.msd-dialog')?.focus({ preventScroll: true });
+        return;
+    }
+    if (opener && opener.isConnected) opener.focus({ preventScroll: true });
+    else manageOverlay.querySelector('.msd-dialog')?.focus({ preventScroll: true });
 }
 
 /**
- * Remove student from class
- * @param {string} facultyNumber - Faculty number
- * @param {string} className - Class name
+ * Remove a student's enrollment in a class (their account and attendance
+ * records stay, as before). Throws when the server refuses.
+ * @param {{ classId, className, studentId, facultyNumber }} target
  */
-export async function removeStudentFromClass(facultyNumber, className) {
-    const classId = await resolveClassId(className);
-    if (!classId) {
-        console.error('[removeStudentFromClass] Unable to get class ID for class:', className);
-        alert('Error: Class ID not found.');
-        return;
-    }
-
-    const teacherEmail = getTeacherEmail();
-
+async function removeStudentEnrollment({ classId, className, studentId, facultyNumber }) {
+    if (!classId || !facultyNumber) throw new Error('Student or class is not known');
     try {
-        await apiRemoveStudentFromClass(classId, facultyNumber, teacherEmail);
-        markRosterChanged(classId);
-        invalidateAttendanceSummary(classId);
-
-        // Optimistic local update using stable matching:
-        // prefer ID match, then faculty number match.
-        const targetKey = normalizeStudentKey(facultyNumber);
-        const classStudents = loadClassStudentsFromStorage(className);
-        if (classStudents && Array.isArray(classStudents)) {
-            const targetNum = Number(targetKey);
-            const hasNumericTarget = Number.isFinite(targetNum) && /^\d+$/.test(targetKey);
-            const filtered = classStudents.filter((s) => {
-                const idKey = normalizeStudentKey(s?.id || s?.student_id);
-                const facultyKey = normalizeStudentKey(getStudentFacultyNumber(s));
-                const directMatch = targetKey && (idKey === targetKey || facultyKey === targetKey);
-                const numericIdMatch = hasNumericTarget && /^\d+$/.test(idKey) && Number(idKey) === targetNum;
-                return !(directMatch || numericIdMatch);
-            });
-            addNewStudentsToStorage(className, filtered);
-        }
-
-        // Update in-memory assignments
-        removeStudentFromClassAssignments(className, targetKey);
-        if (/^\d+$/.test(targetKey)) {
-            removeStudentFromClassAssignments(className, Number(targetKey));
-        }
-
-        // Canonical refresh from API, then re-render list.
-        // If refresh fails, keep optimistic local update.
-        try {
-            await fetchClassStudents(classId, className);
-        } catch (refreshError) {
-            console.warn('[removeStudentFromClass] Post-remove refresh failed, using optimistic state', refreshError);
-        }
-
-        // Close overlays and refresh UI without requiring page reload.
-        closeStudentInfoOverlay();
-        await renderManageStudentsForClass(className);
-
-        showToast(i18nText('toast_student_removed', 'Student removed'), 'error');
+        await apiRemoveStudentFromClass(classId, facultyNumber, getTeacherEmail());
     } catch (error) {
-        console.error('[removeStudentFromClass] Error:', error.message);
-        alert('Failed to remove student: ' + error.message);
+        // Already not enrolled (e.g. removed in another tab): same end state
+        const message = String(error?.body?.error || error?.message || '');
+        if (!(error?.status === 404 && /not found in this class/i.test(message))) throw error;
     }
-}
+    markRosterChanged(classId);
+    invalidateAttendanceSummary(classId);
 
-/**
- * Render attendance history list
- * @param {string} className - Class name
- * @param {string} studentId - Student ID
- */
-async function renderAttendanceHistoryList(className, studentId) {
-    const container = document.getElementById('attendanceHistoryList');
-    if (!container) return;
-
-    showSkeletonRows(container, { count: 3 });
-    let sessions;
-    try {
-        sessions = await loadAttendanceLog(className, studentId);
-    } catch (error) {
-        console.error('[renderAttendanceHistoryList] failed', error);
-        showLoadError(container, i18nText('tp_history_error', 'Неуспешно зареждане на историята на присъствията.'), () => renderAttendanceHistoryList(className, studentId));
-        return;
+    // Local roster copy and assignments: match by id, then faculty number
+    const idKey = normalizeStudentKey(studentId);
+    const fnKey = normalizeStudentKey(facultyNumber);
+    const classStudents = loadClassStudentsFromStorage(className);
+    if (Array.isArray(classStudents)) {
+        addNewStudentsToStorage(className, classStudents.filter((s) => {
+            const sid = normalizeStudentKey(s?.id || s?.student_id);
+            const sfn = normalizeStudentKey(getStudentFacultyNumber(s));
+            return !((idKey && sid === idKey) || (fnKey && sfn === fnKey));
+        }));
     }
-    endBusy(container);
-    logAttendanceHistoryDebug('renderAttendanceHistoryList:result', {
-        className: String(className || '').trim(),
-        studentId: String(studentId || '').trim(),
-        sessionsLength: Array.isArray(sessions) ? sessions.length : null,
-        sessionsSample: Array.isArray(sessions) ? sessions.slice(0, 3) : []
-    });
-
-    container.innerHTML = '';
-    if (!Array.isArray(sessions) || sessions.length === 0) {
-        const p = document.createElement('p');
-        p.className = 'muted';
-        p.textContent = i18nText('no_attendance_records', 'No attendance records.');
-        container.appendChild(p);
-        return;
-    }
-
-    const ul = document.createElement('ul');
-    ul.className = 'attendance-history-ul';
-    sessions.slice().reverse().forEach((sess) => {
-        const li = document.createElement('li');
-        li.className = 'attendance-history-item';
-        const joined = new Date(sess.joinAt || sess.leaveAt || Date.now());
-        const left = new Date(sess.leaveAt || sess.joinAt || Date.now());
-        const timeOpts = { hour: 'numeric', minute: '2-digit' };
-        const dateOpts = { year: 'numeric', month: 'short', day: 'numeric', weekday: 'short' };
-        const lang = (window.i18n && typeof window.i18n.getLanguage === 'function')
-            ? window.i18n.getLanguage()
-            : (document.documentElement.lang || 'en');
-        const locale = lang === 'bg' ? 'bg-BG' : 'en-US';
-        const joinTime = joined.toLocaleTimeString(locale, timeOpts);
-        const leaveTime = left.toLocaleTimeString(locale, timeOpts);
-        const joinDate = joined.toLocaleDateString(locale, dateOpts);
-        const leaveDate = left.toLocaleDateString(locale, dateOpts);
-
-        const row1 = document.createElement('div');
-        row1.className = 'att-row';
-        const joinLabel = document.createElement('span');
-        joinLabel.className = 'att-label att-label-joined';
-        joinLabel.textContent = i18nText('joined_label', 'Joined');
-        const joinVal = document.createElement('span');
-        joinVal.className = 'att-value';
-        joinVal.textContent = `${joinTime} - ${joinDate}`;
-        row1.appendChild(joinLabel);
-        row1.appendChild(joinVal);
-
-        const row2 = document.createElement('div');
-        row2.className = 'att-row';
-        const leaveLabel = document.createElement('span');
-        leaveLabel.className = 'att-label att-label-left';
-        leaveLabel.textContent = i18nText('left_label', 'Left');
-        const leaveVal = document.createElement('span');
-        leaveVal.className = 'att-value';
-        leaveVal.textContent = `${leaveTime} - ${leaveDate}`;
-        row2.appendChild(leaveLabel);
-        row2.appendChild(leaveVal);
-
-        li.appendChild(row1);
-        li.appendChild(row2);
-        ul.appendChild(li);
-    });
-    container.appendChild(ul);
-}
-
-/**
- * Ensure attendance history overlay is initialized (idempotent)
- */
-function ensureAttendanceHistoryOverlayInitialized() {
-    if (attendanceHistoryOverlayInitialized) return;
-    attendanceHistoryOverlayInitialized = true;
-
-    const overlay = getAttendanceHistoryOverlay();
-    if (!overlay) return;
-
-    const closeBtn = overlay.querySelector('#closeAttendanceHistoryBtn');
-    const backBtn = overlay.querySelector('#attendanceHistoryBackBtn');
-
-    closeBtn?.addEventListener('click', () => returnToManageStudentsFromHistory());
-    backBtn?.addEventListener('click', () => returnToStudentInfoOverlay());
-
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) returnToManageStudentsFromHistory();
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isOverlayVisible(overlay)) {
-            returnToManageStudentsFromHistory();
-        }
-    });
-}
-
-/**
- * Open attendance history overlay
- * @param {string} className - Class name
- * @param {string} studentId - Student ID
- */
-export function openAttendanceHistoryOverlay(className, studentId) {
-    ensureAttendanceHistoryOverlayInitialized();
-    applyI18n();
-
-    // Hide student info overlay
-    if (studentInfoOverlay) hideOverlay(studentInfoOverlay, false);
-
-    const overlay = getAttendanceHistoryOverlay();
-    const titleEl = overlay?.querySelector('#attendanceHistoryTitle');
-    if (titleEl) titleEl.textContent = i18nText('attendance_history', 'Attendance History');
-
-    if (overlay) {
-        showOverlay(overlay, false);
-        overlay.dataset.studentId = String(studentId);
-        overlay.dataset.className = String(className || getCurrentClass().name || '');
-    }
-    logAttendanceHistoryDebug('openAttendanceHistoryOverlay', {
-        className: String(className || '').trim(),
-        studentId: String(studentId || '').trim(),
-        overlayFound: Boolean(overlay)
-    });
-    renderAttendanceHistoryList(className, studentId);
-}
-
-/**
- * Return to student info overlay from history
- */
-function returnToStudentInfoOverlay() {
-    const overlay = getAttendanceHistoryOverlay();
-    if (overlay) hideOverlay(overlay, false);
-    if (studentInfoOverlay) showOverlay(studentInfoOverlay, false);
-}
-
-/**
- * Close attendance history overlay
- */
-function closeAttendanceHistoryOverlay() {
-    const overlay = getAttendanceHistoryOverlay();
-    if (overlay) hideOverlay(overlay, false);
-}
-
-/**
- * Return to manage students from history
- */
-function returnToManageStudentsFromHistory() {
-    closeAttendanceHistoryOverlay();
-    if (studentInfoOverlay) hideOverlay(studentInfoOverlay, false);
-    const manageOverlay = getManageStudentsOverlay();
-    if (manageOverlay) {
-        showOverlay(manageOverlay, false);
-        const listEl = getManageStudentsListEl();
-        if (listEl) listEl.scrollTop = manageStudentsScrollPos;
+    removeStudentFromClassAssignments(className, fnKey);
+    if (idKey) {
+        removeStudentFromClassAssignments(className, idKey);
+        if (/^\d+$/.test(idKey)) removeStudentFromClassAssignments(className, Number(idKey));
     }
 }
 
@@ -1881,7 +1353,8 @@ function isOverlayVisible(overlay) {
 function closeAllClassOverlays() {
     const readyPopupOverlay = getOverlay('readyClassPopupOverlay');
     const manageOverlay = getManageStudentsOverlay();
-    const studentInfo = studentInfoOverlay;
+    const studentInfo = getOverlay('studentInfoOverlay');
+    onStudentDetailsHidden();
     const scannerOverlay = getOverlay('scannerOverlay');
 
     if (readyPopupOverlay) hideOverlay(readyPopupOverlay);

@@ -488,7 +488,7 @@ function clearCriteria() {
 
 function focusables() {
     return Array.from(dom.dialog.querySelectorAll(
-        'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
     )).filter((node) => node.offsetParent !== null || node === document.activeElement);
 }
 
@@ -546,10 +546,12 @@ function openAddStudents() {
     deps.openAddStudents(state.className);
 }
 
-function openStudent(openKey) {
+function openStudent(openKey, opener) {
     rememberView();
-    // The details overlay hides this one and shows it again on return (state kept)
-    deps.openStudent(openKey, state.className);
+    // The details dialog hides this one and shows it again on return (state kept);
+    // it gets the row (identity shown at once) and the row's button (focus on return)
+    const row = state.rows.find((r) => r.openKey === openKey) || null;
+    deps.openStudent(openKey, state.className, row, opener || null);
 }
 
 function bindEvents() {
@@ -586,7 +588,7 @@ function bindEvents() {
         const tr = e.target.closest('tr[data-key]');
         if (!tr) return;
         const button = tr.querySelector('.msd-name');
-        if (button?.dataset.openKey) openStudent(button.dataset.openKey);
+        if (button?.dataset.openKey) openStudent(button.dataset.openKey, button);
     });
 
     document.addEventListener('app:languagechange', () => {
@@ -600,7 +602,7 @@ function bindEvents() {
  * @param {object} callbacks
  * @param {(student) => object} callbacks.normalizeStudent - roster entry -> row
  *   { key, openKey, id, facultyNumber, name, email, level, faculty, specialization, group, searchText }
- * @param {(openKey, className) => void} callbacks.openStudent
+ * @param {(openKey, className, row, opener) => void} callbacks.openStudent
  * @param {(className) => void} callbacks.openAddStudents
  * @param {(className) => void} callbacks.back - to the discipline menu
  * @param {() => void} callbacks.close - close every class overlay

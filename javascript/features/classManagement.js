@@ -316,7 +316,7 @@ function onClassOptionsKeydown(e) {
         return;
     }
     if (e.key !== 'Tab') return;
-    const items = Array.from(d.dialog.querySelectorAll('button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'))
+    const items = Array.from(d.dialog.querySelectorAll('button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'))
         .filter((node) => node.offsetParent !== null);
     if (!items.length) return;
     const first = items[0];

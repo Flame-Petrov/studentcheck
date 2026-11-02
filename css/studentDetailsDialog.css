@@ -1,0 +1,514 @@
+/* "Данни за студента" dialog with its attendance-history view (markup:
+   #studentInfoOverlay in teacherHomepage.html; logic:
+   javascript/features/studentDetailsDialog.js). Scoped to the overlay id so
+   the older #studentInfoOverlay / .student-info-popup rules do not apply.
+   Values pending a request show a skeleton bar in the value's own box. */
+
+#studentInfoOverlay.overlay {
+    z-index: 1001;
+    padding:
+        max(16px, env(safe-area-inset-top, 0px))
+        max(16px, env(safe-area-inset-right, 0px))
+        max(16px, env(safe-area-inset-bottom, 0px))
+        max(16px, env(safe-area-inset-left, 0px));
+    background: rgba(30, 41, 56, 0.5);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    box-sizing: border-box;
+}
+
+#studentInfoOverlay .sdd-dialog {
+    width: 100%;
+    max-width: 560px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    padding: 28px 28px 24px;
+    background: var(--tp-surface, #fff);
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(8, 15, 31, 0.18), 0 2px 8px rgba(8, 15, 31, 0.06);
+    color: var(--tp-text, #080F1F);
+    font-family: var(--tp-font, inherit);
+    box-sizing: border-box;
+}
+
+#studentInfoOverlay .sdd-dialog:focus { outline: none; }
+
+#studentInfoOverlay .sdd-dialog *,
+#studentInfoOverlay .sdd-dialog *::before,
+#studentInfoOverlay .sdd-dialog *::after { box-sizing: border-box; }
+
+#studentInfoOverlay .sdd-view { display: none; }
+#studentInfoOverlay [data-view="details"] .sdd-view--details,
+#studentInfoOverlay [data-view="history"] .sdd-view--history { display: block; }
+
+/* ---------- Header ---------- */
+
+#studentInfoOverlay .sdd-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+#studentInfoOverlay .sdd-heading { flex: 1 1 auto; min-width: 0; }
+
+#studentInfoOverlay .sdd-title,
+#studentInfoOverlay h2.sdd-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    color: var(--tp-text, #080F1F);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: left;
+}
+
+#studentInfoOverlay .sdd-sub {
+    margin: 4px 0 0;
+    color: var(--tp-muted, #5B6472);
+    font-size: 14px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+#studentInfoOverlay .sdd-x {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -8px -10px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--tp-muted, #747C89);
+    cursor: pointer;
+}
+
+#studentInfoOverlay .sdd-x .tp-icon { width: 24px; height: 24px; stroke-width: 2; }
+#studentInfoOverlay .sdd-x:hover { background: #F1F5F8; color: var(--tp-text, #080F1F); }
+
+/* ---------- Identity ---------- */
+
+#studentInfoOverlay .sdd-name {
+    position: relative;
+    min-height: 30px;
+    margin: 0 0 18px;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+#studentInfoOverlay .sdd-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+    margin: 0;
+}
+
+#studentInfoOverlay .sdd-field { min-width: 0; }
+#studentInfoOverlay .sdd-field--wide { grid-column: 1 / -1; }
+
+#studentInfoOverlay .sdd-field dt {
+    margin: 0 0 4px;
+    color: var(--tp-muted, #5B6472);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+#studentInfoOverlay .sdd-field dd {
+    position: relative;
+    min-height: 24px;
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+#studentInfoOverlay .is-empty .sdd-value { color: var(--tp-muted, #747C89); font-weight: 500; }
+
+/* Skeleton: only for values a request is still resolving */
+#studentInfoOverlay .sdd-sk { display: none; height: 14px; border-radius: 999px; }
+#studentInfoOverlay .is-pending > .sdd-sk { display: block; margin-top: 5px; }
+#studentInfoOverlay .is-pending > .sdd-value { display: none; }
+#studentInfoOverlay .sdd-name.is-pending > .sdd-sk { height: 20px; margin-top: 5px; }
+#studentInfoOverlay .sdd-sk--name { width: 62%; }
+#studentInfoOverlay .sdd-sk--fn { width: 56%; }
+#studentInfoOverlay .sdd-sk--group { width: 28%; }
+#studentInfoOverlay .sdd-sk--email { width: 74%; }
+
+#studentInfoOverlay .sdd-divider {
+    height: 1px;
+    margin: 22px 0;
+    border: 0;
+    background: var(--tp-border, #DFE6EC);
+}
+
+/* ---------- Attendance panel ---------- */
+
+#studentInfoOverlay .sdd-att {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    padding: 10px 10px 10px 16px;
+    border-radius: 12px;
+    background: #EEF8F3;
+}
+
+#studentInfoOverlay .sdd-att-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #C9D2DA;
+    color: #fff;
+}
+
+#studentInfoOverlay .sdd-att-icon .tp-icon { width: 18px; height: 18px; stroke-width: 3; }
+#studentInfoOverlay .sdd-att-check,
+#studentInfoOverlay .sdd-att-dash { display: none; }
+/* Green check only for a confirmed count above zero */
+#studentInfoOverlay .sdd-att[data-state="count"] .sdd-att-icon { background: var(--tp-green, #00A174); }
+#studentInfoOverlay .sdd-att[data-state="count"] .sdd-att-check { display: block; }
+#studentInfoOverlay .sdd-att:is([data-state="zero"], [data-state="unavailable"], [data-state="error"]) .sdd-att-dash { display: block; }
+#studentInfoOverlay .sdd-att[data-state="loading"] .sdd-att-icon { background: #DCE5EA; }
+#studentInfoOverlay .sdd-att[data-state="error"] { background: #FFF6E5; }
+#studentInfoOverlay .sdd-att[data-state="error"] .sdd-att-icon { background: #E8730C; }
+#studentInfoOverlay .sdd-att:not([data-state="count"]):not([data-state="zero"]) { background-color: #F3F6F8; }
+#studentInfoOverlay .sdd-att[data-state="error"] { background-color: #FFF6E5; }
+
+#studentInfoOverlay .sdd-att-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+#studentInfoOverlay .sdd-att:is([data-state="loading"], [data-state="unavailable"], [data-state="error"]) .sdd-att-text {
+    color: #4B5563;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+#studentInfoOverlay .sdd-att-history {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 8px 0 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #3A4250;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#studentInfoOverlay .sdd-att-history .tp-icon { width: 20px; height: 20px; stroke-width: 2; }
+#studentInfoOverlay .sdd-att-history:hover { background: rgba(0, 161, 116, 0.1); color: var(--tp-text, #080F1F); }
+
+/* ---------- Footer ---------- */
+
+#studentInfoOverlay .sdd-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#studentInfoOverlay .sdd-remove {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    margin: 0 0 0 -8px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #D92D20;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#studentInfoOverlay .sdd-remove .tp-icon { width: 22px; height: 22px; stroke-width: 1.8; }
+#studentInfoOverlay .sdd-remove:not(:disabled):hover { background: #FEF3F2; color: #B42318; }
+#studentInfoOverlay .sdd-remove:disabled { opacity: 0.6; cursor: not-allowed; }
+#studentInfoOverlay .sdd-remove[aria-busy="true"] { cursor: progress; }
+
+#studentInfoOverlay .sdd-btn-outline {
+    min-width: 120px;
+    min-height: 46px;
+    margin: 0;
+    padding: 0 22px;
+    border: 1px solid #3A4250;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--tp-text, #080F1F);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#studentInfoOverlay .sdd-btn-outline:hover { background: #F7F9FB; }
+
+#studentInfoOverlay .sdd-inline-error {
+    margin: 12px 0 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #FDECEC;
+    color: #B42318;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+#studentInfoOverlay .sdd-inline-error[hidden] { display: none; }
+
+#studentInfoOverlay .sdd-link {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--tp-green-pressed, #008460);
+    font: inherit;
+    font-size: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ---------- History view: timeline grouped by date ---------- */
+
+#studentInfoOverlay .ahd-header { margin-bottom: 18px; }
+
+#studentInfoOverlay .ahd-count {
+    min-height: 24px;
+    margin: 4px 0 0;
+    color: var(--tp-muted, #5B6472);
+    font-size: 16px;
+    line-height: 1.45;
+}
+
+#studentInfoOverlay .ahd-sk { display: block; height: 14px; border-radius: 999px; }
+#studentInfoOverlay .ahd-count .ahd-sk--count { display: none; width: 150px; margin-top: 5px; }
+#studentInfoOverlay .ahd-count.is-pending .ahd-sk--count { display: block; }
+
+/* The only scrolling region: long histories scroll, header and Back stay put */
+#studentInfoOverlay .ahd-list {
+    min-height: 220px;
+    max-height: min(460px, calc(100dvh - 250px));
+    margin: 0 -6px;
+    padding: 2px 6px 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+#studentInfoOverlay .ahd-group {
+    position: relative;
+    padding: 0 0 18px 40px;
+}
+
+/* Vertical line from this marker to the next group (the last one ends at its rows) */
+#studentInfoOverlay .ahd-group::before {
+    content: '';
+    position: absolute;
+    top: 24px;
+    bottom: 0;
+    left: 10px;
+    width: 2px;
+    background: #DFE6EC;
+}
+
+#studentInfoOverlay .ahd-group:last-child::before { bottom: 18px; }
+
+#studentInfoOverlay .ahd-marker {
+    position: absolute;
+    top: 4px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid var(--tp-green, #00A174);
+    border-radius: 50%;
+    background: #fff;
+}
+
+#studentInfoOverlay .ahd-group--skel .ahd-marker { border-color: #C9D2DA; }
+
+#studentInfoOverlay .ahd-date,
+#studentInfoOverlay h3.ahd-date {
+    margin: 0 0 8px;
+    color: var(--tp-text, #080F1F);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+#studentInfoOverlay .ahd-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+#studentInfoOverlay .ahd-table th {
+    width: 50%;
+    padding: 0 8px 2px 0;
+    color: var(--tp-muted, #5B6472);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+}
+
+#studentInfoOverlay .ahd-table td {
+    height: 46px;
+    padding: 8px 8px 8px 0;
+    border-bottom: 1px solid #E5EAEE;
+    color: var(--tp-text, #080F1F);
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.35;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+
+#studentInfoOverlay .ahd-time.is-missing { color: var(--tp-muted, #747C89); }
+
+#studentInfoOverlay .ahd-other-day {
+    color: var(--tp-muted, #5B6472);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* Skeleton groups: same box as real groups (label row, 46px rows, separators) */
+#studentInfoOverlay .ahd-sk--date { width: var(--sk-w, 40%); height: 18px; margin: 3px 0 13px; }
+
+#studentInfoOverlay .ahd-skel-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#studentInfoOverlay .ahd-skel-label {
+    padding-bottom: 2px;
+    color: #A7B0BA;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+#studentInfoOverlay .ahd-skel-cell {
+    display: flex;
+    align-items: center;
+    height: 46px;
+    border-bottom: 1px solid #E5EAEE;
+}
+
+#studentInfoOverlay .ahd-skel-cell .ahd-sk { width: 64px; }
+
+#studentInfoOverlay .ahd-note {
+    margin: 0;
+    padding: 4px 0 12px 40px;
+    color: var(--tp-muted, #5B6472);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+#studentInfoOverlay .ahd-state {
+    margin: 0;
+    padding: 48px 12px;
+    color: var(--tp-muted, #5B6472);
+    font-size: 15px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+#studentInfoOverlay .ahd-state--error { color: #B42318; }
+
+#studentInfoOverlay .ahd-stale { margin: 8px 0 0; }
+
+#studentInfoOverlay .ahd-footer {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid #EEF2F5;
+}
+
+#studentInfoOverlay .ahd-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    margin: 0 0 0 -10px;
+    padding: 0 12px 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #4B5563;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+#studentInfoOverlay .ahd-back .tp-icon { width: 20px; height: 20px; stroke-width: 2; }
+#studentInfoOverlay .ahd-back:hover { background: #F1F5F8; color: var(--tp-text, #080F1F); }
+
+@media (max-width: 479.98px) {
+    #studentInfoOverlay .ahd-group { padding-left: 32px; }
+    #studentInfoOverlay .ahd-group::before { left: 8px; }
+    #studentInfoOverlay .ahd-marker { left: 0; }
+    #studentInfoOverlay .ahd-date, #studentInfoOverlay h3.ahd-date { font-size: 17px; }
+    #studentInfoOverlay .ahd-table td { font-size: 16px; }
+    #studentInfoOverlay .ahd-note { padding-left: 32px; }
+    #studentInfoOverlay .ahd-list { max-height: calc(100dvh - 220px); }
+}
+
+/* ---------- Shared ---------- */
+
+body.tp-app #studentInfoOverlay button:not(:disabled):hover,
+body.tp-app #studentInfoOverlay button:not(:disabled):active { transform: none !important; }
+
+body.tp-app #studentInfoOverlay button:focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+body.tp-app #studentInfoOverlay .sdd-remove:focus-visible { outline-color: #D92D20; }
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 479.98px) {
+    #studentInfoOverlay.overlay {
+        padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    }
+
+    #studentInfoOverlay .sdd-dialog { padding: 22px 20px 18px; border-radius: 18px; }
+    #studentInfoOverlay .sdd-title, #studentInfoOverlay h2.sdd-title { font-size: 21px; }
+    #studentInfoOverlay .sdd-name { font-size: 20px; }
+    #studentInfoOverlay .sdd-divider { margin: 18px 0; }
+
+    /* "Виж историята" under the count, full width */
+    #studentInfoOverlay .sdd-att { flex-wrap: wrap; row-gap: 4px; }
+    #studentInfoOverlay .sdd-att-text { flex-basis: calc(100% - 42px); }
+    #studentInfoOverlay .sdd-att-history { width: 100%; justify-content: space-between; padding-left: 42px; }
+
+    /* Close full width, remove above it */
+    #studentInfoOverlay .sdd-view--details .sdd-footer { flex-direction: column-reverse; align-items: stretch; gap: 6px; }
+    #studentInfoOverlay .sdd-view--details .sdd-btn-outline { width: 100%; }
+    #studentInfoOverlay .sdd-remove { justify-content: center; margin: 0; }
+}
