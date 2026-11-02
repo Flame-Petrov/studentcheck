@@ -1089,6 +1089,54 @@ html[data-view="payments"] .tp-view--payments {
     }
 }
 
+/* Phones/tablets (bottom navigation): the view is one viewport tall. Title,
+   totals and the "По дисциплини" heading stay put; only the per-discipline
+   list scrolls, ending just above the bottom navigation. On very short
+   screens (landscape phones) the frame keeps a minimum height and the page
+   scrolls a little instead, so the list never slides under the navigation. */
+@media (max-width: 1023.98px) {
+    html[data-view="statistics"] .tp-shell {
+        height: max(100vh, 660px);
+        height: max(100dvh, 660px);
+        padding-bottom: calc(var(--tp-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 16px);
+    }
+
+    html[data-view="statistics"] .tp-main {
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    html[data-view="statistics"] .tp-view--statistics,
+    html[data-view="statistics"] .tp-stats {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .tp-stats-list {
+        flex: 0 1 auto;
+        min-height: 140px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        /* room for the cards' shadow, which the scroll box would clip */
+        padding-bottom: 2px;
+    }
+
+    /* The list is a fixed-height flex column now: rows must keep their
+       natural height and overflow (scroll) instead of being squeezed */
+    .tp-stats-list > li {
+        flex-shrink: 0;
+    }
+
+    /* Nothing to scroll: don't reserve the minimum height */
+    .tp-stats-list:empty {
+        min-height: 0;
+    }
+}
+
 /* Filter selects in the student dialogs: hover feedback like other controls */
 .tp-app .filter-select {
     transition: border-color var(--hover-dur, 160ms) var(--hover-ease, ease), box-shadow var(--hover-dur, 160ms) var(--hover-ease, ease);

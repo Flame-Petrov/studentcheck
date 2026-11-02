@@ -5,13 +5,14 @@
    While the chat view is shown the frame is exactly one viewport tall: the
    title stays at the top, the input sits just above the bottom navigation
    (phones/tablets) or the bottom of the window (desktop), and only the message
-   list scrolls. */
+   list scrolls. On very short screens the frame keeps a minimum height and
+   the page scrolls a little instead of squeezing the card under the nav. */
 
 /* ---------- View layout ---------- */
 
 html[data-view="chat"] .tp-shell {
-    height: 100vh;
-    height: 100dvh;
+    height: max(100vh, 520px);
+    height: max(100dvh, 520px);
     padding-bottom: calc(var(--tp-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 16px);
 }
 
@@ -38,8 +39,8 @@ html[data-view="chat"] .tp-view--chat {
     html[data-view="chat"] .tp-content {
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        height: 100dvh;
+        height: max(100vh, 480px);
+        height: max(100dvh, 480px);
         padding-bottom: 32px;
     }
 
