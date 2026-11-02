@@ -8,10 +8,11 @@
     <script>
         (function () {
             var h = location.hash;
-            var view = h === '#payments' ? 'payments' : (h === '#statistics' ? 'statistics' : (h === '#chat' ? 'chat' : 'classes'));
+            var view = h === '#payments' ? 'payments' : (h.indexOf('#statistics') === 0 ? 'statistics' : (h === '#chat' ? 'chat' : 'classes'));
             document.documentElement.setAttribute('data-view', view);
             if (view === 'payments') document.title = 'Плащания · StudentCheck';
             if (view === 'statistics') document.title = 'Статистика · StudentCheck';
+            if (h.indexOf('#statistics/student/') === 0) document.documentElement.setAttribute('data-stats-detail', '');
             if (view === 'chat') document.title = 'Чат · StudentCheck';
         })();
     </script>
@@ -23,7 +24,7 @@
     <!-- Reuse registration styles for class creation wizard -->
     <link rel="stylesheet" href="css/registration.css?v=1.0.0">
     <link rel="stylesheet" href="css/teacherHomepage.css?v=2.2.0">
-    <link rel="stylesheet" href="css/teacherShell.css?v=1.6.0">
+    <link rel="stylesheet" href="css/teacherShell.css?v=1.7.0">
     <link rel="stylesheet" href="css/supportChat.css?v=2.1.0">
     <link rel="stylesheet" href="css/disciplineActionsModal.css?v=1.0.0">
     <link rel="stylesheet" href="css/billing.css?v=2.1.0">
@@ -36,6 +37,7 @@
     <link rel="modulepreload" href="javascript/ui/disciplineActionsModal.js">
     <link rel="modulepreload" href="javascript/features/billingView.js">
     <link rel="modulepreload" href="javascript/features/statisticsView.js">
+    <link rel="modulepreload" href="javascript/features/studentStats.js">
     <link rel="modulepreload" href="javascript/features/classesView.js">
     <link rel="modulepreload" href="javascript/features/studentManagement.js">
     <link rel="modulepreload" href="javascript/features/attendance.js">
@@ -581,7 +583,13 @@
                         <span class="tp-stat-value" id="statAverage"><span class="sk sk-inline" style="--sk-w:2.8em" aria-hidden="true"></span></span>
                     </div>
                 </div>
-                <h2 class="tp-stats-heading" id="statsPerClassTitle">По дисциплини</h2>
+                <!-- По дисциплини / По студенти (javascript/features/statisticsView.js) -->
+                <div class="tp-seg" role="group" aria-labelledby="statisticsTitle" id="statsModeGroup">
+                    <button type="button" class="tp-seg-btn" id="statsModeClasses" data-stats-mode="classes" aria-pressed="true">По дисциплини</button>
+                    <button type="button" class="tp-seg-btn" id="statsModeStudents" data-stats-mode="students" aria-pressed="false">По студенти</button>
+                </div>
+                <div class="tp-stats-pane" id="statsClassesPane">
+                <h2 class="tp-visually-hidden" id="statsPerClassTitle">По дисциплини</h2>
                 <ul class="tp-stats-list" id="statsList" aria-labelledby="statsPerClassTitle" aria-busy="true">
                     <li class="tp-stats-row tp-stats-row--skeleton" aria-hidden="true">
                         <div class="tp-stats-main"><span class="sk sk-line" style="--sk-w:44%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:30%"></span></div>
@@ -598,7 +606,48 @@
                 </ul>
                 <p class="tp-empty" id="statsNone" hidden>Все още нямате дисциплини.</p>
                 <p class="sk-stale" id="statsStale" hidden></p>
+                </div>
+
+                <!-- Per student: GET /statistics/students, metrics in javascript/features/studentStats.js -->
+                <div class="tp-stats-pane" id="statsStudentsPane" hidden>
+                    <h2 class="tp-visually-hidden" id="statsPerStudentTitle">По студенти</h2>
+                    <div class="tp-stats-toolbar">
+                        <div class="tp-search" role="search">
+                            <label class="tp-visually-hidden" for="statsStudentSearch" id="statsStudentSearchLabel">Търси студент</label>
+                            <svg class="tp-icon tp-search-icon" aria-hidden="true"><use href="#tp-i-search"/></svg>
+                            <input class="tp-search-input" id="statsStudentSearch" type="search" placeholder="Търси студент" autocomplete="off" spellcheck="false" aria-controls="statsStudentList">
+                        </div>
+                        <label class="tp-visually-hidden" for="statsStudentSort" id="statsStudentSortLabel">Подреди</label>
+                        <select class="tp-select" id="statsStudentSort">
+                            <option value="name" id="statsSortName">По име</option>
+                            <option value="rate" id="statsSortRate">Най-ниска посещаемост</option>
+                            <option value="streak" id="statsSortStreak">Поредни отсъствия</option>
+                        </select>
+                    </div>
+                    <p class="sk-status-text" id="statsStudentsLoading" role="status">Зареждане на студентите…</p>
+                    <ul class="tp-stats-list" id="statsStudentList" aria-labelledby="statsPerStudentTitle" aria-busy="true">
+                        <li class="tp-stats-row tp-stats-row--skeleton" aria-hidden="true">
+                            <div class="tp-stats-main"><span class="sk sk-line" style="--sk-w:48%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:34%"></span></div>
+                            <div class="tp-stats-figure"><span class="sk sk-inline" style="--sk-w:2.6em"></span><span class="sk tp-stats-bar-skel"></span></div>
+                        </li>
+                        <li class="tp-stats-row tp-stats-row--skeleton" aria-hidden="true">
+                            <div class="tp-stats-main"><span class="sk sk-line" style="--sk-w:40%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:30%"></span></div>
+                            <div class="tp-stats-figure"><span class="sk sk-inline" style="--sk-w:2.6em"></span><span class="sk tp-stats-bar-skel"></span></div>
+                        </li>
+                        <li class="tp-stats-row tp-stats-row--skeleton" aria-hidden="true">
+                            <div class="tp-stats-main"><span class="sk sk-line" style="--sk-w:54%"></span><span class="sk sk-line sk-line--sub" style="--sk-w:32%"></span></div>
+                            <div class="tp-stats-figure"><span class="sk sk-inline" style="--sk-w:2.6em"></span><span class="sk tp-stats-bar-skel"></span></div>
+                        </li>
+                    </ul>
+                    <p class="tp-empty" id="statsStudentsNone" hidden>Все още нямате записани студенти.</p>
+                    <p class="tp-empty" id="statsStudentsNoMatch" hidden>Няма намерени студенти.</p>
+                    <p class="tp-visually-hidden" id="statsStudentSearchStatus" role="status" aria-live="polite"></p>
+                    <p class="sk-stale" id="statsStudentsStale" hidden></p>
+                </div>
             </div>
+
+            <!-- One student (#statistics/student/<id>); rendered by statisticsView.js -->
+            <div class="tp-stats-detail" id="statsStudentDetail" hidden></div>
         </section>
 
         <!-- Плащания (was billing.html; that URL now redirects here) -->

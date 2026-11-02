@@ -1089,34 +1089,36 @@ html[data-view="payments"] .tp-view--payments {
     }
 }
 
-/* Phones/tablets (bottom navigation): the view is one viewport tall. Title,
-   totals and the "По дисциплини" heading stay put; only the per-discipline
-   list scrolls, ending just above the bottom navigation. On very short
-   screens (landscape phones) the frame keeps a minimum height and the page
-   scrolls a little instead, so the list never slides under the navigation. */
+/* Phones/tablets (bottom navigation): the overview is one viewport tall.
+   Title, totals and the "По дисциплини | По студенти" switch (plus search on
+   the students list) stay put; only the list scrolls, ending just above the
+   bottom navigation. On very short screens (landscape phones) the frame keeps
+   a minimum height and the page scrolls a little instead, so the list never
+   slides under the navigation. A student's own page scrolls normally. */
 @media (max-width: 1023.98px) {
-    html[data-view="statistics"] .tp-shell {
-        height: max(100vh, 660px);
-        height: max(100dvh, 660px);
+    html[data-view="statistics"]:not([data-stats-detail]) .tp-shell {
+        height: max(100vh, 700px);
+        height: max(100dvh, 700px);
         padding-bottom: calc(var(--tp-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 16px);
     }
 
-    html[data-view="statistics"] .tp-main {
+    html[data-view="statistics"]:not([data-stats-detail]) .tp-main {
         align-self: stretch;
         display: flex;
         flex-direction: column;
         min-height: 0;
     }
 
-    html[data-view="statistics"] .tp-view--statistics,
-    html[data-view="statistics"] .tp-stats {
+    html[data-view="statistics"]:not([data-stats-detail]) .tp-view--statistics,
+    html[data-view="statistics"]:not([data-stats-detail]) .tp-stats,
+    html[data-view="statistics"]:not([data-stats-detail]) .tp-stats-pane:not([hidden]) {
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
         min-height: 0;
     }
 
-    .tp-stats-list {
+    html[data-view="statistics"]:not([data-stats-detail]) .tp-stats-list {
         flex: 0 1 auto;
         min-height: 140px;
         overflow-y: auto;
@@ -1127,14 +1129,452 @@ html[data-view="payments"] .tp-view--payments {
 
     /* The list is a fixed-height flex column now: rows must keep their
        natural height and overflow (scroll) instead of being squeezed */
-    .tp-stats-list > li {
+    html[data-view="statistics"]:not([data-stats-detail]) .tp-stats-list > li {
         flex-shrink: 0;
     }
 
     /* Nothing to scroll: don't reserve the minimum height */
-    .tp-stats-list:empty {
+    html[data-view="statistics"]:not([data-stats-detail]) .tp-stats-list:empty {
         min-height: 0;
     }
+}
+
+/* ---------- Статистика: switch, students list, a student's page ---------- */
+
+.tp-seg {
+    display: inline-flex;
+    gap: 2px;
+    margin: calc(var(--tp-list-gap-top) + 4px) 0 var(--tp-card-gap);
+    padding: 3px;
+    border-radius: 999px;
+    background: #E3EAF0;
+    align-self: flex-start;
+    max-width: 100%;
+}
+
+.tp-seg-btn {
+    min-height: 36px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--tp-muted);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--tp-dur) var(--tp-ease), color var(--tp-dur) var(--tp-ease);
+}
+
+.tp-seg-btn:hover {
+    color: var(--tp-text);
+}
+
+.tp-seg-btn[aria-pressed="true"] {
+    background: var(--tp-surface);
+    color: var(--tp-text);
+    box-shadow: 0 1px 2px rgba(8, 15, 31, 0.08);
+}
+
+.tp-seg-btn:focus-visible {
+    outline: 2px solid var(--tp-green);
+    outline-offset: 2px;
+}
+
+.tp-seg--small {
+    margin: 0;
+}
+
+.tp-seg--small .tp-seg-btn {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+}
+
+.tp-stats-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-bottom: var(--tp-card-gap);
+}
+
+.tp-select {
+    width: 210px;
+    height: var(--tp-control-h);
+    padding: 0 34px 0 12px;
+    border: 1px solid transparent;
+    border-radius: var(--tp-radius);
+    background-color: var(--tp-surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23747C89' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    color: var(--tp-text);
+    font: inherit;
+    font-size: 15px;
+    -webkit-appearance: none;
+    appearance: none;
+    text-overflow: ellipsis;
+    box-shadow: 0 1px 2px rgba(8, 15, 31, 0.03);
+    cursor: pointer;
+}
+
+.tp-select:focus-visible {
+    outline: none;
+    border-color: var(--tp-green);
+    box-shadow: var(--tp-focus-ring);
+}
+
+.tp-stats-row--link {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--tp-dur) var(--tp-ease);
+}
+
+.tp-stats-row--link:hover {
+    background: var(--tp-surface-pressed);
+}
+
+.tp-stats-row--link:focus-visible {
+    outline: 2px solid var(--tp-green);
+    outline-offset: 2px;
+}
+
+.tp-stats-figure .tp-stats-flags {
+    grid-column: 1 / -1;
+    justify-self: end;
+    max-width: 320px;
+    text-align: right;
+}
+
+.tp-stats-chevron {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    color: var(--tp-muted);
+    stroke-width: 2;
+}
+
+.tp-stats-row--flat {
+    box-shadow: none;
+    padding-left: 0;
+    padding-right: 0;
+    min-height: 0;
+}
+
+/* A student's page */
+.tp-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 40px;
+    margin: 0 0 8px -8px;
+    padding: 0 12px 0 4px;
+    border: 0;
+    border-radius: var(--tp-radius-sm);
+    background: transparent;
+    color: var(--tp-green);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.tp-back:hover {
+    background: var(--tp-green-tint);
+}
+
+.tp-back:focus-visible {
+    outline: 2px solid var(--tp-green);
+    outline-offset: 2px;
+}
+
+.tp-back-icon {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.2;
+    transform: rotate(180deg);
+}
+
+.tp-stats-detail-name {
+    margin: 4px 0 0;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.tp-stats-detail-name:focus {
+    outline: none;
+}
+
+.tp-stats-detail > .tp-stats-meta {
+    margin-bottom: 16px;
+}
+
+.tp-stats-detail-skeleton {
+    display: grid;
+    gap: 10px;
+    padding-top: 8px;
+}
+
+.tp-stat-sub {
+    color: var(--tp-muted);
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.tp-stat-tile.is-low .tp-stat-value {
+    color: #B45309;
+}
+
+.tp-stats-subheading {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.tp-stats-detail > .tp-stats-subheading {
+    margin: 28px 0 var(--tp-card-gap);
+}
+
+.tp-stats-courses {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tp-card-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tp-stats-course {
+    padding: 4px var(--tp-card-pad-l) 14px;
+    border-radius: var(--tp-radius);
+    background: var(--tp-surface);
+    box-shadow: 0 1px 2px rgba(8, 15, 31, 0.03);
+}
+
+.tp-stats-lines {
+    display: grid;
+    gap: 6px;
+    margin: 2px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--tp-border);
+    list-style: none;
+    color: var(--tp-text);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.tp-stats-lines li.is-low {
+    color: #B45309;
+    font-weight: 600;
+}
+
+.tp-stats-footnote {
+    margin: 20px 0 0;
+    color: var(--tp-muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+/* Trend: attendance % per week/month, one series, 50% reference line */
+.tp-trend {
+    margin-top: 28px;
+    padding: 16px var(--tp-card-pad-l) 14px;
+    border-radius: var(--tp-radius);
+    background: var(--tp-surface);
+    box-shadow: 0 1px 2px rgba(8, 15, 31, 0.03);
+}
+
+.tp-trend-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+}
+
+.tp-trend-direction {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 0 0;
+    color: var(--tp-muted);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.tp-trend-direction.is-up { color: var(--tp-green); }
+.tp-trend-direction.is-down { color: #B45309; }
+
+.tp-trend-arrow {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.tp-trend-empty {
+    display: block;
+    margin: 12px 0 0;
+}
+
+.tp-trend-plot,
+.tp-trend-axis {
+    /* only as wide as the bars need (set --n = number of bars), so the date
+       labels sit under the first and last bar */
+    max-width: calc(var(--n, 12) * 44px + 34px);
+}
+
+.tp-trend-plot {
+    position: relative;
+    height: 140px;
+    margin-top: 40px;
+    /* recessive baseline and 100% line */
+    border-bottom: 1px solid #C9D2DA;
+    border-top: 1px solid #EEF2F5;
+}
+
+.tp-trend-ref {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 50%;
+    border-top: 1px dashed #9AA6B2;
+    pointer-events: none;
+}
+
+.tp-trend-ref-label {
+    position: absolute;
+    right: 0;
+    bottom: 2px;
+    padding: 0 2px;
+    background: var(--tp-surface);
+    color: var(--tp-muted);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.tp-trend-bars {
+    position: absolute;
+    inset: 0 34px 0 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tp-trend-item {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.tp-trend-bar {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 4px 4px 0 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.tp-trend-bar:hover,
+.tp-trend-bar.is-active {
+    background: rgba(8, 15, 31, 0.04);
+}
+
+.tp-trend-bar:focus-visible {
+    outline: 2px solid var(--tp-green);
+    outline-offset: 1px;
+}
+
+.tp-trend-fill {
+    display: block;
+    width: 100%;
+    min-height: 2px;
+    border-radius: 4px 4px 0 0;
+    background: var(--tp-green);
+}
+
+.tp-trend-fill.is-low {
+    background: #E8730C;
+}
+
+.tp-trend-fill.is-zero {
+    background: #C9D2DA;
+}
+
+.tp-trend-tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    transform: translateX(-50%);
+    z-index: 2;
+    width: max-content;
+    max-width: min(280px, 100%);
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--tp-text);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.35;
+    text-align: center;
+    pointer-events: none;
+}
+
+.tp-trend-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-right: 34px;
+    padding-top: 6px;
+    color: var(--tp-muted);
+    font-size: 12px;
+}
+
+@media (max-width: 719.98px) {
+    /* the select is as wide as its longest option; keep room for the search */
+    .tp-select {
+        width: 128px;
+    }
+
+    .tp-stats-row--link {
+        position: relative;
+        padding-right: 44px;
+    }
+
+    .tp-stats-row--link .tp-stats-chevron {
+        position: absolute;
+        top: 16px;
+        right: 12px;
+    }
+
+    .tp-stats-figure .tp-stats-flags {
+        justify-self: start;
+        text-align: left;
+    }
+}
+
+@media (min-width: 720px) {
+    .tp-stat-tiles--detail {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .tp-trend-plot {
+        height: 170px;
+    }
+}
+
+body.tp-app :is(.tp-seg-btn, .tp-back, .tp-trend-bar):not(:disabled):hover,
+body.tp-app :is(.tp-seg-btn, .tp-back, .tp-trend-bar):not(:disabled):active {
+    transform: none !important;
 }
 
 /* Filter selects in the student dialogs: hover feedback like other controls */

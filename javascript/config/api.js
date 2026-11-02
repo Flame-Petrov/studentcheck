@@ -25,6 +25,7 @@ export const ENDPOINTS = {
     removeStudentFromClass: '/class_students/remove',
     // Fixed: Added missing endpoint for class attendance summary
     classAttendanceSummary: (classId) => `/attendance/summary?class_id=${classId}`,
+    statisticsStudents: '/statistics/students',
     attendanceTimestamps: (classId) => `/attendance/timestamps?class_id=${classId}`,
     attendanceHistory: (classId, studentId, facultyNumber) => {
         const params = new URLSearchParams();

@@ -97,7 +97,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     const viewFromLocation = () => {
         if (location.hash === '#payments') return 'payments';
-        if (location.hash === '#statistics') return 'statistics';
+        // #statistics and its sub-routes (#statistics/student/<id>)
+        if (location.hash.startsWith('#statistics')) return 'statistics';
         if (location.hash === '#chat') return 'chat';
         return 'classes';
     };
@@ -158,6 +159,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function goToView(view) {
         if (!VIEWS[view]) return;
+        if (view === currentView && view === 'statistics' && location.hash !== '#statistics') {
+            // "Статистика" from a student's page: back to the overview
+            history.pushState({ tpView: view }, '', '#statistics');
+            showStatisticsView({ focus: true });
+            return;
+        }
         if (view === currentView) {
             document.getElementById(VIEWS[view].heading)?.focus({ preventScroll: true });
             return;
@@ -170,6 +177,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('popstate', () => {
         const view = viewFromLocation();
         if (view !== currentView) applyView(view, { focus: true, restoreScroll: true });
+        // Same view, other sub-route (a student's statistics <-> the list)
+        else if (view === 'statistics') showStatisticsView({ focus: true });
     });
     document.addEventListener('app:languagechange', () => setDocumentTitle(currentView));
 

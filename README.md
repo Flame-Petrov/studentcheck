@@ -47,6 +47,13 @@ there are and the average attendance. Below, each discipline with its number of
 students and lessons, its average attendance, and how many students are under
 50% attendance.
 
+"По студенти" switches the list to students (search, sort by name, lowest
+attendance or absences in a row). Opening a student shows their overall and
+per-discipline attendance, a week/month trend, absence streaks, late arrivals,
+early leaving, time in class, and how many more absences each discipline
+allows before dropping below 50%. Lesson start and end are the first and last
+scan of that lesson, so lateness is measured from the first scan.
+
 ### Teacher – Payments (Плащания)
 
 ![Payments view](docs/screenshots/teacher-payments.png)
