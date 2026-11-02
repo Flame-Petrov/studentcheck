@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="css/skeleton.css?v=1.0.0">
     <link rel="stylesheet" href="css/addStudentsDialog.css?v=1.0.0">
     <link rel="stylesheet" href="css/manageStudentsDialog.css?v=1.0.0">
+    <link rel="stylesheet" href="css/classOptionsDialog.css?v=1.0.0">
     <link rel="stylesheet" href="css/scannerDialog.css?v=1.0.0">
     <!-- Fetch the module graph in parallel instead of import-by-import -->
     <link rel="modulepreload" href="javascript/teacherHomepage.js">
@@ -414,6 +415,48 @@
                         <span id="addStudentManageLabel">Добави студенти</span>
                     </button>
                 </div>
+            </div>
+        </div>
+
+
+
+        <!-- Class options dialog. Static shell so it shows at once, filled from
+             the class list's state (javascript/features/classManagement.js). -->
+        <div class="overlay" id="classOptionsOverlay">
+            <div class="cod-dialog" role="dialog" aria-modal="true" aria-labelledby="classOptionsTitle" tabindex="-1">
+                <div class="cod-header">
+                    <h2 id="classOptionsTitle" class="cod-title">Опции на дисциплината</h2>
+                    <button type="button" id="closeClassOptionsBtn" class="cod-close" aria-label="Затвори">
+                        <svg class="tp-icon" aria-hidden="true"><use href="#tp-i-close"/></svg>
+                    </button>
+                </div>
+
+                <form class="cod-section" id="classOptionsRenameForm" novalidate>
+                    <label for="classOptionsNameInput" id="classOptionsNameLabel" class="cod-label">Име на дисциплината</label>
+                    <div class="cod-row">
+                        <!-- Skeleton covers the input only while class details load (same box) -->
+                        <div class="cod-field" id="classOptionsField">
+                            <input type="text" id="classOptionsNameInput" class="cod-input" autocomplete="off" spellcheck="false" aria-describedby="classOptionsError classOptionsLoadError">
+                            <span class="sk cod-skeleton" id="classOptionsNameSkeleton" aria-hidden="true" hidden></span>
+                        </div>
+                        <button type="submit" id="classOptionsSaveBtn" class="cod-rename" disabled>
+                            <span id="classOptionsSaveLabel">Преименувай</span>
+                        </button>
+                    </div>
+                    <p class="cod-error" id="classOptionsError" role="alert" hidden></p>
+                    <p class="cod-error" id="classOptionsLoadError" role="alert" hidden></p>
+                </form>
+
+                <hr class="cod-divider">
+
+                <section class="cod-section" aria-labelledby="classOptionsDeleteTitle">
+                    <h3 id="classOptionsDeleteTitle" class="cod-subtitle">Изтриване на дисциплината</h3>
+                    <p id="classOptionsDeleteText" class="cod-text">Дисциплината, списъкът със студенти и всички записани присъствия ще бъдат изтрити. Това не може да бъде отменено.</p>
+                    <button type="button" id="classOptionsDeleteBtn" class="cod-delete" disabled>
+                        <span id="classOptionsDeleteLabel">Изтрий дисциплината</span>
+                    </button>
+                    <p class="cod-error" id="classOptionsDeleteError" role="alert" hidden></p>
+                </section>
             </div>
         </div>
 

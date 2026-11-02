@@ -1,0 +1,315 @@
+/* "Опции на дисциплината" dialog (markup in teacherHomepage.html, logic in
+   javascript/features/classManagement.js). Loaded after teacherHomepage.css;
+   selectors are scoped to the overlay id so the older .class-options-popup
+   rules do not apply. Same visual language as css/addStudentsDialog.css. */
+
+#classOptionsOverlay.overlay {
+    z-index: 1002; /* above the discipline menu; the delete confirmation (1003) sits on top */
+    padding:
+        max(16px, env(safe-area-inset-top, 0px))
+        max(16px, env(safe-area-inset-right, 0px))
+        max(16px, env(safe-area-inset-bottom, 0px))
+        max(16px, env(safe-area-inset-left, 0px));
+    background: rgba(30, 41, 56, 0.5);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    box-sizing: border-box;
+}
+
+#classOptionsOverlay .cod-dialog {
+    width: 100%;
+    max-width: 480px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    padding: 24px;
+    background: var(--tp-surface, #fff);
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(8, 15, 31, 0.18), 0 2px 8px rgba(8, 15, 31, 0.06);
+    color: var(--tp-text, #080F1F);
+    font-family: var(--tp-font, inherit);
+    box-sizing: border-box;
+}
+
+#classOptionsOverlay .cod-dialog:focus {
+    outline: none;
+}
+
+#classOptionsOverlay .cod-dialog *,
+#classOptionsOverlay .cod-dialog *::before,
+#classOptionsOverlay .cod-dialog *::after {
+    box-sizing: border-box;
+}
+
+/* ---------- Header ---------- */
+
+#classOptionsOverlay .cod-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+#classOptionsOverlay #classOptionsTitle.cod-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: left;
+}
+
+#classOptionsOverlay .cod-close {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -8px -10px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--tp-muted, #747C89);
+    cursor: pointer;
+}
+
+#classOptionsOverlay .cod-close .tp-icon {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2;
+}
+
+#classOptionsOverlay .cod-close:hover {
+    background: #F1F5F8;
+    color: var(--tp-text, #080F1F);
+}
+
+/* ---------- Rename ---------- */
+
+#classOptionsOverlay .cod-section {
+    margin: 0;
+}
+
+#classOptionsOverlay .cod-label {
+    display: block;
+    margin: 0 0 8px;
+    color: var(--tp-text, #080F1F);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+#classOptionsOverlay .cod-row {
+    display: flex;
+    gap: 10px;
+}
+
+#classOptionsOverlay .cod-field {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 46px;
+}
+
+#classOptionsOverlay #classOptionsNameInput.cod-input {
+    display: block;
+    width: 100%;
+    height: 46px;
+    margin: 0;
+    padding: 0 14px;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--tp-text, #080F1F);
+    font: inherit;
+    font-size: 16px; /* no iOS zoom */
+    box-shadow: none;
+    outline: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+#classOptionsOverlay #classOptionsNameInput.cod-input:hover {
+    border-color: #C9D3DC;
+}
+
+#classOptionsOverlay #classOptionsNameInput.cod-input:focus {
+    border-color: var(--tp-green, #00A174);
+    box-shadow: var(--tp-focus-ring, 0 0 0 3px rgba(0, 161, 116, 0.32));
+}
+
+#classOptionsOverlay #classOptionsNameInput.cod-input[aria-invalid="true"] {
+    border-color: #D92D20;
+}
+
+#classOptionsOverlay #classOptionsNameInput.cod-input[readonly] {
+    background: #F7F9FB;
+    color: #3A4250;
+}
+
+/* Loading: the input keeps its box (invisible), the skeleton sits on top of it */
+#classOptionsOverlay .cod-field.is-loading #classOptionsNameInput.cod-input {
+    visibility: hidden;
+}
+
+#classOptionsOverlay .cod-skeleton {
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+}
+
+#classOptionsOverlay .cod-skeleton[hidden] {
+    display: none;
+}
+
+#classOptionsOverlay .cod-rename,
+#classOptionsOverlay .cod-delete {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    min-width: 132px;
+    height: 46px;
+    margin: 0;
+    padding: 0 18px;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+#classOptionsOverlay .cod-rename {
+    border: 0;
+    background: var(--tp-green, #00A174);
+    color: #fff;
+}
+
+#classOptionsOverlay .cod-rename:not(:disabled):hover {
+    background: var(--tp-green-hover, #00936A);
+}
+
+#classOptionsOverlay .cod-rename:not(:disabled):active {
+    background: var(--tp-green-pressed, #008460);
+}
+
+#classOptionsOverlay .cod-rename:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+#classOptionsOverlay .cod-rename[aria-busy="true"],
+#classOptionsOverlay .cod-delete[aria-busy="true"] {
+    opacity: 0.8;
+    cursor: progress;
+}
+
+#classOptionsOverlay .cod-error {
+    margin: 10px 0 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #FDECEC;
+    color: #B42318;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+#classOptionsOverlay .cod-error[hidden] {
+    display: none;
+}
+
+#classOptionsOverlay .cod-link {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--tp-green-pressed, #008460);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ---------- Delete ---------- */
+
+#classOptionsOverlay .cod-divider {
+    height: 1px;
+    margin: 24px 0;
+    border: 0;
+    background: var(--tp-border, #DFE6EC);
+}
+
+#classOptionsOverlay .cod-subtitle {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+#classOptionsOverlay .cod-text {
+    margin: 0 0 14px;
+    color: var(--tp-muted, #747C89);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+#classOptionsOverlay .cod-delete {
+    border: 1px solid #F1B5AF;
+    background: #fff;
+    color: #B42318;
+}
+
+#classOptionsOverlay .cod-delete:not(:disabled):hover {
+    border-color: #D92D20;
+    background: #FEF3F2;
+}
+
+#classOptionsOverlay .cod-delete:not(:disabled):active {
+    background: #FDE3E0;
+}
+
+#classOptionsOverlay .cod-delete:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#classOptionsOverlay .cod-delete[aria-busy="true"] {
+    opacity: 0.8;
+}
+
+/* Shared hover scaling off: these controls animate colour instead */
+body.tp-app #classOptionsOverlay button:not(:disabled):hover,
+body.tp-app #classOptionsOverlay button:not(:disabled):active {
+    transform: none !important;
+}
+
+body.tp-app #classOptionsOverlay :is(.cod-close, .cod-rename, .cod-delete, .cod-link):focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+body.tp-app #classOptionsOverlay .cod-delete:focus-visible {
+    outline-color: #D92D20;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 479.98px) {
+    #classOptionsOverlay.overlay {
+        padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    }
+
+    #classOptionsOverlay .cod-dialog {
+        max-height: calc(100dvh - 24px);
+        padding: 20px;
+        border-radius: 18px;
+    }
+
+    #classOptionsOverlay #classOptionsTitle.cod-title { font-size: 20px; }
+
+    /* Input on its own line, full-width buttons: nothing squeezed or hidden */
+    #classOptionsOverlay .cod-row { flex-direction: column; }
+    #classOptionsOverlay .cod-rename,
+    #classOptionsOverlay .cod-delete { width: 100%; }
+}

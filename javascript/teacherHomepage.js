@@ -39,7 +39,7 @@ import { getStoredClassesMap, saveClassesMap, getClassIdByNameFromStorage } from
 import { loadClassStudentsFromStorage, addNewStudentsToStorage } from './storage/studentStorage.js';
 import { renderClassItem, updateClassStatusUI, attachNewClassButtonBehavior, ensureClassesContainerVisible } from './ui/classUI.js';
 import { openClassCreationWizard, closeClassCreationWizard } from './features/classCreation.js';
-import { openClassOptionsOverlay, closeClassOptionsOverlay, renameClass, deleteClass } from './features/classManagement.js';
+import { openClassOptionsOverlay, closeClassOptionsOverlay, renameClass, deleteClass, syncClassOptionsWithList } from './features/classManagement.js';
 import { openManageStudentsOverlay, openStudentInfoOverlay, openAddStudentsToClass, finalizeAddStudentsToClass, closeAllClassOverlays } from './features/studentManagement.js';
 import { openScannerOverlay, closeScanner, setScanMode } from './features/scanner.js';
 import {
@@ -122,6 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (view !== 'classes') return;
         // A route change must not leave dialogs of the old view on top
         if (typeof closeReadyClassPopup === 'function') closeReadyClassPopup();
+        if (getOverlay('classOptionsOverlay')?.style.visibility === 'visible') closeClassOptionsOverlay({ restoreFocus: false });
         const scanner = getOverlay('scannerOverlay');
         if (scanner && scanner.style.visibility === 'visible') {
             // Keep the scan as a draft and release the camera
@@ -306,7 +307,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         onOptions: (d) => {
             selectDiscipline(d);
-            openClassOptionsOverlay(d.name);
+            // id + name come from the class list: the dialog opens filled in
+            openClassOptionsOverlay(d.name, { classId: d.id, opener: findCardById(d.id) });
         },
     });
 
@@ -612,6 +614,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 attachUnreadyDeleteLongPress(b);
             });
             updateClassDraftBadges();
+            // A refreshed list may carry a name changed elsewhere
+            syncClassOptionsWithList();
         }
     });
     applyView(viewFromLocation());
