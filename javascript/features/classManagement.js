@@ -21,6 +21,7 @@ import {
 } from '../state/appState.js';
 import { updateClassStatusUI, setClassButtonLabel } from '../ui/classUI.js';
 import { renameCachedClass, removeCachedClass } from '../data/classesStore.js';
+import { renameManageStudentsDialog } from './manageStudentsDialog.js';
 import { toast as uiToast } from '../ui/toast.js';
 import { openConfirmOverlay, showOverlay, hideOverlay, getOverlay } from '../ui/overlays.js';
 import { getActiveClassName, getRawClassNameFromButton } from '../utils/helpers.js';
@@ -207,6 +208,7 @@ export function renameClass(oldName, newName) {
         updateClassStatusUI(btn);
     }
     renameCachedClass(from, to);
+    renameManageStudentsDialog(from, to);
     
     const current = getCurrentClass();
     if (current.name === from) {
@@ -227,7 +229,9 @@ export function renameClass(oldName, newName) {
     const manageTitle = document.getElementById('manageStudentsTitle');
     const manageStudentsOverlay = getOverlay('manageStudentsOverlay');
     if (manageTitle && manageStudentsOverlay && isOverlayVisible(manageStudentsOverlay)) {
-        manageTitle.textContent = i18nText('students', 'Students');
+        // The title stays "Управление на студенти"; the course name is the subtitle
+        const manageSubtitle = document.getElementById('manageStudentsClassName');
+        if (manageSubtitle) manageSubtitle.textContent = to;
     }
     
     const scannerTitle = document.getElementById('scannerTitle');

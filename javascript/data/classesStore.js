@@ -44,6 +44,7 @@ export function readCachedClasses() {
 /** Statistics depend on classes, rosters and attendance: drop them after a change. */
 export function invalidateStatistics() {
     invalidateCache(cacheKey(teacherScope(), 'statistics'));
+    invalidateCache(cacheKey(teacherScope(), 'statistics-students'));
 }
 
 export function upsertCachedClass({ id, name }) {

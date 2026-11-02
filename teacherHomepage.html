@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="css/billing.css?v=2.1.0">
     <link rel="stylesheet" href="css/skeleton.css?v=1.0.0">
     <link rel="stylesheet" href="css/addStudentsDialog.css?v=1.0.0">
+    <link rel="stylesheet" href="css/manageStudentsDialog.css?v=1.0.0">
     <link rel="stylesheet" href="css/scannerDialog.css?v=1.0.0">
     <!-- Fetch the module graph in parallel instead of import-by-import -->
     <link rel="modulepreload" href="javascript/teacherHomepage.js">
@@ -40,6 +41,7 @@
     <link rel="modulepreload" href="javascript/features/studentStats.js">
     <link rel="modulepreload" href="javascript/features/classesView.js">
     <link rel="modulepreload" href="javascript/features/studentManagement.js">
+    <link rel="modulepreload" href="javascript/features/manageStudentsDialog.js">
     <link rel="modulepreload" href="javascript/features/attendance.js">
     <link rel="modulepreload" href="javascript/features/classCreation.js">
     <link rel="modulepreload" href="javascript/features/classManagement.js">
@@ -316,60 +318,101 @@
 
 
 
-        <!-- Manage Students Overlay -->
+        <!-- Manage students dialog. The shell (title, search, filters, column
+             headings, footer) and skeleton rows are static so they show at once;
+             javascript/features/manageStudentsDialog.js fills the table. -->
         <div class="overlay" id="manageStudentsOverlay">
-            <div class="ready-class-popup" role="dialog" aria-modal="true" aria-labelledby="manageStudentsTitle">
-                <div class="overlay-top-bar">
-                    <h2 id="manageStudentsTitle">Students</h2>
-                    <button type="button" id="closeManageOverlayBtn" class="close-small" aria-label="Close">×</button>
-                </div>
-                <div class="top-section-search-bar-reset-filters">
-                    <input type="text" id="manageStudentsSearchInput" placeholder="Search by name, email, or faculty number..." aria-label="Search students" />
-                    <button type="button" id="manageStudentsFilterBtn" class="reset-filters-button" aria-label="Filter students">Filter</button>
-                </div>
-                <div id="manageFilterPanel" class="manage-filter-panel hidden">
-                    <div class="manage-filter-grid">
-                        <select class="filter-select" id="manageFilterLevel" aria-label="Level">
-                            <option value="" selected>Level</option>
-                            <option value="bachelor">Bachelor</option>
-                            <option value="master">Master</option>
-                            <option value="phd">PhD</option>
-                        </select>
-                        <select class="filter-select" id="manageFilterFaculty" aria-label="Faculty">
-                            <option value="" selected>Faculty</option>
-                            <option value="Economics">Economics</option>
-                        </select>
-                        <select class="filter-select" id="manageFilterSpecialization" aria-label="Specialization">
-                            <option value="" selected>Specialization</option>
-                            <option value="Business Management">Business Management</option>
-                            <option value="Business Management 1">Business Management 1</option>
-                            <option value="Business Management 2">Business Management 2</option>
-                            <option value="Business Management in English">Business Management in English</option>
-                            <option value="Electricity Management">Electricity Management</option>
-                            <option value="Industrial Management">Industrial Management</option>
-                            <option value="Industrial Management in English">Industrial Management in English</option>
-                            <option value="Intellectual Property and Innovation">Intellectual Property and Innovation</option>
-                            <option value="Management and Business Information Systems">Management and Business Information Systems</option>
-                            <option value="Senior Management">Senior Management</option>
-                        </select>
-                        <select class="filter-select" id="manageFilterGroup" aria-label="Group">
-                            <option value="" selected>Group</option>
-                            <option value="37">37</option>
-                            <option value="38">38</option>
-                            <option value="39">39</option>
-                            <option value="40">40</option>
-                            <option value="41">41</option>
-                            <option value="42">42</option>
-                        </select>
+            <div class="msd-dialog" role="dialog" aria-modal="true" aria-labelledby="manageStudentsTitle" aria-describedby="manageStudentsClassName" tabindex="-1">
+                <div class="msd-header">
+                    <div class="msd-heading">
+                        <h2 id="manageStudentsTitle" class="msd-title">Управление на студенти</h2>
+                        <p id="manageStudentsClassName" class="msd-desc"></p>
                     </div>
-                    <div class="manage-filter-footer">
-                        <button type="button" id="manageFilterResetBtn" class="reset-filters-button">Reset Filters</button>
-                    </div>
+                    <button type="button" id="closeManageOverlayBtn" class="msd-close" aria-label="Затвори">
+                        <svg class="tp-icon" aria-hidden="true"><use href="#tp-i-close"/></svg>
+                    </button>
                 </div>
-                <div id="manageStudentsList" class="manage-students-list"></div>
-                <div class="manage-footer-actions">
-                    <button type="button" id="backToReadyBtn" class="role-button">Back</button>
-                    <button type="button" id="addStudentManageBtn" class="role-button" aria-label="Add Students">Add Students</button>
+
+                <div class="msd-tools">
+                    <div class="msd-search">
+                        <svg class="tp-icon msd-search-icon" aria-hidden="true"><use href="#tp-i-search"/></svg>
+                        <input type="search" id="manageStudentsSearchInput" class="msd-search-input" placeholder="Име, имейл или фак. номер" aria-label="Търси студент" autocomplete="off" spellcheck="false" aria-controls="manageStudentsTable">
+                    </div>
+                    <button type="button" id="manageStudentsFilterBtn" class="msd-filter-toggle" aria-expanded="false" aria-controls="manageFilterPanel" aria-label="Филтри">
+                        <svg class="tp-icon" aria-hidden="true"><use href="#tp-i-filter"/></svg>
+                        <span id="manageStudentsFilterLabel">Филтри</span>
+                    </button>
+                </div>
+                <div class="msd-filters" id="manageFilterPanel" hidden>
+                    <select class="filter-select" id="manageFilterLevel" aria-label="Level">
+                        <option value="" selected>Level</option>
+                        <option value="bachelor">Bachelor</option>
+                        <option value="master">Master</option>
+                        <option value="phd">PhD</option>
+                    </select>
+                    <select class="filter-select" id="manageFilterFaculty" aria-label="Faculty">
+                        <option value="" selected>Faculty</option>
+                        <option value="Economics">Economics</option>
+                    </select>
+                    <select class="filter-select" id="manageFilterSpecialization" aria-label="Specialization">
+                        <option value="" selected>Specialization</option>
+                        <option value="Business Management">Business Management</option>
+                        <option value="Business Management 1">Business Management 1</option>
+                        <option value="Business Management 2">Business Management 2</option>
+                        <option value="Business Management in English">Business Management in English</option>
+                        <option value="Electricity Management">Electricity Management</option>
+                        <option value="Industrial Management">Industrial Management</option>
+                        <option value="Industrial Management in English">Industrial Management in English</option>
+                        <option value="Intellectual Property and Innovation">Intellectual Property and Innovation</option>
+                        <option value="Management and Business Information Systems">Management and Business Information Systems</option>
+                        <option value="Senior Management">Senior Management</option>
+                    </select>
+                    <select class="filter-select" id="manageFilterGroup" aria-label="Group">
+                        <option value="" selected>Group</option>
+                        <option value="37">37</option>
+                        <option value="38">38</option>
+                        <option value="39">39</option>
+                        <option value="40">40</option>
+                        <option value="41">41</option>
+                        <option value="42">42</option>
+                    </select>
+                    <button type="button" id="manageFilterResetBtn" class="msd-reset">Нулирай</button>
+                </div>
+
+                <!-- Attendance failed but the roster is shown: totals unavailable + Retry -->
+                <p class="msd-att-error" id="manageAttendanceError" role="alert" hidden></p>
+
+                <!-- Only this region scrolls; header, column headings and footer stay visible -->
+                <div id="manageStudentsList" class="msd-scroll" aria-busy="true">
+                    <table class="msd-table" id="manageStudentsTable" aria-labelledby="manageStudentsTitle" aria-describedby="manageStudentsClassName">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="msd-th msd-th--name" id="manageColStudent">Студент</th>
+                                <th scope="col" class="msd-th msd-th--fn" id="manageColFn">Факултетен номер</th>
+                                <th scope="col" class="msd-th msd-th--att" id="manageColAtt">Присъствия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manageStudentsRows">
+                            <tr class="msd-row msd-row--skel" aria-hidden="true"><td class="msd-cell msd-cell--name"><span class="sk msd-sk msd-sk--name" style="--sk-w:62%"></span></td><td class="msd-cell msd-cell--fn"><span class="sk msd-sk msd-sk--fn" style="--sk-w:58%"></span></td><td class="msd-cell msd-cell--att"><span class="sk msd-sk msd-sk--att"></span></td></tr>
+                            <tr class="msd-row msd-row--skel" aria-hidden="true"><td class="msd-cell msd-cell--name"><span class="sk msd-sk msd-sk--name" style="--sk-w:48%"></span></td><td class="msd-cell msd-cell--fn"><span class="sk msd-sk msd-sk--fn" style="--sk-w:64%"></span></td><td class="msd-cell msd-cell--att"><span class="sk msd-sk msd-sk--att"></span></td></tr>
+                            <tr class="msd-row msd-row--skel" aria-hidden="true"><td class="msd-cell msd-cell--name"><span class="sk msd-sk msd-sk--name" style="--sk-w:70%"></span></td><td class="msd-cell msd-cell--fn"><span class="sk msd-sk msd-sk--fn" style="--sk-w:52%"></span></td><td class="msd-cell msd-cell--att"><span class="sk msd-sk msd-sk--att"></span></td></tr>
+                            <tr class="msd-row msd-row--skel" aria-hidden="true"><td class="msd-cell msd-cell--name"><span class="sk msd-sk msd-sk--name" style="--sk-w:54%"></span></td><td class="msd-cell msd-cell--fn"><span class="sk msd-sk msd-sk--fn" style="--sk-w:60%"></span></td><td class="msd-cell msd-cell--att"><span class="sk msd-sk msd-sk--att"></span></td></tr>
+                            <tr class="msd-row msd-row--skel" aria-hidden="true"><td class="msd-cell msd-cell--name"><span class="sk msd-sk msd-sk--name" style="--sk-w:44%"></span></td><td class="msd-cell msd-cell--fn"><span class="sk msd-sk msd-sk--fn" style="--sk-w:56%"></span></td><td class="msd-cell msd-cell--att"><span class="sk msd-sk msd-sk--att"></span></td></tr>
+                        </tbody>
+                    </table>
+                    <p class="sk-status-text" id="manageStudentsStatus" role="status">Зареждане на студентите…</p>
+                    <!-- Empty course / no matches / load error -->
+                    <div class="msd-state" id="manageStudentsState" hidden></div>
+                </div>
+                <p class="tp-visually-hidden" id="manageStudentsCount" role="status" aria-live="polite"></p>
+                <p class="sk-stale msd-stale" id="manageStudentsStale" hidden></p>
+
+                <div class="msd-footer">
+                    <button type="button" id="backToReadyBtn" class="tp-btn-secondary msd-back">Назад</button>
+                    <button type="button" id="addStudentManageBtn" class="tp-btn-primary msd-add">
+                        <svg class="tp-icon tp-btn-icon" aria-hidden="true"><use href="#tp-i-plus"/></svg>
+                        <span id="addStudentManageLabel">Добави студенти</span>
+                    </button>
                 </div>
             </div>
         </div>

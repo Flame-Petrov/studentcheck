@@ -1,0 +1,571 @@
+/* "Управление на студенти" dialog (markup in teacherHomepage.html, logic in
+   javascript/features/manageStudentsDialog.js). Loaded after teacherHomepage.css;
+   selectors are scoped to the overlay id so older #manageStudentsOverlay rules
+   do not apply. Same visual language as css/addStudentsDialog.css.
+
+   Stable layout: the dialog has a fixed height (not content-sized), the table
+   uses fixed column widths, and skeleton rows share the real rows' box (row
+   height, padding, separators), so nothing moves when data arrives. */
+
+#manageStudentsOverlay.overlay {
+    padding:
+        max(16px, env(safe-area-inset-top, 0px))
+        max(16px, env(safe-area-inset-right, 0px))
+        max(16px, env(safe-area-inset-bottom, 0px))
+        max(16px, env(safe-area-inset-left, 0px));
+    background: rgba(30, 41, 56, 0.5);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    box-sizing: border-box;
+}
+
+#manageStudentsOverlay .msd-dialog {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 680px;
+    height: min(680px, calc(100dvh - 32px));
+    overflow: hidden;
+    background: var(--tp-surface, #fff);
+    border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(8, 15, 31, 0.18), 0 2px 8px rgba(8, 15, 31, 0.06);
+    color: var(--tp-text, #080F1F);
+    font-family: var(--tp-font, inherit);
+    box-sizing: border-box;
+}
+
+#manageStudentsOverlay .msd-dialog:focus {
+    outline: none;
+}
+
+#manageStudentsOverlay .msd-dialog *,
+#manageStudentsOverlay .msd-dialog *::before,
+#manageStudentsOverlay .msd-dialog *::after {
+    box-sizing: border-box;
+}
+
+/* ---------- Header ---------- */
+
+#manageStudentsOverlay .msd-header {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 24px 24px 0;
+}
+
+#manageStudentsOverlay .msd-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#manageStudentsOverlay #manageStudentsTitle.msd-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: left;
+}
+
+#manageStudentsOverlay .msd-desc {
+    margin: 4px 0 0;
+    color: var(--tp-muted, #747C89);
+    font-size: 14px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+#manageStudentsOverlay .msd-desc:empty {
+    display: none;
+}
+
+#manageStudentsOverlay .msd-close {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -8px -10px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--tp-muted, #747C89);
+    cursor: pointer;
+}
+
+#manageStudentsOverlay .msd-close .tp-icon {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2;
+}
+
+#manageStudentsOverlay .msd-close:hover {
+    background: #F1F5F8;
+    color: var(--tp-text, #080F1F);
+}
+
+/* ---------- Search + filters ---------- */
+
+#manageStudentsOverlay .msd-tools {
+    display: flex;
+    flex: none;
+    gap: 10px;
+    padding: 18px 24px 12px;
+}
+
+#manageStudentsOverlay .msd-search {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#manageStudentsOverlay .msd-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    width: 20px;
+    height: 20px;
+    transform: translateY(-50%);
+    color: var(--tp-muted, #747C89);
+    stroke-width: 1.8;
+    pointer-events: none;
+}
+
+#manageStudentsOverlay #manageStudentsSearchInput.msd-search-input {
+    display: block;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    padding: 0 12px 0 40px;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 12px;
+    background: #F7F9FB;
+    color: var(--tp-text, #080F1F);
+    font: inherit;
+    font-size: 16px; /* no iOS zoom */
+    box-shadow: none;
+    outline: none;
+    text-overflow: ellipsis;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+#manageStudentsOverlay #manageStudentsSearchInput.msd-search-input:hover {
+    border-color: #C9D3DC;
+}
+
+#manageStudentsOverlay #manageStudentsSearchInput.msd-search-input:focus {
+    border-color: var(--tp-green, #00A174);
+    background: #fff;
+    box-shadow: var(--tp-focus-ring, 0 0 0 3px rgba(0, 161, 116, 0.32));
+}
+
+#manageStudentsOverlay .msd-filter-toggle {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--tp-text, #080F1F);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* An older rule in teacherHomepage.css adds a caret to this button id */
+#manageStudentsOverlay #manageStudentsFilterBtn.msd-filter-toggle::after {
+    content: none;
+    display: none;
+}
+
+#manageStudentsOverlay .msd-filter-toggle .tp-icon {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+}
+
+#manageStudentsOverlay .msd-filter-toggle:hover {
+    background: #F7F9FB;
+    border-color: #C9D3DC;
+}
+
+#manageStudentsOverlay .msd-filter-toggle[aria-expanded="true"],
+#manageStudentsOverlay .msd-filter-toggle.has-filters {
+    border-color: var(--tp-green, #00A174);
+    background: var(--tp-green-tint, #ECF9F4);
+    color: var(--tp-green-pressed, #008460);
+}
+
+#manageStudentsOverlay .msd-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    flex: none;
+    padding: 0 24px 12px;
+}
+
+#manageStudentsOverlay .msd-filters[hidden] {
+    display: none;
+}
+
+#manageStudentsOverlay .msd-filters .filter-select {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    margin: 0;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 10px;
+    background-color: #fff;
+    font: inherit;
+    font-size: 14px;
+}
+
+#manageStudentsOverlay .msd-reset {
+    grid-column: 1 / -1;
+    justify-self: end;
+    height: 36px;
+    margin: 0;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--tp-green-pressed, #008460);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#manageStudentsOverlay .msd-reset:hover {
+    background: var(--tp-green-tint, #ECF9F4);
+}
+
+/* Attendance unavailable: one line above the table, with Retry */
+#manageStudentsOverlay .msd-att-error {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    margin: 0 24px 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #FFF6E5;
+    color: #8A4B08;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+#manageStudentsOverlay .msd-att-error[hidden] {
+    display: none;
+}
+
+#manageStudentsOverlay .msd-inline-retry {
+    height: 30px;
+    margin: 0;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--tp-green-pressed, #008460);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#manageStudentsOverlay .msd-inline-retry:hover {
+    background: var(--tp-green-tint, #ECF9F4);
+}
+
+/* ---------- Table (the only scrolling region) ---------- */
+
+#manageStudentsOverlay .msd-scroll {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    border-top: 1px solid var(--tp-border, #DFE6EC);
+    border-bottom: 1px solid var(--tp-border, #DFE6EC);
+}
+
+#manageStudentsOverlay .msd-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+#manageStudentsOverlay .msd-table[hidden] {
+    display: none;
+}
+
+/* Column widths live on the header cells (fixed layout reads the first row),
+   so hiding the faculty-number column on phones really leaves two columns */
+#manageStudentsOverlay .msd-th--name { width: 48%; }
+#manageStudentsOverlay .msd-th--fn { width: 30%; }
+#manageStudentsOverlay .msd-th--att { width: 22%; }
+
+#manageStudentsOverlay .msd-th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    height: 40px;
+    padding: 0 12px;
+    background: #F7F9FB;
+    border-bottom: 1px solid var(--tp-border, #DFE6EC);
+    color: var(--tp-muted, #747C89);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#manageStudentsOverlay .msd-th--name { padding-left: 24px; }
+#manageStudentsOverlay .msd-th--att { padding-right: 24px; text-align: right; }
+
+/* Real rows and skeleton rows: same box */
+#manageStudentsOverlay .msd-row > td {
+    height: 60px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #EEF2F5;
+    vertical-align: middle;
+}
+
+#manageStudentsOverlay .msd-row > td.msd-cell--name { padding-left: 24px; }
+#manageStudentsOverlay .msd-row > td.msd-cell--att { padding-right: 24px; text-align: right; }
+
+#manageStudentsOverlay .msd-row:not(.msd-row--skel) {
+    cursor: pointer;
+    transition: background-color 120ms ease;
+}
+
+#manageStudentsOverlay .msd-row:not(.msd-row--skel):hover {
+    background: #F7F9FB;
+}
+
+#manageStudentsOverlay .msd-row--skel {
+    pointer-events: none;
+}
+
+#manageStudentsOverlay .msd-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--tp-text, #080F1F);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+#manageStudentsOverlay .msd-name:focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+
+#manageStudentsOverlay .msd-name-text {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+/* Faculty number under the name: only on narrow screens (column hidden there) */
+#manageStudentsOverlay .msd-sub {
+    display: none;
+    color: var(--tp-muted, #747C89);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+#manageStudentsOverlay .msd-cell--fn {
+    color: #3A4250;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+#manageStudentsOverlay .msd-att {
+    color: var(--tp-text, #080F1F);
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+#manageStudentsOverlay .msd-att--na {
+    color: var(--tp-muted, #747C89);
+    font-weight: 500;
+}
+
+/* Skeleton bars (decorative; aria-hidden in the markup) */
+#manageStudentsOverlay .msd-sk {
+    height: 13px;
+    border-radius: 999px;
+}
+
+#manageStudentsOverlay .msd-sk--name { width: var(--sk-w, 60%); height: 14px; }
+#manageStudentsOverlay .msd-sk--fn { width: var(--sk-w, 60%); }
+#manageStudentsOverlay .msd-sk--att { width: 56px; max-width: 100%; margin-left: auto; }
+
+/* ---------- Empty / no results / error ---------- */
+
+#manageStudentsOverlay .msd-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 24px;
+    text-align: center;
+}
+
+#manageStudentsOverlay .msd-state[hidden] {
+    display: none;
+}
+
+#manageStudentsOverlay .msd-state-text {
+    max-width: 360px;
+    margin: 0;
+    color: var(--tp-muted, #747C89);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+#manageStudentsOverlay .msd-state-action {
+    height: 40px;
+    margin: 0;
+    padding: 0 16px;
+    border: 1px solid var(--tp-border, #DFE6EC);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--tp-green-pressed, #008460);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#manageStudentsOverlay .msd-state-action:hover {
+    background: var(--tp-green-tint, #ECF9F4);
+    border-color: var(--tp-green, #00A174);
+}
+
+#manageStudentsOverlay .msd-state .sk-error {
+    width: 100%;
+    margin: 0;
+}
+
+#manageStudentsOverlay .msd-stale {
+    flex: none;
+    margin: 8px 24px 0;
+}
+
+/* ---------- Footer ---------- */
+
+#manageStudentsOverlay .msd-footer {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 24px 20px;
+}
+
+#manageStudentsOverlay .msd-back,
+#manageStudentsOverlay .msd-add {
+    width: auto;
+    min-width: 0;
+    height: 44px;
+    padding: 0 18px;
+    font-size: 15px;
+}
+
+#manageStudentsOverlay #addStudentManageBtn.msd-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    background: var(--tp-green, #00A174);
+    color: #fff;
+}
+
+#manageStudentsOverlay #addStudentManageBtn.msd-add .tp-icon {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.2;
+}
+
+#manageStudentsOverlay #addStudentManageBtn.msd-add:hover {
+    background: var(--tp-green-hover, #00936A);
+}
+
+#manageStudentsOverlay #addStudentManageBtn.msd-add:active {
+    background: var(--tp-green-pressed, #008460);
+}
+
+/* Shared hover scaling off: these controls animate colour instead */
+body.tp-app #manageStudentsOverlay :is(button):not(:disabled):hover,
+body.tp-app #manageStudentsOverlay :is(button):not(:disabled):active {
+    transform: none !important;
+}
+
+body.tp-app #manageStudentsOverlay :is(.msd-close, .msd-filter-toggle, .msd-reset, .msd-state-action, .msd-inline-retry):focus-visible {
+    outline: 2px solid var(--tp-green, #00A174);
+    outline-offset: 2px;
+}
+
+/* ---------- Narrow screens: two columns (faculty number under the name) ---------- */
+
+@media (max-width: 559.98px) {
+    #manageStudentsOverlay.overlay {
+        padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+    }
+
+    #manageStudentsOverlay .msd-dialog {
+        height: calc(100dvh - 24px);
+        border-radius: 18px;
+    }
+
+    #manageStudentsOverlay .msd-header { padding: 20px 20px 0; }
+    #manageStudentsOverlay #manageStudentsTitle.msd-title { font-size: 20px; }
+    #manageStudentsOverlay .msd-tools { padding: 14px 20px 10px; }
+    #manageStudentsOverlay .msd-filters { padding: 0 20px 10px; grid-template-columns: minmax(0, 1fr); }
+    #manageStudentsOverlay .msd-att-error { margin: 0 20px 10px; }
+    #manageStudentsOverlay .msd-filter-toggle span { display: none; }
+    /* the typed text stays 16px (no iOS zoom); the hint fits the narrow field */
+    #manageStudentsOverlay #manageStudentsSearchInput.msd-search-input::placeholder { font-size: 14px; }
+    #manageStudentsOverlay .msd-filter-toggle { width: 44px; justify-content: center; padding: 0; }
+
+    #manageStudentsOverlay .msd-th--name { width: 60%; }
+    #manageStudentsOverlay .msd-th--att { width: 40%; padding-left: 4px; }
+    #manageStudentsOverlay .msd-th--fn,
+    #manageStudentsOverlay .msd-cell--fn { display: none; }
+    #manageStudentsOverlay .msd-sub { display: block; }
+
+    #manageStudentsOverlay .msd-th--name,
+    #manageStudentsOverlay .msd-row > td.msd-cell--name { padding-left: 20px; }
+    #manageStudentsOverlay .msd-th--att,
+    #manageStudentsOverlay .msd-row > td.msd-cell--att { padding-right: 20px; }
+    #manageStudentsOverlay .msd-row > td { height: 64px; }
+
+    #manageStudentsOverlay .msd-footer { gap: 8px; padding: 14px 20px 16px; }
+    #manageStudentsOverlay .msd-back,
+    #manageStudentsOverlay .msd-add { padding: 0 14px; }
+}

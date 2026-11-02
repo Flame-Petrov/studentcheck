@@ -22,12 +22,24 @@ export function hasStoredRoster(className) {
     return Array.isArray(loadClassStudentsFromStorage(className));
 }
 
-export function ensureRoster(classId, className, { maxAgeMs = ROSTER_MAX_AGE_MS } = {}) {
+/**
+ * @param {object} [opts]
+ * @param {number} [opts.maxAgeMs] - a stored roster younger than this is used as is
+ * @param {boolean} [opts.rethrow] - reject on a failed fetch even when a stored
+ *   roster exists (callers that show it already and want to flag a failed refresh)
+ */
+export function ensureRoster(classId, className, { maxAgeMs = ROSTER_MAX_AGE_MS, rethrow = false } = {}) {
     const id = String(classId || '');
     if (!id || !className) return Promise.resolve(loadClassStudentsFromStorage(className) || []);
     const stored = loadClassStudentsFromStorage(className);
     if (stored && Date.now() - (fetchedAt.get(id) || 0) < maxAgeMs) return Promise.resolve(stored);
-    if (inflight.has(id)) return inflight.get(id);
+    if (inflight.has(id)) {
+        const shared = inflight.get(id);
+        return rethrow ? shared.then((list) => list) : shared.catch((error) => {
+            if (stored) return stored;
+            throw error;
+        });
+    }
 
     const promise = fetchClassStudents(id, className)
         .then((students) => {
@@ -36,13 +48,14 @@ export function ensureRoster(classId, className, { maxAgeMs = ROSTER_MAX_AGE_MS 
             setClassReady(className, list.length > 0);
             return list;
         })
-        .catch((error) => {
-            if (stored) return stored; // keep working with what we have
-            throw error;
-        })
         .finally(() => inflight.delete(id));
     inflight.set(id, promise);
-    return promise;
+    if (rethrow) return promise;
+    // keep working with what we have
+    return promise.catch((error) => {
+        if (stored) return stored;
+        throw error;
+    });
 }
 
 export function prefetchRoster(classId, className) {
