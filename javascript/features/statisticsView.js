@@ -15,6 +15,11 @@
  * rate per discipline, trend by week/month, absence streaks, lateness, early
  * leaving, time in class and the distance to the 50% threshold.
  *
+ * A discipline's own page (#statistics/class/<id>, opened from its row) uses
+ * the same per-student data: average attendance (same formula as the row),
+ * students below 50%, attendance per lesson, trend, and its students (each
+ * linking to the student's page).
+ *
  * Same loading rules as the rest of the app: static skeleton in the HTML,
  * cached result shown at once and refreshed when stale, inline error + Retry
  * on a first-load failure, discreet note when a background refresh fails.
@@ -35,6 +40,7 @@ const CONCURRENCY = 4;
 const MODE_KEY = 'tp.stats.mode';
 const TREND_UNIT_KEY = 'tp.stats.trendUnit';
 const DETAIL_PREFIX = '#statistics/student/';
+const CLASS_PREFIX = '#statistics/class/';
 
 function t(key, fallback) {
     const value = window.i18n?.t?.(key);
@@ -174,6 +180,16 @@ function countText(n, oneKey, oneFallback, manyKey, manyFallback) {
     return (n === 1 ? t(oneKey, oneFallback) : t(manyKey, manyFallback)).replace('{n}', String(n));
 }
 
+function chevronIcon() {
+    const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    chevron.setAttribute('class', 'tp-icon tp-stats-chevron');
+    chevron.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', '#tp-i-chevron-right');
+    chevron.appendChild(use);
+    return chevron;
+}
+
 /** "46%" + bar, the figure used by every row. */
 function rateFigure(rate, label) {
     const figure = el('div', 'tp-stats-figure');
@@ -234,13 +250,13 @@ function bind() {
         });
     }
     els.studentList?.addEventListener('click', onStudentLinkClick);
+    els.list?.addEventListener('click', onClassLinkClick);
+    els.detail?.addEventListener('click', onDetailLinkClick);
 
     document.addEventListener('app:languagechange', () => {
         if (lastData) render(lastData);
-        if (studentStats) {
-            renderStudentList();
-            if (detailId !== null) renderDetail(detailId);
-        }
+        if (studentStats) renderStudentList();
+        if (detail) renderCurrentDetail();
     });
 }
 
@@ -255,8 +271,11 @@ function render(data) {
     const fragment = document.createDocumentFragment();
     classes.forEach((c) => {
         const average = c.possible > 0 ? Math.round((c.attended / c.possible) * 100) : null;
-        const li = el('li', 'tp-stats-row');
+        const li = el('li');
         li.dataset.classId = c.id;
+        const link = el('a', 'tp-stats-row tp-stats-row--link');
+        link.href = `${CLASS_PREFIX}${c.id}`;
+        link.dataset.classLink = c.id;
 
         const main = el('div', 'tp-stats-main');
         main.append(
@@ -271,7 +290,8 @@ function render(data) {
             figure.appendChild(el('span', 'tp-stats-note', t('tp_stats_no_lessons', 'Няма проведени занятия')));
         }
 
-        li.append(main, figure);
+        link.append(main, figure, chevronIcon());
+        li.appendChild(link);
         fragment.appendChild(li);
     });
     els.list.replaceChildren(fragment);
@@ -377,7 +397,7 @@ function loadStudents({ force = false } = {}) {
 
 function onStudentsReady() {
     renderStudentList();
-    if (detailId !== null) renderDetail(detailId);
+    if (detail) renderCurrentDetail();
 }
 
 function onStudentsError(error) {
@@ -389,7 +409,7 @@ function onStudentsError(error) {
     const retry = () => {
         hideStaleNote(els.studentsStale);
         if (!studentsRendered) showSkeletonRows(els.studentList, { count: 3 });
-        if (detailId !== null && !studentStats) renderDetailLoading();
+        if (detail && !studentStats) renderDetailLoading();
         loadStudents({ force: true });
     };
     if (studentsRendered) {
@@ -400,7 +420,7 @@ function onStudentsError(error) {
     els.studentsLoading = null;
     const message = t('tp_stats_students_error', 'Неуспешно зареждане на студентите.');
     showLoadError(els.studentList, message, retry);
-    if (detailId !== null) {
+    if (detail) {
         els.detail.replaceChildren(backButton());
         const box = el('div');
         els.detail.appendChild(box);
@@ -456,14 +476,7 @@ function studentRow(s) {
         if (flags.length) figure.appendChild(el('span', 'tp-stats-low tp-stats-flags', flags.join(' · ')));
     }
 
-    const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    chevron.setAttribute('class', 'tp-icon tp-stats-chevron');
-    chevron.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-    use.setAttribute('href', '#tp-i-chevron-right');
-    chevron.appendChild(use);
-
-    link.append(main, figure, chevron);
+    link.append(main, figure, chevronIcon());
     li.appendChild(link);
     return li;
 }
@@ -492,10 +505,13 @@ function renderStudentList() {
     }
 }
 
+function plainClick(event) {
+    return !(event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey);
+}
+
 function onStudentLinkClick(event) {
     const link = event.target.closest('a[data-student-id]');
-    if (!link) return;
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!link || !plainClick(event)) return;
     event.preventDefault();
     listScrollY = window.scrollY;
     listScrollTop = els.studentList.scrollTop;
@@ -503,16 +519,54 @@ function onStudentLinkClick(event) {
     showStatisticsView({ focus: true });
 }
 
+function onClassLinkClick(event) {
+    const link = event.target.closest('a[data-class-link]');
+    if (!link || !plainClick(event)) return;
+    event.preventDefault();
+    listScrollY = window.scrollY;
+    listScrollTop = els.list.scrollTop;
+    history.pushState({ tpView: 'statistics', tpStatsFromList: true }, '', link.getAttribute('href'));
+    showStatisticsView({ focus: true });
+}
+
+/** A student opened from a discipline's page: Back returns to that page. */
+function onDetailLinkClick(event) {
+    const link = event.target.closest('a[data-student-id]');
+    if (!link || !plainClick(event) || !detail || detail.kind !== 'class') return;
+    event.preventDefault();
+    classPageScrollY = window.scrollY;
+    const name = studentPayload?.courses?.find((c) => String(c.id) === String(detail.id))?.name || '';
+    history.pushState({ tpView: 'statistics', tpStatsFromList: true, tpStatsFromClass: name }, '', link.getAttribute('href'));
+    showStatisticsView({ focus: true });
+}
+
 // ---------- По студенти: one student ----------
 
-let detailId = null;
+let detail = null;          // { kind: 'student' | 'class', id } while a detail page is shown
 let listScrollY = 0;
 let listScrollTop = 0;
+let classPageScrollY = 0;
 
-function detailIdFromLocation() {
-    if (!location.hash.startsWith(DETAIL_PREFIX)) return null;
-    const id = Number.parseInt(location.hash.slice(DETAIL_PREFIX.length), 10);
-    return Number.isFinite(id) && id > 0 ? id : null;
+function detailFromLocation() {
+    const hash = location.hash;
+    const prefix = hash.startsWith(DETAIL_PREFIX) ? DETAIL_PREFIX : hash.startsWith(CLASS_PREFIX) ? CLASS_PREFIX : null;
+    if (!prefix) return null;
+    const id = Number.parseInt(hash.slice(prefix.length), 10);
+    if (!Number.isFinite(id) || id <= 0) return null;
+    return { kind: prefix === CLASS_PREFIX ? 'class' : 'student', id };
+}
+
+function renderCurrentDetail() {
+    if (!detail) return;
+    // A re-render (data arrived, language changed) must not drop keyboard focus
+    const active = document.activeElement;
+    const focusedId = active && els.detail.contains(active) ? active.id : '';
+    const focusLost = !active || active === document.body;
+    if (detail.kind === 'class') renderClassDetail(detail.id);
+    else renderDetail(detail.id);
+    const heading = document.getElementById(detail.kind === 'class' ? 'statsClassName' : 'statsStudentName');
+    const target = (focusedId && document.getElementById(focusedId)) || ((focusedId || focusLost) && heading);
+    if (target && document.activeElement !== target) target.focus({ preventScroll: true });
 }
 
 function backButton() {
@@ -524,7 +578,11 @@ function backButton() {
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
     use.setAttribute('href', '#tp-i-chevron-right');
     icon.appendChild(use);
-    button.append(icon, el('span', null, t('tp_stats_back', 'Всички студенти')));
+    const fromClass = history.state?.tpStatsFromClass;
+    const label = detail?.kind === 'class'
+        ? t('tp_cls_back', 'Всички дисциплини')
+        : fromClass ? tf('tp_stats_back_to', 'Назад към „{name}“', { name: fromClass }) : t('tp_stats_back', 'Всички студенти');
+    button.append(icon, el('span', null, label));
     button.addEventListener('click', () => {
         if (history.state && history.state.tpStatsFromList) {
             history.back();
@@ -653,9 +711,9 @@ function periodLabel(start, unit, { long = false } = {}) {
     return long ? tf('tp_stats_week_of', 'Седмица от {d}', { d: day }) : day;
 }
 
-function trendSection(student) {
+function trendSection(subject) {
     const section = el('section', 'tp-trend');
-    const headingId = `statsTrendTitle-${student.id}`;
+    const headingId = `statsTrendTitle-${subject.id}`;
     section.setAttribute('aria-labelledby', headingId);
 
     const head = el('div', 'tp-trend-head');
@@ -672,7 +730,7 @@ function trendSection(student) {
             if (trendUnit === unit) return;
             trendUnit = unit;
             writePref(TREND_UNIT_KEY, unit);
-            const fresh = trendSection(student);
+            const fresh = trendSection(subject);
             section.replaceWith(fresh);
             fresh.querySelector(`.tp-seg-btn[aria-pressed="true"]`)?.focus({ preventScroll: true });
         });
@@ -681,7 +739,7 @@ function trendSection(student) {
     head.append(heading, seg);
     section.appendChild(head);
 
-    const points = trend(student.entries, trendUnit);
+    const points = trend(subject.entries, trendUnit);
     if (points.length === 0) {
         section.appendChild(el('p', 'tp-stats-note tp-trend-empty', t('tp_stats_trend_empty', 'Все още няма занятия с дата.')));
         return section;
@@ -814,21 +872,194 @@ function renderDetail(id) {
     els.detail.replaceChildren(fragment);
 }
 
-/** Show the overview or a student's page, following location.hash. */
+// ---------- one discipline ----------
+
+/**
+ * Discipline numbers from the per-student payload. The average and "below
+ * 50%" use the same formula as the discipline's row (attended out of every
+ * lesson held, per enrolled student), so the two always agree.
+ */
+function classStats(classId) {
+    const id = Number(classId);
+    const course = (studentPayload?.courses || []).find((c) => Number(c.id) === id);
+    if (!course) return null;
+    const lessons = (studentPayload.lessons || []).filter((l) => l[1] === id);
+    const rows = studentStats.students
+        .map((s) => ({ student: s, course: s.courses.find((c) => c.id === id) }))
+        .filter((r) => r.course);
+    const perLesson = new Map(lessons.map((l) => [l[0], { lesson: l, present: 0, recorded: 0 }]));
+    const entries = [];
+    rows.forEach(({ student }) => student.entries.forEach((e) => {
+        if (e.lesson[1] !== id) return;
+        entries.push(e);
+        const pl = perLesson.get(e.lesson[0]);
+        if (!pl) return;
+        pl.recorded += 1;
+        if (e.record.present) pl.present += 1;
+    }));
+    const held = lessons.length;
+    const attended = rows.reduce((a, r) => a + r.course.attended, 0);
+    const possible = rows.length * held;
+    const recordedLessons = Array.from(perLesson.values()).filter((p) => p.recorded > 0);
+    const dated = Array.from(perLesson.values()).filter((p) => p.lesson[2] !== null).sort((a, b) => b.lesson[2] - a.lesson[2]);
+    return {
+        id,
+        name: String(course.name || ''),
+        rows,
+        held,
+        attended,
+        possible,
+        average: possible > 0 ? Math.round((attended / possible) * 100) : null,
+        low: held > 0 ? rows.filter((r) => (r.course.attended / held) * 100 < LOW_ATTENDANCE_PERCENT).length : 0,
+        perLessonAvg: recordedLessons.length ? recordedLessons.reduce((a, p) => a + p.present, 0) / recordedLessons.length : null,
+        last: dated[0] || null,
+        // newest first; lessons migrated without a date at the end
+        lessons: [...dated, ...Array.from(perLesson.values()).filter((p) => p.lesson[2] === null)],
+        entries
+    };
+}
+
+function lessonDate(ms, opts = { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) {
+    return new Date(ms).toLocaleDateString(lang() === 'en' ? 'en-GB' : 'bg-BG', opts);
+}
+
+function lessonRow(p) {
+    const li = el('li', 'tp-stats-row tp-stats-row--lesson');
+    const main = el('div', 'tp-stats-main');
+    main.append(
+        el('h4', 'tp-stats-name', p.lesson[2] === null ? t('tp_cls_undated', 'Без дата (пренесено занятие)') : lessonDate(p.lesson[2])),
+        el('p', 'tp-stats-meta', p.recorded > 0
+            ? tf('tp_cls_attended_of', '{a} от {h} присъстваха', { a: p.present, h: p.recorded })
+            : t('tp_cls_no_records', 'Няма записи за това занятие'))
+    );
+    const rate = p.recorded > 0 ? Math.round((p.present / p.recorded) * 100) : null;
+    li.append(main, rateFigure(rate, t('tp_stats_average', 'Средна посещаемост')));
+    return li;
+}
+
+function classStudentRow({ student, course }) {
+    const li = el('li');
+    const link = el('a', 'tp-stats-row tp-stats-row--link');
+    link.href = `${DETAIL_PREFIX}${student.id}`;
+    link.dataset.studentId = String(student.id);
+    const main = el('div', 'tp-stats-main');
+    const meta = [];
+    if (student.facultyNumber) meta.push(student.facultyNumber);
+    meta.push(course.held > 0
+        ? tf('tp_stats_of_lessons', '{a} от {h} занятия', { a: course.attended, h: course.held })
+        : t('tp_stats_no_lessons', 'Няма проведени занятия'));
+    main.append(el('h4', 'tp-stats-name', student.name), el('p', 'tp-stats-meta', meta.join(' · ')));
+    const figure = rateFigure(course.rate, student.name);
+    const flags = [];
+    if (course.below) flags.push(t('tp_cls_below', 'Под 50%'));
+    if (course.streak.current >= 2) flags.push(tf('tp_stats_streak_badge', '{n} поредни отсъствия', { n: course.streak.current }));
+    if (flags.length) figure.appendChild(el('span', 'tp-stats-low tp-stats-flags', flags.join(' · ')));
+    link.append(main, figure, chevronIcon());
+    li.appendChild(link);
+    return li;
+}
+
+function renderClassDetail(id) {
+    if (!els.detail) return;
+    // The name is known from the list right away; the numbers need the payload
+    const known = lastData?.classes?.find((c) => Number(c.id) === Number(id));
+    if (!studentStats) {
+        renderDetailLoading();
+        if (known) {
+            const name = el('h2', 'tp-stats-detail-name', known.name);
+            name.id = 'statsClassName';
+            name.tabIndex = -1;
+            els.detail.querySelector('.tp-back')?.after(name);
+        }
+        return;
+    }
+    els.detail.removeAttribute('aria-busy');
+    const c = classStats(id);
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(backButton());
+    if (!c) {
+        fragment.appendChild(el('p', 'tp-empty', t('tp_cls_missing', 'Дисциплината не е намерена.')));
+        els.detail.replaceChildren(fragment);
+        return;
+    }
+
+    const name = el('h2', 'tp-stats-detail-name', c.name);
+    name.id = 'statsClassName';
+    name.tabIndex = -1;
+    fragment.append(name, el('p', 'tp-stats-meta', `${countText(c.rows.length, 'tp_stats_students_one', '{n} студент', 'tp_stats_students_many', '{n} студенти')} · ${countText(c.held, 'tp_stats_lessons_one', '{n} занятие', 'tp_stats_lessons_many', '{n} занятия')}`));
+
+    const nf = new Intl.NumberFormat(lang() === 'en' ? 'en-GB' : 'bg-BG', { maximumFractionDigits: 1 });
+    const tiles = el('div', 'tp-stat-tiles tp-stat-tiles--detail');
+    tiles.append(
+        statTile(t('tp_stats_average', 'Средна посещаемост'), pct(c.average),
+            c.possible > 0 ? tf('tp_cls_presences', '{a} от {p} възможни присъствия', { a: c.attended, p: c.possible }) : t('tp_stats_no_lessons', 'Няма проведени занятия')),
+        statTile(t('tp_cls_low_title', 'Под 50%'), String(c.low),
+            countText(c.rows.length, 'tp_cls_of_students_one', 'от {n} студент', 'tp_cls_of_students_many', 'от {n} студенти')),
+        statTile(t('tp_cls_per_lesson', 'Средно присъстващи'), c.perLessonAvg === null ? '—' : nf.format(c.perLessonAvg),
+            t('tp_cls_per_lesson_sub', 'на занятие')),
+        statTile(t('tp_cls_last', 'Последно занятие'),
+            c.last ? lessonDate(c.last.lesson[2], { day: 'numeric', month: 'long' }) : '—',
+            c.last ? tf('tp_cls_attended_of', '{a} от {h} присъстваха', { a: c.last.present, h: c.last.recorded }) : t('tp_cls_no_dated', 'няма занятия с дата'))
+    );
+    if (c.average !== null && c.average < LOW_ATTENDANCE_PERCENT) tiles.firstChild.classList.add('is-low');
+    if (c.low > 0) tiles.children[1].classList.add('is-low');
+    fragment.appendChild(tiles);
+
+    fragment.appendChild(trendSection({ id: `class-${c.id}`, entries: c.entries }));
+
+    // Lessons, newest first
+    const lessonsHeading = el('h3', 'tp-stats-subheading', t('tp_cls_lessons', 'Занятия'));
+    lessonsHeading.id = 'statsClassLessonsTitle';
+    fragment.appendChild(lessonsHeading);
+    if (c.lessons.length === 0) {
+        fragment.appendChild(el('p', 'tp-empty', t('tp_cls_no_lessons', 'Все още няма проведени занятия.')));
+    } else {
+        const ul = el('ul', 'tp-stats-courses tp-stats-lessons');
+        ul.setAttribute('aria-labelledby', 'statsClassLessonsTitle');
+        c.lessons.forEach((p) => ul.appendChild(lessonRow(p)));
+        fragment.appendChild(ul);
+    }
+
+    // Students, lowest attendance first (each opens the student's page)
+    const studentsHeading = el('h3', 'tp-stats-subheading', t('tp_stats_students', 'Студенти'));
+    studentsHeading.id = 'statsClassStudentsTitle';
+    fragment.appendChild(studentsHeading);
+    if (c.rows.length === 0) {
+        fragment.appendChild(el('p', 'tp-empty', t('tp_cls_no_students', 'В дисциплината няма записани студенти.')));
+    } else {
+        const ul = el('ul', 'tp-stats-courses');
+        ul.setAttribute('aria-labelledby', 'statsClassStudentsTitle');
+        c.rows.slice()
+            .sort((a, b) => (a.course.rate ?? 101) - (b.course.rate ?? 101) || a.student.name.localeCompare(b.student.name, lang() === 'bg' ? 'bg' : 'en'))
+            .forEach((r) => ul.appendChild(classStudentRow(r)));
+        fragment.appendChild(ul);
+    }
+
+    fragment.appendChild(el('p', 'tp-stats-footnote', t('tp_cls_footnote',
+        'Средната посещаемост и „Под 50%“ са спрямо всички проведени занятия в дисциплината (както в списъка). При всеки студент се броят занятията, за които има запис.')));
+    els.detail.replaceChildren(fragment);
+}
+
+/** Show the overview, a student's or a discipline's page, following location.hash. */
 function syncRoute({ focus = false } = {}) {
-    const id = detailIdFromLocation();
-    const wasDetail = detailId !== null;
-    detailId = id;
-    if (id !== null) {
+    const next = detailFromLocation();
+    const previous = detail;
+    detail = next;
+    if (next) {
         document.documentElement.setAttribute('data-stats-detail', '');
         els.detail.hidden = false;
         els.region.hidden = true;
         document.getElementById('statsLoadingStatus')?.setAttribute('hidden', '');
-        renderDetail(id);
+        renderCurrentDetail();
         loadStudents();
-        if (!wasDetail) window.scrollTo(0, 0);
+        const backToClass = previous?.kind === 'student' && next.kind === 'class';
+        if (!previous || previous.kind !== next.kind || previous.id !== next.id) {
+            window.scrollTo(0, backToClass ? classPageScrollY : 0);
+        }
         if (focus) {
-            (document.getElementById('statsStudentName') || els.detail.querySelector('.tp-back'))?.focus({ preventScroll: true });
+            const row = backToClass ? els.detail.querySelector(`a[data-student-id="${CSS.escape(String(previous.id))}"]`) : null;
+            (row || document.getElementById(next.kind === 'class' ? 'statsClassName' : 'statsStudentName') || els.detail.querySelector('.tp-back'))
+                ?.focus({ preventScroll: true });
         }
         return;
     }
@@ -837,19 +1068,19 @@ function syncRoute({ focus = false } = {}) {
     els.detail.replaceChildren();
     els.region.hidden = false;
     document.getElementById('statsLoadingStatus')?.removeAttribute('hidden');
-    if (wasDetail) {
-        // Back from a student: the students list, where the teacher left it
-        setMode('students');
+    if (previous) {
+        // Back to the list the page was opened from, where the teacher left it
+        const fromClasses = previous.kind === 'class';
+        setMode(fromClasses ? 'classes' : 'students');
         window.scrollTo(0, listScrollY);
-        if (els.studentList) els.studentList.scrollTop = listScrollTop;
+        const list = fromClasses ? els.list : els.studentList;
+        if (list) list.scrollTop = listScrollTop;
         if (focus) {
-            const row = els.studentList?.querySelector(`a[data-student-id="${CSS.escape(String(lastDetailId))}"]`);
-            (row || document.getElementById('statisticsTitle'))?.focus({ preventScroll: true });
+            const selector = fromClasses ? `a[data-class-link="${CSS.escape(String(previous.id))}"]` : `a[data-student-id="${CSS.escape(String(previous.id))}"]`;
+            (list?.querySelector(selector) || document.getElementById('statisticsTitle'))?.focus({ preventScroll: true });
         }
     }
 }
-
-let lastDetailId = null;
 
 /** Called each time the Статистика view is shown or its sub-route changes. */
 export function showStatisticsView({ focus = false } = {}) {
@@ -858,7 +1089,6 @@ export function showStatisticsView({ focus = false } = {}) {
         const cached = readCache(statisticsKey());
         if (cached) render(cached.data);
     }
-    if (detailId !== null) lastDetailId = detailId;
     if (!modeRestored) {
         modeRestored = true;
         setMode(readPref(MODE_KEY, ['classes', 'students'], 'classes'), { persist: false });

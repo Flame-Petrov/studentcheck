@@ -12,7 +12,7 @@
             document.documentElement.setAttribute('data-view', view);
             if (view === 'payments') document.title = 'Плащания · StudentCheck';
             if (view === 'statistics') document.title = 'Статистика · StudentCheck';
-            if (h.indexOf('#statistics/student/') === 0) document.documentElement.setAttribute('data-stats-detail', '');
+            if (h.indexOf('#statistics/student/') === 0 || h.indexOf('#statistics/class/') === 0) document.documentElement.setAttribute('data-stats-detail', '');
             if (view === 'chat') document.title = 'Чат · StudentCheck';
         })();
     </script>
@@ -456,15 +456,11 @@
             <div class="exd-dialog" role="dialog" aria-modal="true" aria-labelledby="exportStateTitle" aria-describedby="exportClassName exportStateText" tabindex="-1" data-state="preparing">
                 <p class="exd-class" id="exportClassName"></p>
 
-                <!-- Decorative: table skeleton while preparing, check / error / download icon after -->
+                <!-- Decorative: spinner while preparing; animated check once the download
+                     is handed to the browser; error / download icon otherwise -->
                 <div class="exd-visual" aria-hidden="true">
-                    <div class="exd-skel">
-                        <div class="exd-skel-row exd-skel-row--head"><span class="sk"></span><span class="sk"></span><span class="sk"></span></div>
-                        <div class="exd-skel-row"><span class="sk"></span><span class="sk"></span><span class="sk"></span></div>
-                        <div class="exd-skel-row"><span class="sk"></span><span class="sk"></span><span class="sk"></span></div>
-                        <div class="exd-skel-row"><span class="sk"></span><span class="sk"></span><span class="sk"></span></div>
-                    </div>
-                    <svg class="tp-icon exd-icon exd-icon--done" viewBox="0 0 24 24" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>
+                    <svg class="exd-spinner" viewBox="0 0 48 48" focusable="false"><circle class="exd-spinner-track" cx="24" cy="24" r="20"/><circle class="exd-spinner-arc" cx="24" cy="24" r="20"/></svg>
+                    <span class="exd-done"><svg class="tp-icon exd-icon exd-icon--done" viewBox="0 0 24 24" focusable="false"><path class="exd-check" d="M20 6 9 17l-5-5" pathLength="1"/></svg></span>
                     <svg class="tp-icon exd-icon exd-icon--failed" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 7v6"/><path d="M12 16.5h.01"/></svg>
                     <svg class="tp-icon exd-icon exd-icon--ready" viewBox="0 0 24 24" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
                 </div>

@@ -56,7 +56,7 @@
     overflow-wrap: anywhere;
 }
 
-/* ---------- Visual: skeleton table / icons (same box in every state) ---------- */
+/* ---------- Visual: spinner / animated check / icons (same box in every state) ---------- */
 
 #exportOverlay .exd-visual {
     display: flex;
@@ -67,38 +67,89 @@
     margin: 22px 0 18px;
 }
 
-#exportOverlay .exd-skel,
+#exportOverlay .exd-spinner,
+#exportOverlay .exd-done,
 #exportOverlay .exd-icon {
     display: none;
 }
 
-#exportOverlay [data-state="preparing"] .exd-skel { display: grid; }
+#exportOverlay [data-state="preparing"] .exd-spinner { display: block; }
+#exportOverlay [data-state="done"] .exd-done { display: flex; }
 #exportOverlay [data-state="done"] .exd-icon--done,
 #exportOverlay [data-state="failed"] .exd-icon--failed,
 #exportOverlay [data-state="ready"] .exd-icon--ready { display: block; }
 
-#exportOverlay .exd-skel {
-    gap: 6px;
-    width: min(220px, 100%);
-    padding: 10px 12px;
-    border: 1px solid var(--tp-border, #DFE6EC);
-    border-radius: 10px;
+/* Preparing: green arc turning on a light track */
+#exportOverlay .exd-spinner {
+    width: 60px;
+    height: 60px;
+    animation: exd-spin 0.9s linear infinite;
 }
 
-#exportOverlay .exd-skel-row {
-    display: grid;
-    grid-template-columns: 1.6fr 1fr 0.7fr;
-    gap: 8px;
+#exportOverlay .exd-spinner circle {
+    fill: none;
+    stroke-width: 4;
 }
 
-#exportOverlay .exd-skel-row .sk {
-    height: 8px;
-    border-radius: 999px;
+#exportOverlay .exd-spinner-track { stroke: #E3EAF0; }
+
+#exportOverlay .exd-spinner-arc {
+    stroke: var(--tp-green, #00A174);
+    stroke-linecap: round;
+    stroke-dasharray: 34 92; /* about a quarter of the 126px circumference */
 }
 
-#exportOverlay .exd-skel-row--head .sk {
-    height: 10px;
-    background: #D7E0E7;
+@keyframes exd-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Download handed to the browser: the check draws itself in a soft green
+   disc, with one ring pulse. Replays each time the state is entered (the
+   element goes from display:none to shown). */
+#exportOverlay .exd-done {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--tp-green-tint, #ECF9F4);
+    animation: exd-pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+#exportOverlay .exd-done::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--tp-green, #00A174);
+    opacity: 0;
+    animation: exd-ring 900ms ease-out 200ms 1 both;
+}
+
+#exportOverlay .exd-done .exd-icon--done {
+    width: 40px;
+    height: 40px;
+}
+
+#exportOverlay .exd-check {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: exd-draw 420ms ease-out 180ms forwards;
+}
+
+@keyframes exd-pop {
+    from { transform: scale(0.6); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes exd-draw {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes exd-ring {
+    0% { transform: scale(1); opacity: 0.55; }
+    100% { transform: scale(1.45); opacity: 0; }
 }
 
 #exportOverlay .exd-icon {
@@ -112,7 +163,7 @@
 
 #exportOverlay .exd-icon--done {
     color: var(--tp-green, #00A174);
-    stroke-width: 2.4;
+    stroke-width: 2.6;
 }
 
 #exportOverlay .exd-icon--failed {
@@ -123,6 +174,14 @@
 #exportOverlay .exd-icon--ready {
     color: var(--tp-green, #00A174);
     stroke-width: 2;
+}
+
+/* Reduced motion: a still arc while preparing, the check simply shown */
+@media (prefers-reduced-motion: reduce) {
+    #exportOverlay .exd-spinner { animation: none; }
+    #exportOverlay .exd-done,
+    #exportOverlay .exd-done::after { animation: none; }
+    #exportOverlay .exd-check { animation: none; stroke-dashoffset: 0; }
 }
 
 /* ---------- Text ---------- */
