@@ -304,7 +304,52 @@ export async function renameClassById(classId, newName, teacherEmail) {
     }
 }
 /**
- * Delete a class by ID
+ * The teacher's archived classes, newest first.
+ * @returns {Promise<Array<{id:number,name:string,archived_at:string,lessons_count:number,first_lesson_at:?string,last_lesson_at:?string,students_count:number}>>}
+ */
+export async function fetchArchivedClasses() {
+    try {
+        const body = await authJsonFetch(`${SERVER_BASE_URL + ENDPOINTS.archivedClasses}`, { method: 'GET' });
+        return Array.isArray(body?.classes) ? body.classes : [];
+    } catch (err) {
+        handleMutationApiError(ENDPOINTS.archivedClasses, err);
+    }
+}
+
+/**
+ * Bring an archived class back to the class list, optionally under a new name.
+ * A taken name rejects with status 409 and body { code: 'name_taken', suggestedName }.
+ * @returns {Promise<{id:number,name:string}>} The restored class
+ */
+export async function restoreArchivedClass(classId, name) {
+    try {
+        const body = await authJsonFetch(`${SERVER_BASE_URL + ENDPOINTS.restoreClass}`, {
+            method: 'POST',
+            body: JSON.stringify(name === undefined ? { classId: Number(classId) } : { classId: Number(classId), name })
+        });
+        invalidateStatistics();
+        return body?.class || { id: Number(classId), name };
+    } catch (err) {
+        handleMutationApiError(ENDPOINTS.restoreClass, err);
+    }
+}
+
+/**
+ * Delete an archived class: it leaves the archive too (the server keeps the data).
+ */
+export async function deleteArchivedClass(classId) {
+    try {
+        return await authJsonFetch(`${SERVER_BASE_URL + ENDPOINTS.archivedClasses}`, {
+            method: 'DELETE',
+            body: JSON.stringify({ classId: Number(classId) })
+        });
+    } catch (err) {
+        handleMutationApiError(ENDPOINTS.archivedClasses, err);
+    }
+}
+
+/**
+ * Archive a class by ID (the "delete" action: the server keeps it in the archive)
  * @param {number} classId - Class ID
  * @param {string} teacherEmail - Teacher email
  * @returns {Promise<{success: boolean}>} Response data

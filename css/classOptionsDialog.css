@@ -254,19 +254,21 @@
     line-height: 1.5;
 }
 
+/* "Archive": reversible (the class can be restored from Архив), so a neutral
+   button rather than a red destructive one */
 #classOptionsOverlay .cod-delete {
-    border: 1px solid #F1B5AF;
+    border: 1px solid var(--tp-border, #E3E8EE);
     background: #fff;
-    color: #B42318;
+    color: var(--tp-text, #080F1F);
 }
 
 #classOptionsOverlay .cod-delete:not(:disabled):hover {
-    border-color: #D92D20;
-    background: #FEF3F2;
+    border-color: #CFD8E0;
+    background: var(--tp-surface-hover, #F6F8FA);
 }
 
 #classOptionsOverlay .cod-delete:not(:disabled):active {
-    background: #FDE3E0;
+    background: var(--tp-surface-pressed, #EEF2F5);
 }
 
 #classOptionsOverlay .cod-delete:disabled {

@@ -15,7 +15,10 @@ export const ENDPOINTS = {
     teacherLogin: '/teacherLogin',
     registration: '/registration',
     createClass: '/classes',
+    // DELETE archives the class (it is never removed); see the archive endpoints below
     deleteClass: '/classes',
+    archivedClasses: '/classes/archived',
+    restoreClass: '/classes/restore',
     updateClass: '/classes',
     finishAttendanceSession: '/attendance/finish',
     class_students: '/class_students',

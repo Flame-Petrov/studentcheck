@@ -8,6 +8,7 @@
 import { getClassIdByNameFromStorage, classItemKey, removeClassFromStoredMap, getStoredClassesMap, saveClassesMap } from '../storage/classStorage.js';
 import { loadClassStudentsFromStorage, saveClassStudents } from '../storage/studentStorage.js';
 import { fetchClassStudents, fetchClasses, deleteClassById, renameClassById } from '../api/classApi.js';
+import { invalidateArchive } from './classArchive.js';
 import {
     getCurrentClass,
     setCurrentClass,
@@ -430,8 +431,9 @@ async function performDelete(token, classId, name) {
         return;
     }
 
-    // Confirmed: now remove it from the UI, state, storage and caches
+    // Confirmed (archived): now remove it from the UI, state, storage and caches
     removeDeletedClassLocally(name, classId);
+    invalidateArchive();
     showClassOptionsToast(i18nText('cod_deleted', 'Дисциплината е изтрита.'), 'success');
     if (token === optionsSession) {
         optionsState.pending = null;
@@ -600,6 +602,7 @@ export async function deleteClass(name) {
     }
 
     removeDeletedClassLocally(n, classId);
+    invalidateArchive();
     return true;
 }
 

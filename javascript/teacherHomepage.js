@@ -12,6 +12,7 @@
 // ===== IMPORTS =====
 import { initTeacherShell } from './ui/teacherShell.js';
 import { initClassesView, loadClasses as loadClassList } from './features/classesView.js';
+import { syncClassesRoute, isArchiveRoute } from './features/classArchive.js';
 import { showBillingView, prefetchBilling, onBillingPageRestored } from './features/billingView.js';
 import { showStatisticsView, prefetchStatistics } from './features/statisticsView.js';
 import { showSupportChat } from './features/chatSupport.js';
@@ -136,7 +137,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (view === 'payments') showBillingView();
         else if (view === 'statistics') showStatisticsView();
         else if (view === 'chat') showSupportChat();
-        else loadClassList();
+        else {
+            loadClassList();
+            syncClassesRoute();
+        }
     }
 
     function applyView(view, { focus = false, restoreScroll = false } = {}) {
@@ -166,6 +170,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             showStatisticsView({ focus: true });
             return;
         }
+        if (view === currentView && view === 'classes' && isArchiveRoute()) {
+            // "Дисциплини" from the archive: back to the list
+            history.pushState({ tpView: view }, '', `${location.pathname}${location.search}`);
+            syncClassesRoute({ focus: true });
+            document.getElementById(VIEWS[view].heading)?.focus({ preventScroll: true });
+            return;
+        }
         if (view === currentView) {
             document.getElementById(VIEWS[view].heading)?.focus({ preventScroll: true });
             return;
@@ -178,8 +189,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('popstate', () => {
         const view = viewFromLocation();
         if (view !== currentView) applyView(view, { focus: true, restoreScroll: true });
-        // Same view, other sub-route (a student's statistics <-> the list)
+        // Same view, other sub-route (a student's statistics <-> the list, the archive <-> the classes)
         else if (view === 'statistics') showStatisticsView({ focus: true });
+        else if (view === 'classes') syncClassesRoute({ focus: true });
     });
     document.addEventListener('app:languagechange', () => setDocumentTitle(currentView));
 
