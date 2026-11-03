@@ -48,6 +48,21 @@ form .field:first-child {
     margin-top: 16px; 
 }
 
+/* After registering: confirmation above the Log in button */
+.login-notice {
+    margin: -6px 0 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #ECF9F4;
+    color: #0B5E45;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.login-notice[hidden] {
+    display: none;
+}
+
 /* Ensure error message spacing consistent */
 #error-message.error { 
     margin-top: -6px; 

@@ -222,7 +222,9 @@ function loadCourses(force = false) {
 		})
 		.finally(() => {
 			state.coursesPromise = null;
-			if (state.route?.view === 'courses') applyRoute(parseRoute());
+			// Redraw only. Loading again from here would retry a failed load
+			// forever, with no pause when it fails at once (no token).
+			if (state.route?.view === 'courses') applyRoute(parseRoute(), { load: false });
 		});
 	return state.coursesPromise;
 }
@@ -248,7 +250,7 @@ function loadLessons(courseId, force = false) {
 			const previous = state.lessons.get(courseId);
 			const changed = !previous || previous.status !== 'ready' || JSON.stringify(previous.items) !== JSON.stringify(data);
 			state.lessons.set(courseId, { status: 'ready', items: data });
-			if (changed && state.selectedId === courseId) renderLessonsSection();
+			if (changed && state.selectedId === courseId) renderLessonsSection({ load: false });
 		})
 		.catch((err) => {
 			console.error('[StudentHome] lessons load failed', err);
@@ -256,7 +258,8 @@ function loadLessons(courseId, force = false) {
 			const previous = state.lessons.get(courseId);
 			if (previous && previous.status === 'ready' && err.code !== 'signin') return; // keep what is shown
 			state.lessons.set(courseId, { status: err.code === 'signin' ? 'signin' : 'error', items: [] });
-			if (state.selectedId === courseId) renderLessonsSection();
+			// Redraw only (see loadCourses): showing the error must not retry
+			if (state.selectedId === courseId) renderLessonsSection({ load: false });
 		});
 }
 
@@ -311,7 +314,7 @@ function isTwoColumn() {
 	return getComputedStyle(listCol).display !== 'none' && getComputedStyle(detail).display !== 'none';
 }
 
-function applyRoute(route, { focus = false } = {}) {
+function applyRoute(route, { focus = false, load = true } = {}) {
 	const previous = state.route;
 	state.route = route;
 	// The inline head script picked the first view; from now on the router does
@@ -326,7 +329,7 @@ function applyRoute(route, { focus = false } = {}) {
 	});
 
 	if (route.view === 'courses') {
-		loadCourses();
+		if (load) loadCourses();
 		if (route.courseId !== null && state.coursesStatus === 'ready'
 			&& !state.courses.some((c) => c.id === route.courseId)) {
 			// Unknown course (e.g. removed): fall back to the list
@@ -521,11 +524,11 @@ function renderDetail() {
 }
 
 // Lessons load after the summary; only this part re-renders when they arrive
-function renderLessonsSection() {
+function renderLessonsSection({ load = true } = {}) {
 	const container = document.getElementById('detailLessons');
 	const course = state.courses.find((c) => c.id === state.selectedId);
 	if (!container || !course) return;
-	container.replaceChildren(renderLessons(course, courseStats(course)));
+	container.replaceChildren(renderLessons(course, courseStats(course), { load }));
 }
 
 function formatLessonDates(items) {
@@ -542,15 +545,15 @@ function formatLessonDates(items) {
 	return labels.map((l) => (l ? (dayCounts.get(l.day) > 1 ? `${l.day}, ${l.time}` : l.day) : '—'));
 }
 
-function renderLessons(course, stats) {
+function renderLessons(course, stats, { load = true } = {}) {
 	const wrap = el('div');
 	if (!stats.hasData) {
 		wrap.appendChild(el('p', 'sp-note', t('sp_no_lessons_yet', 'No lessons held yet')));
 		return wrap;
 	}
 
-	loadLessons(course.id); // cached -> instant; refreshes quietly when stale
-	const current = state.lessons.get(course.id);
+	if (load) loadLessons(course.id); // cached -> instant; refreshes quietly when stale
+	const current = state.lessons.get(course.id) || { status: 'loading', items: [] };
 
 	if (current.status === 'loading') {
 		const list = el('ul', 'sp-lessons');

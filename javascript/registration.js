@@ -747,6 +747,7 @@ import { SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
             course: selectCourse.options[selectCourse.selectedIndex].text,
         };
 
+        let navigating = false;
         try {
             submitting = true;
             finishBtn.disabled = true;
@@ -805,42 +806,17 @@ import { SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
                 data = await resp.json();
             }
             if (data && (data.registrationSuccess || data.success)) {
-                // Optionally store token if provided
-                if (data.token) {
-                    // Store token ONLY in sessionStorage so closing the tab ends implicit login.
-                    try { sessionStorage.setItem('authToken', data.token); } catch (_) {}
-                }
-
-                // Persist a minimal student session so the homepage doesn't redirect to login.
-                const responseStudent = data.student || data.user || data.data?.student || null;
-                const fullNameFromPayload = [payload.firstName, payload.middleName, payload.lastName]
-                    .filter(Boolean)
-                    .join(' ')
-                    .trim();
-                const sessionStudent = {
-                    id: responseStudent?.id,
-                    student_id: responseStudent?.student_id || responseStudent?.id,
-                    full_name: responseStudent?.full_name || responseStudent?.fullName || fullNameFromPayload,
-                    faculty_number: responseStudent?.faculty_number || responseStudent?.facultyNumber || payload.facultyNumber,
-                    firstName: responseStudent?.firstName || payload.firstName,
-                    middleName: responseStudent?.middleName || payload.middleName,
-                    lastName: responseStudent?.lastName || payload.lastName,
-                    email: responseStudent?.email || payload.email,
-                    group: responseStudent?.group || payload.group,
-                    course: responseStudent?.course || payload.course,
-                    faculty: responseStudent?.faculty || payload.faculty,
-                    level: responseStudent?.level || payload.level,
-                    specialization: responseStudent?.specialization || payload.specialization
-                };
+                // Registering does not sign the student in: they log in once with
+                // the new password, so /studentLogin stays the only place that
+                // issues a session. The login page pre-fills the faculty number.
                 try {
-                    sessionStorage.removeItem('teacherData');
-                    localStorage.removeItem('teacherEmail');
-                    sessionStorage.setItem('studentData', JSON.stringify({
-                        data: { student: sessionStudent, loginSuccess: true }
+                    if (window.clearSessionData) window.clearSessionData();
+                    sessionStorage.setItem('registration.justRegistered', JSON.stringify({
+                        facultyNumber: payload.facultyNumber
                     }));
                 } catch (_) {}
-
-                window.location.href = 'studentHomepage.html';
+                navigating = true;
+                window.location.replace('index.html');
             } else {
                 if (/duplicate|exists|already/i.test(data.message || '') && /faculty/i.test(data.message || '')) {
                     lastDuplicateFaculty = facultyNumber.value.trim().replace(/\s+/g,'');
@@ -866,10 +842,14 @@ import { SERVER_BASE_URL, ENDPOINTS } from './config/api.js';
             console.error('Registration request failed:', e);
             alert(t('err_network_unavailable'));
         } finally {
-            submitting = false;
-            window.PendingAction?.stop();
-            finishBtn.disabled = false;
-            finishBtn.textContent = t('finish', 'Finish');
+            // On success the login page is loading: keep Finish pending (and
+            // disabled) until then, so a second tap cannot register twice
+            if (!navigating) {
+                submitting = false;
+                window.PendingAction?.stop();
+                finishBtn.disabled = false;
+                finishBtn.textContent = t('finish', 'Finish');
+            }
         }
     }
 

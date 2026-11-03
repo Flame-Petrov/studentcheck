@@ -137,6 +137,30 @@ async function handleTeacherLogin(email, password, errorMessage) {
     return false;
 }
 
+// ===== Just registered: confirm it and pre-fill the faculty number =====
+// registration.js leaves the faculty number here; it is read once, then removed.
+(function showRegisteredNotice() {
+    let info = null;
+    try {
+        const raw = sessionStorage.getItem('registration.justRegistered');
+        sessionStorage.removeItem('registration.justRegistered');
+        info = raw ? JSON.parse(raw) : null;
+    } catch (_) {}
+    const facultyNumber = String(info?.facultyNumber || '').trim();
+    if (!/^\d{9}$/.test(facultyNumber)) return;
+
+    const identifier = document.getElementById('loginIdentifier');
+    if (identifier && !identifier.value) identifier.value = facultyNumber;
+    const notice = document.getElementById('login-notice');
+    if (!notice) return;
+    const render = () => { notice.textContent = t('login_registered_notice', 'Registration complete. Enter your password to log in.'); };
+    render();
+    notice.hidden = false;
+    document.addEventListener('app:languagechange', render);
+    // Hide it once the student starts a login attempt
+    document.getElementById('unifiedLoginForm')?.addEventListener('submit', () => { notice.hidden = true; }, { once: true });
+})();
+
 // ===== Warm the likely next page (role is known from the identifier) =====
 // Fetched into the HTTP cache only; nothing runs until the user logs in.
 const HOME_ASSETS = {
