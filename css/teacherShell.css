@@ -1572,6 +1572,63 @@ html[data-view="payments"] .tp-view--payments {
     }
 }
 
+/* A lesson's page: who was present / absent, with a status label per row */
+.tp-les-side {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.tp-les-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.tp-les-status.is-present {
+    background: var(--tp-green-tint, #ECF9F4);
+    color: #0B6E50;
+}
+
+.tp-les-status.is-absent {
+    background: #FDF0E6;
+    color: #A3480A;
+}
+
+.tp-les-status.is-none {
+    background: #EEF1F4;
+    color: var(--tp-muted);
+}
+
+.tp-les-flags {
+    font-size: 13px;
+    text-align: right;
+}
+
+.tp-stats-detail > .tp-les-note {
+    margin: -6px 0 var(--tp-card-gap);
+}
+
+@media (max-width: 719.98px) {
+    .tp-les-side {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+    }
+
+    .tp-les-flags {
+        text-align: left;
+    }
+}
+
 body.tp-app :is(.tp-seg-btn, .tp-back, .tp-trend-bar):not(:disabled):hover,
 body.tp-app :is(.tp-seg-btn, .tp-back, .tp-trend-bar):not(:disabled):active {
     transform: none !important;

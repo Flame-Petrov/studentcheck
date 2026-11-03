@@ -20,6 +20,11 @@
  * students below 50%, attendance per lesson, trend, and its students (each
  * linking to the student's page).
  *
+ * Each lesson there opens the lesson's page (#statistics/class/<id>/lesson/<id>):
+ * who was absent, who was present (arrival / leaving time, late, left early)
+ * and the enrolled students with no record for it, each linking to the
+ * student's page.
+ *
  * Same loading rules as the rest of the app: static skeleton in the HTML,
  * cached result shown at once and refreshed when stale, inline error + Retry
  * on a first-load failure, discreet note when a background refresh fails.
@@ -41,6 +46,9 @@ const MODE_KEY = 'tp.stats.mode';
 const TREND_UNIT_KEY = 'tp.stats.trendUnit';
 const DETAIL_PREFIX = '#statistics/student/';
 const CLASS_PREFIX = '#statistics/class/';
+const MINUTE = 60 * 1000;
+// Depth of each detail page: going to a smaller depth is going back
+const DETAIL_DEPTH = { class: 1, lesson: 2, student: 3 };
 
 function t(key, fallback) {
     const value = window.i18n?.t?.(key);
@@ -529,32 +537,60 @@ function onClassLinkClick(event) {
     showStatisticsView({ focus: true });
 }
 
-/** A student opened from a discipline's page: Back returns to that page. */
+function classNameOf(id) {
+    return studentPayload?.courses?.find((c) => String(c.id) === String(id))?.name
+        || lastData?.classes?.find((c) => String(c.id) === String(id))?.name
+        || '';
+}
+
+/**
+ * A lesson or a student opened from a discipline's or a lesson's page: Back
+ * returns to that page, where the teacher left it.
+ */
 function onDetailLinkClick(event) {
-    const link = event.target.closest('a[data-student-id]');
-    if (!link || !plainClick(event) || !detail || detail.kind !== 'class') return;
+    if (!detail || detail.kind === 'student' || !plainClick(event)) return;
+    const link = event.target.closest('a[data-student-id], a[data-lesson-id]');
+    if (!link) return;
     event.preventDefault();
-    classPageScrollY = window.scrollY;
-    const name = studentPayload?.courses?.find((c) => String(c.id) === String(detail.id))?.name || '';
-    history.pushState({ tpView: 'statistics', tpStatsFromList: true, tpStatsFromClass: name }, '', link.getAttribute('href'));
+    detailScroll.set(detailKey(detail), window.scrollY);
+    const state = { tpView: 'statistics', tpStatsFromList: true };
+    if (link.dataset.studentId) {
+        if (detail.kind === 'lesson') state.tpStatsFromLesson = true;
+        else state.tpStatsFromClass = classNameOf(detail.id);
+    }
+    history.pushState(state, '', link.getAttribute('href'));
     showStatisticsView({ focus: true });
 }
 
 // ---------- По студенти: one student ----------
 
-let detail = null;          // { kind: 'student' | 'class', id } while a detail page is shown
+// { kind: 'student' | 'class' | 'lesson', id, lessonId? } while a detail page is shown
+// (for a lesson, id is its discipline)
+let detail = null;
 let listScrollY = 0;
 let listScrollTop = 0;
-let classPageScrollY = 0;
+const detailScroll = new Map(); // detail page -> scroll position when a link on it was opened
+
+function detailKey(d) {
+    return d ? `${d.kind}:${d.id}:${d.lessonId ?? ''}` : '';
+}
 
 function detailFromLocation() {
     const hash = location.hash;
-    const prefix = hash.startsWith(DETAIL_PREFIX) ? DETAIL_PREFIX : hash.startsWith(CLASS_PREFIX) ? CLASS_PREFIX : null;
-    if (!prefix) return null;
-    const id = Number.parseInt(hash.slice(prefix.length), 10);
+    if (hash.startsWith(CLASS_PREFIX)) {
+        const match = hash.slice(CLASS_PREFIX.length).match(/^(\d+)(?:\/lesson\/(\d+))?/);
+        const id = match ? Number(match[1]) : 0;
+        if (!(id > 0)) return null;
+        const lessonId = match[2] ? Number(match[2]) : 0;
+        return lessonId > 0 ? { kind: 'lesson', id, lessonId } : { kind: 'class', id };
+    }
+    if (!hash.startsWith(DETAIL_PREFIX)) return null;
+    const id = Number.parseInt(hash.slice(DETAIL_PREFIX.length), 10);
     if (!Number.isFinite(id) || id <= 0) return null;
-    return { kind: prefix === CLASS_PREFIX ? 'class' : 'student', id };
+    return { kind: 'student', id };
 }
+
+const HEADING_ID = { class: 'statsClassName', lesson: 'statsLessonName', student: 'statsStudentName' };
 
 function renderCurrentDetail() {
     if (!detail) return;
@@ -563,8 +599,9 @@ function renderCurrentDetail() {
     const focusedId = active && els.detail.contains(active) ? active.id : '';
     const focusLost = !active || active === document.body;
     if (detail.kind === 'class') renderClassDetail(detail.id);
+    else if (detail.kind === 'lesson') renderLessonDetail(detail.id, detail.lessonId);
     else renderDetail(detail.id);
-    const heading = document.getElementById(detail.kind === 'class' ? 'statsClassName' : 'statsStudentName');
+    const heading = document.getElementById(HEADING_ID[detail.kind]);
     const target = (focusedId && document.getElementById(focusedId)) || ((focusedId || focusLost) && heading);
     if (target && document.activeElement !== target) target.focus({ preventScroll: true });
 }
@@ -579,16 +616,21 @@ function backButton() {
     use.setAttribute('href', '#tp-i-chevron-right');
     icon.appendChild(use);
     const fromClass = history.state?.tpStatsFromClass;
-    const label = detail?.kind === 'class'
-        ? t('tp_cls_back', 'Всички дисциплини')
-        : fromClass ? tf('tp_stats_back_to', 'Назад към „{name}“', { name: fromClass }) : t('tp_stats_back', 'Всички студенти');
+    let label;
+    if (detail?.kind === 'class') label = t('tp_cls_back', 'Всички дисциплини');
+    else if (detail?.kind === 'lesson') label = tf('tp_stats_back_to', 'Назад към „{name}“', { name: classNameOf(detail.id) });
+    else if (history.state?.tpStatsFromLesson) label = t('tp_les_back_to_lesson', 'Назад към занятието');
+    else if (fromClass) label = tf('tp_stats_back_to', 'Назад към „{name}“', { name: fromClass });
+    else label = t('tp_stats_back', 'Всички студенти');
     button.append(icon, el('span', null, label));
     button.addEventListener('click', () => {
         if (history.state && history.state.tpStatsFromList) {
             history.back();
             return;
         }
-        history.replaceState({ tpView: 'statistics' }, '', '#statistics');
+        // Opened from a link: a lesson goes up to its discipline, the rest to the list
+        const up = detail?.kind === 'lesson' ? `${CLASS_PREFIX}${detail.id}` : '#statistics';
+        history.replaceState({ tpView: 'statistics' }, '', up);
         showStatisticsView({ focus: true });
     });
     return button;
@@ -923,17 +965,25 @@ function lessonDate(ms, opts = { weekday: 'short', day: 'numeric', month: 'long'
     return new Date(ms).toLocaleDateString(lang() === 'en' ? 'en-GB' : 'bg-BG', opts);
 }
 
-function lessonRow(p) {
-    const li = el('li', 'tp-stats-row tp-stats-row--lesson');
+function lessonLabel(lesson) {
+    return lesson[2] === null ? t('tp_cls_undated', 'Без дата (пренесено занятие)') : lessonDate(lesson[2]);
+}
+
+function lessonRow(p, classId) {
+    const li = el('li');
+    const link = el('a', 'tp-stats-row tp-stats-row--link tp-stats-row--lesson');
+    link.href = `${CLASS_PREFIX}${classId}/lesson/${p.lesson[0]}`;
+    link.dataset.lessonId = String(p.lesson[0]);
     const main = el('div', 'tp-stats-main');
     main.append(
-        el('h4', 'tp-stats-name', p.lesson[2] === null ? t('tp_cls_undated', 'Без дата (пренесено занятие)') : lessonDate(p.lesson[2])),
+        el('h4', 'tp-stats-name', lessonLabel(p.lesson)),
         el('p', 'tp-stats-meta', p.recorded > 0
             ? tf('tp_cls_attended_of', '{a} от {h} присъстваха', { a: p.present, h: p.recorded })
             : t('tp_cls_no_records', 'Няма записи за това занятие'))
     );
     const rate = p.recorded > 0 ? Math.round((p.present / p.recorded) * 100) : null;
-    li.append(main, rateFigure(rate, t('tp_stats_average', 'Средна посещаемост')));
+    link.append(main, rateFigure(rate, t('tp_stats_average', 'Средна посещаемост')), chevronIcon());
+    li.appendChild(link);
     return li;
 }
 
@@ -1016,7 +1066,7 @@ function renderClassDetail(id) {
     } else {
         const ul = el('ul', 'tp-stats-courses tp-stats-lessons');
         ul.setAttribute('aria-labelledby', 'statsClassLessonsTitle');
-        c.lessons.forEach((p) => ul.appendChild(lessonRow(p)));
+        c.lessons.forEach((p) => ul.appendChild(lessonRow(p, c.id)));
         fragment.appendChild(ul);
     }
 
@@ -1040,7 +1090,170 @@ function renderClassDetail(id) {
     els.detail.replaceChildren(fragment);
 }
 
-/** Show the overview, a student's or a discipline's page, following location.hash. */
+// ---------- one lesson ----------
+
+function timeOf(ms) {
+    return new Date(ms).toLocaleTimeString(lang() === 'en' ? 'en-GB' : 'bg-BG', { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Who was present, absent or has no record in one lesson. Lateness and early
+ * leaving follow the student pages: measured from the first / last scan of
+ * the lesson, beyond the same grace minutes.
+ */
+function lessonStats(classId, lessonId) {
+    const c = classStats(classId);
+    if (!c) return null;
+    const p = c.lessons.find((x) => x.lesson[0] === lessonId);
+    if (!p) return { c, p: null };
+    const [, , started, ended] = p.lesson;
+    const present = [];
+    const absent = [];
+    const none = [];
+    let arrivals = 0;
+    let departures = 0;
+    c.rows.forEach(({ student }) => {
+        const entry = student.entries.find((e) => e.lesson[0] === lessonId);
+        if (!entry) { none.push({ student }); return; }
+        const { joined, left } = entry.record;
+        if (!entry.record.present) { absent.push({ student, joined, left }); return; }
+        const lateMin = joined !== null && started !== null ? Math.max(0, (joined - started) / MINUTE) : null;
+        const earlyMin = left !== null && ended !== null ? Math.max(0, (ended - left) / MINUTE) : null;
+        if (lateMin !== null) arrivals += 1;
+        if (earlyMin !== null) departures += 1;
+        present.push({
+            student, joined, left,
+            late: lateMin !== null && lateMin > LATE_GRACE_MINUTES ? Math.round(lateMin) : null,
+            early: earlyMin !== null && earlyMin > EARLY_GRACE_MINUTES ? Math.round(earlyMin) : null
+        });
+    });
+    const collator = new Intl.Collator(lang() === 'en' ? 'en' : 'bg', { sensitivity: 'base' });
+    const byName = (a, b) => collator.compare(a.student.name, b.student.name) || a.student.id - b.student.id;
+    [present, absent, none].forEach((list) => list.sort(byName));
+    return {
+        c, p, started, ended, present, absent, none, arrivals, departures,
+        late: present.filter((r) => r.late !== null).length,
+        early: present.filter((r) => r.early !== null).length
+    };
+}
+
+const LESSON_STATUS = {
+    present: ['tp_les_status_present', 'Присъства'],
+    absent: ['tp_les_status_absent', 'Отсъства'],
+    none: ['tp_les_status_none', 'Без запис']
+};
+
+function lessonStudentRow(item, status) {
+    const { student } = item;
+    const li = el('li');
+    const link = el('a', 'tp-stats-row tp-stats-row--link tp-les-row');
+    link.href = `${DETAIL_PREFIX}${student.id}`;
+    link.dataset.studentId = String(student.id);
+    const main = el('div', 'tp-stats-main');
+    const meta = [];
+    if (student.facultyNumber) meta.push(student.facultyNumber);
+    if (item.joined != null) meta.push(`${t('ahd_joined', 'Влизане')} ${timeOf(item.joined)}`);
+    if (item.left != null) meta.push(`${t('ahd_left', 'Излизане')} ${timeOf(item.left)}`);
+    main.appendChild(el('h4', 'tp-stats-name', student.name));
+    if (meta.length) main.appendChild(el('p', 'tp-stats-meta', meta.join(' · ')));
+
+    const side = el('div', 'tp-les-side');
+    const [key, fallback] = LESSON_STATUS[status];
+    side.appendChild(el('span', `tp-les-status is-${status}`, t(key, fallback)));
+    const flags = [];
+    if (item.late != null) flags.push(tf('tp_les_late_flag', 'Закъсня с {n} мин', { n: item.late }));
+    if (item.early != null) flags.push(tf('tp_les_early_flag', 'Тръгна {n} мин по-рано', { n: item.early }));
+    if (flags.length) side.appendChild(el('span', 'tp-stats-low tp-les-flags', flags.join(' · ')));
+    link.append(main, side, chevronIcon());
+    li.appendChild(link);
+    return li;
+}
+
+function lessonSection(fragment, id, title, items, status, emptyText, note) {
+    const heading = el('h3', 'tp-stats-subheading', title);
+    heading.id = id;
+    fragment.appendChild(heading);
+    if (note) fragment.appendChild(el('p', 'tp-stats-meta tp-les-note', note));
+    if (items.length === 0) {
+        fragment.appendChild(el('p', 'tp-empty', emptyText));
+        return;
+    }
+    const ul = el('ul', 'tp-stats-courses tp-les-list');
+    ul.setAttribute('aria-labelledby', id);
+    ul.dataset.status = status;
+    items.forEach((item) => ul.appendChild(lessonStudentRow(item, status)));
+    fragment.appendChild(ul);
+}
+
+function renderLessonDetail(classId, lessonId) {
+    if (!els.detail) return;
+    if (!studentStats) {
+        renderDetailLoading();
+        return;
+    }
+    els.detail.removeAttribute('aria-busy');
+    const s = lessonStats(classId, lessonId);
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(backButton());
+    if (!s || !s.p) {
+        fragment.appendChild(el('p', 'tp-empty', s
+            ? t('tp_les_missing', 'Занятието не е намерено.')
+            : t('tp_cls_missing', 'Дисциплината не е намерена.')));
+        els.detail.replaceChildren(fragment);
+        return;
+    }
+    const { c, p } = s;
+
+    const name = el('h2', 'tp-stats-detail-name', lessonLabel(p.lesson));
+    name.id = 'statsLessonName';
+    name.tabIndex = -1;
+    const meta = [c.name];
+    if (s.started !== null) {
+        meta.push(s.ended !== null && timeOf(s.ended) !== timeOf(s.started)
+            ? `${timeOf(s.started)}–${timeOf(s.ended)}`
+            : timeOf(s.started));
+    }
+    fragment.append(name, el('p', 'tp-stats-meta', meta.join(' · ')));
+
+    const recorded = s.present.length + s.absent.length;
+    const rate = recorded > 0 ? Math.round((s.present.length / recorded) * 100) : null;
+    const noTimes = t('tp_les_no_times', 'няма записани часове');
+    const tiles = el('div', 'tp-stat-tiles tp-stat-tiles--detail');
+    tiles.append(
+        statTile(t('tp_les_rate', 'Посещаемост'), pct(rate), recorded > 0
+            ? tf('tp_cls_attended_of', '{a} от {h} присъстваха', { a: s.present.length, h: recorded })
+            : t('tp_cls_no_records', 'Няма записи за това занятие')),
+        statTile(t('tp_les_absent_tile', 'Отсъстваха'), String(s.absent.length),
+            recorded > 0 ? tf('tp_les_of_recorded', 'от {n} с запис', { n: recorded }) : ''),
+        statTile(t('tp_les_late_tile', 'Закъснели'), s.arrivals > 0 ? String(s.late) : '—',
+            s.arrivals > 0 ? tf('tp_les_late_sub', 'над {n} мин след началото', { n: LATE_GRACE_MINUTES }) : noTimes),
+        statTile(t('tp_les_early_tile', 'Тръгнали по-рано'), s.departures > 0 ? String(s.early) : '—',
+            s.departures > 0 ? tf('tp_les_early_sub', 'над {n} мин преди края', { n: EARLY_GRACE_MINUTES }) : noTimes)
+    );
+    if (rate !== null && rate < LOW_ATTENDANCE_PERCENT) tiles.firstChild.classList.add('is-low');
+    if (s.absent.length > 0) tiles.children[1].classList.add('is-low');
+    fragment.appendChild(tiles);
+
+    // Absent first: that is the list a teacher acts on
+    lessonSection(fragment, 'statsLessonAbsentTitle',
+        tf('tp_les_absent_title', 'Отсъстваха ({n})', { n: s.absent.length }), s.absent, 'absent',
+        recorded > 0 ? t('tp_les_no_absent', 'Няма отсъстващи.') : t('tp_cls_no_records', 'Няма записи за това занятие'));
+    lessonSection(fragment, 'statsLessonPresentTitle',
+        tf('tp_les_present_title', 'Присъстваха ({n})', { n: s.present.length }), s.present, 'present',
+        recorded > 0 ? t('tp_les_no_present', 'Никой не е присъствал.') : t('tp_cls_no_records', 'Няма записи за това занятие'));
+    if (s.none.length > 0) {
+        lessonSection(fragment, 'statsLessonNoneTitle',
+            tf('tp_les_none_title', 'Без запис ({n})', { n: s.none.length }), s.none, 'none', '',
+            t('tp_les_none_note', 'За тях няма сканиране или отбелязано отсъствие в това занятие (например са записани в дисциплината по-късно).'));
+    }
+
+    fragment.appendChild(el('p', 'tp-stats-footnote', tf('tp_les_footnote',
+        'Началото и краят на занятието са първото и последното сканиране в него. Закъснение е влизане над {late} мин след началото, ранно тръгване — излизане над {early} мин преди края. Часовете са според часовата зона на устройството.',
+        { late: LATE_GRACE_MINUTES, early: EARLY_GRACE_MINUTES })));
+    els.detail.replaceChildren(fragment);
+}
+
+/** Show the overview, a student's, a discipline's or a lesson's page, following location.hash. */
 function syncRoute({ focus = false } = {}) {
     const next = detailFromLocation();
     const previous = detail;
@@ -1052,13 +1265,17 @@ function syncRoute({ focus = false } = {}) {
         document.getElementById('statsLoadingStatus')?.setAttribute('hidden', '');
         renderCurrentDetail();
         loadStudents();
-        const backToClass = previous?.kind === 'student' && next.kind === 'class';
-        if (!previous || previous.kind !== next.kind || previous.id !== next.id) {
-            window.scrollTo(0, backToClass ? classPageScrollY : 0);
+        // Back from a deeper page (student -> lesson/discipline, lesson -> discipline):
+        // restore the scroll position and focus the row that was opened
+        const goingBack = Boolean(previous) && DETAIL_DEPTH[previous.kind] > DETAIL_DEPTH[next.kind];
+        if (detailKey(previous) !== detailKey(next)) {
+            window.scrollTo(0, goingBack ? (detailScroll.get(detailKey(next)) || 0) : 0);
         }
         if (focus) {
-            const row = backToClass ? els.detail.querySelector(`a[data-student-id="${CSS.escape(String(previous.id))}"]`) : null;
-            (row || document.getElementById(next.kind === 'class' ? 'statsClassName' : 'statsStudentName') || els.detail.querySelector('.tp-back'))
+            const row = !goingBack ? null : previous.kind === 'lesson'
+                ? els.detail.querySelector(`a[data-lesson-id="${CSS.escape(String(previous.lessonId))}"]`)
+                : els.detail.querySelector(`a[data-student-id="${CSS.escape(String(previous.id))}"]`);
+            (row || document.getElementById(HEADING_ID[next.kind]) || els.detail.querySelector('.tp-back'))
                 ?.focus({ preventScroll: true });
         }
         return;
@@ -1070,7 +1287,7 @@ function syncRoute({ focus = false } = {}) {
     document.getElementById('statsLoadingStatus')?.removeAttribute('hidden');
     if (previous) {
         // Back to the list the page was opened from, where the teacher left it
-        const fromClasses = previous.kind === 'class';
+        const fromClasses = previous.kind !== 'student';
         setMode(fromClasses ? 'classes' : 'students');
         window.scrollTo(0, listScrollY);
         const list = fromClasses ? els.list : els.studentList;
